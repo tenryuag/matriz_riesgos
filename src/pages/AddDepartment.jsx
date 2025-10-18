@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from "react";
-import { Department } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Building2, ArrowLeft, Save } from "lucide-react";
@@ -11,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLanguage } from '@/components/LanguageContext';
+import { User, Department } from '@/api/entities';
 
 export default function AddDepartment() {
   const navigate = useNavigate();
@@ -62,16 +62,28 @@ export default function AddDepartment() {
     setError("");
 
     try {
+      const user = await User.me();
+
       const dataToSave = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        area_count: editingDepartment ? editingDepartment.area_count : 0
+        area_count: editingDepartment ? editingDepartment.area_count : 0,
+        created_by_id: user.id
       };
 
       if (editingDepartment) {
-        await Department.update(editingDepartment.id, dataToSave);
+        const { error: updateError } = await supabase
+          .from("departments")
+          .update({ ...dataToSave, created_by_id: user.id })
+          .eq("id", editingDepartment.id);
+
+        if (updateError) throw updateError;
       } else {
-        await Department.create(dataToSave);
+        const { error: insertError } = await supabase
+          .from("departments")
+          .insert([dataToSave]);
+
+        if (insertError) throw insertError;
       }
 
       navigate(createPageUrl("Departments"));

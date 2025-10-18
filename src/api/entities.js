@@ -1,27 +1,51 @@
 import { supabase } from './supabaseClient';
 
-
 export const Department = {
-  async getAll() {
-    const { data, error } = await supabase.from('departments').select('*')
+  // 🔹 Obtener lista de departamentos
+  async list(order = 'created_at') {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .order(order.replace('-', ''), { ascending: !order.startsWith('-') })
+
     if (error) throw error
     return data
   },
-  // Agrega aquí más métodos como create, update, delete, etc.
+  // 🔹 Crear nuevo departamento
+  async create(departmentData) {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert([departmentData])
+      .select()  // opcional: para obtener el resultado insertado
+    if (error) throw error
+    return data
+  },
+
+  // 🔹 Filtrar departamentos por condiciones
+  async filter(filters) {
+    let query = supabase.from('departments').select('*')
+    for (const key in filters) {
+      query = query.eq(key, filters[key])
+    }
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  }
 }
 
 export const Risk = {
-  async getAll() {
-    const { data, error } = await supabase.from('risks').select('*')
+  async list(order = 'created_at') {
+    const { data, error } = await supabase
+      .from('risks')
+      .select('*')
+      .order(order.replace('-', ''), { ascending: !order.startsWith('-') })
+
     if (error) throw error
     return data
   },
 }
 
-
-
 // auth
-
 export const User = {
   // 🔹 Iniciar sesión
   async login(email, password) {
