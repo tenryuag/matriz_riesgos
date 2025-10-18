@@ -41,7 +41,7 @@ const translations = {
     loginWelcomeTitle: "Bienvenido de Vuelta",
     loginWelcomeSubtitle: "Ingresa a tu sistema de gestión de riesgos",
     loginHeroSubtitle: "Sistema profesional para la identificación, evaluación y gestión integral de riesgos organizacionales",
-    loginButton: "Iniciar Sesión con Google",
+    loginButton: "Iniciar Sesión",
     loginButtonLoading: "Iniciando Sesión...",
     loginDisclaimer: "Al iniciar sesión, aceptas que tus datos se mantendrán privados y seguros",
     
@@ -238,7 +238,7 @@ const translations = {
     loginWelcomeTitle: "Welcome Back",
     loginWelcomeSubtitle: "Access your risk management system",
     loginHeroSubtitle: "Professional system for comprehensive identification, evaluation, and management of organizational risks",
-    loginButton: "Sign In with Google",
+    loginButton: "Sign In",
     loginButtonLoading: "Signing In...",
     loginDisclaimer: "By logging in, you agree that your data will be kept private and secure",
     

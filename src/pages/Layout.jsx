@@ -27,11 +27,14 @@ import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 const LoginScreen = ({ theme, toggleTheme }) => {
   const { language, changeLanguage, t } = useLanguage();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-      await User.login();
+      await User.login(email, password);
+      window.location.reload();
     } catch (error) {
       console.error('Login error:', error);
       setIsLoading(false);
@@ -147,8 +150,22 @@ const LoginScreen = ({ theme, toggleTheme }) => {
               ))}
             </div>
 
-            {/* Login Button */}
+            {/* Email and Password Inputs */}
             <div className="space-y-4">
+              <input
+                type="email"
+                placeholder={t('Email')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-glass w-full p-3 rounded-xl"
+              />
+              <input
+                type="password"
+                placeholder={t('Contraseña')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-glass w-full p-3 rounded-xl"
+              />
               <Button
                 onClick={handleLogin}
                 disabled={isLoading}
