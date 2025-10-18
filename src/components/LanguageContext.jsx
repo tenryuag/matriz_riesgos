@@ -27,7 +27,7 @@ const translations = {
     unclassified: "Sin clasificar",
 
     // Layout & Login
-    riskManagement: "RiskManager",
+    riskManagement: "Matriz de Riesgos",
     professionalManagement: "Gestión Profesional",
     dashboard: "Dashboard",
     departments: "Departamentos",
@@ -224,7 +224,7 @@ const translations = {
     unclassified: "Unclassified",
 
     // Layout & Login
-    riskManagement: "RiskManager",
+    riskManagement: "Risk Manager",
     professionalManagement: "Professional Management",
     dashboard: "Dashboard",
     departments: "Departments",

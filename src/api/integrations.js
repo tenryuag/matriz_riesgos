@@ -1,23 +1,23 @@
-import { base44 } from './base44Client';
+import { supabase } from './supabaseClient';
 
 
 
 
-export const Core = base44.integrations.Core;
+export const Core = supabase.integrations.Core;
 
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
+export const InvokeLLM = supabase.integrations.Core.InvokeLLM;
 
-export const SendEmail = base44.integrations.Core.SendEmail;
+export const SendEmail = supabase.integrations.Core.SendEmail;
 
-export const UploadFile = base44.integrations.Core.UploadFile;
+export const UploadFile = supabase.integrations.Core.UploadFile;
 
-export const GenerateImage = base44.integrations.Core.GenerateImage;
+export const GenerateImage = supabase.integrations.Core.GenerateImage;
 
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
+export const ExtractDataFromUploadedFile = supabase.integrations.Core.ExtractDataFromUploadedFile;
 
-export const CreateFileSignedUrl = base44.integrations.Core.CreateFileSignedUrl;
+export const CreateFileSignedUrl = supabase.integrations.Core.CreateFileSignedUrl;
 
-export const UploadPrivateFile = base44.integrations.Core.UploadPrivateFile;
+export const UploadPrivateFile = supabase.integrations.Core.UploadPrivateFile;
 
 
 
