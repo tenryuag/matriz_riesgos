@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLanguage } from '@/components/LanguageContext';
+import { supabase } from "@/api/supabaseClient";
 
 const PROBABILITY_LEVELS = ["Remoto (0-20%)", "Improbable (21-40%)", "Ocasional (41-60%)", "Probable (61-80%)", "Frecuente (81-100%)"];
 const IMPACT_LEVELS = ["Insignificante", "Menor", "Crítico", "Mayor", "Catastrófico"];
@@ -102,10 +103,14 @@ export default function AddRisk() {
     setLoading(true);
     setError("");
     try {
+      // Obtener el usuario actual y enriquecer formData
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      const enrichedData = { ...formData, created_by_id: userId };
       if (editingRisk) {
-        await Risk.update(editingRisk.id, formData);
+        await Risk.update(editingRisk.id, enrichedData);
       } else {
-        await Risk.create(formData);
+        await Risk.create(enrichedData);
       }
       navigate(createPageUrl(`DepartmentRisks?id=${formData.department_id}`));
     } catch (error) {
