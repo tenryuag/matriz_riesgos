@@ -167,7 +167,7 @@ export default function AddRisk() {
               <Label>{t('departmentLabel')}</Label>
               <Select value={formData.department_id} onValueChange={(value) => handleChange("department_id", value)} disabled={loading}>
                 <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentPlaceholder')} /></SelectTrigger>
-                <SelectContent className="glass">{departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}</SelectContent>
+                <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {/* Removed the 'area' input field */}
@@ -175,7 +175,7 @@ export default function AddRisk() {
               <Label>{t('threatTypeLabel')}</Label>
               <Select value={formData.threat_type} onValueChange={(value) => handleChange("threat_type", value)} disabled={loading}>
                 <SelectTrigger className="input-glass"><SelectValue placeholder={t('threatTypePlaceholder')} /></SelectTrigger>
-                <SelectContent className="glass"><SelectItem value="Interna">{t('threatInternal')}</SelectItem><SelectItem value="Externa">{t('threatExternal')}</SelectItem></SelectContent>
+                <SelectContent className="glass dark:bg-zinc-900 dark:text-white"><SelectItem value="Interna">{t('threatInternal')}</SelectItem><SelectItem value="Externa">{t('threatExternal')}</SelectItem></SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -193,14 +193,14 @@ export default function AddRisk() {
                 <Label>{t('inherentProbability')}</Label>
                 <Select value={formData.inherent_probability} onValueChange={(v) => handleChange("inherent_probability", v)} disabled={loading}>
                   <SelectTrigger className="input-glass"><SelectValue placeholder={t('selectProbability')} /></SelectTrigger>
-                  <SelectContent className="glass">{PROBABILITY_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
+                  <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{PROBABILITY_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>{t('inherentImpact')}</Label>
                 <Select value={formData.inherent_impact} onValueChange={(v) => handleChange("inherent_impact", v)} disabled={loading}>
                   <SelectTrigger className="input-glass"><SelectValue placeholder={t('selectImpact')} /></SelectTrigger>
-                  <SelectContent className="glass">{IMPACT_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
+                  <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{IMPACT_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -215,7 +215,7 @@ export default function AddRisk() {
               <Label>{t('managementStrategy')}</Label>
               <Select value={formData.risk_strategy} onValueChange={(v) => handleChange("risk_strategy", v)} disabled={loading}>
                 <SelectTrigger className="input-glass"><SelectValue placeholder={t('selectStrategy')} /></SelectTrigger>
-                <SelectContent className="glass">{STRATEGY_LEVELS.map(s => <SelectItem key={s} value={s}>{t(`strategy${s}`)}</SelectItem>)}</SelectContent>
+                <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{STRATEGY_LEVELS.map(s => <SelectItem key={s} value={s}>{t(`strategy${s}`)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {[1, 2, 3].map(num => (
@@ -227,7 +227,7 @@ export default function AddRisk() {
                     <SelectTrigger className="input-glass">
                       <SelectValue placeholder={t('selectMitigationImpact')} />
                     </SelectTrigger>
-                    <SelectContent className="glass">
+                    <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                       {MITIGANT_IMPACT_OPTIONS.map(option => (
                         <SelectItem key={option} value={option}>{t(option)}</SelectItem>
                       ))}
@@ -247,14 +247,14 @@ export default function AddRisk() {
                 <Label>{t('residualProbability')}</Label>
                 <Select value={formData.residual_probability} onValueChange={(v) => handleChange("residual_probability", v)} disabled={loading}>
                   <SelectTrigger className="input-glass"><SelectValue placeholder={t('selectProbability')} /></SelectTrigger>
-                  <SelectContent className="glass">{PROBABILITY_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
+                  <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{PROBABILITY_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>{t('residualImpact')}</Label>
                 <Select value={formData.residual_impact} onValueChange={(v) => handleChange("residual_impact", v)} disabled={loading}>
                   <SelectTrigger className="input-glass"><SelectValue placeholder={t('selectImpact')} /></SelectTrigger>
-                  <SelectContent className="glass">{IMPACT_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
+                  <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{IMPACT_LEVELS.map(l => <SelectItem key={l} value={l}>{t(l)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>

@@ -127,14 +127,14 @@ export default function DepartmentRisks() {
             </div>
             <Select value={riskLevelFilter} onValueChange={setRiskLevelFilter}>
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('riskLevelLabel')} /></SelectTrigger>
-              <SelectContent className="glass">
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allLevels')}</SelectItem>
                 {RISK_LEVELS_OPTIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={threatTypeFilter} onValueChange={setThreatTypeFilter}>
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('threatTypeLabel')} /></SelectTrigger>
-              <SelectContent className="glass">
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allThreats')}</SelectItem>
                 <SelectItem value="Interna">{t('threatInternal')}</SelectItem>
                 <SelectItem value="Externa">{t('threatExternal')}</SelectItem>
@@ -165,7 +165,7 @@ export default function DepartmentRisks() {
                     <TableRow key={risk.id} className="border-card-border hover:bg-gray-500/5">
                       <TableCell className="max-w-xs truncate text-muted">{risk.description}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${risk.threat_type === 'Interna' ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs border ${risk.threat_type === 'Interna' ? 'bg-blue-500 text-[#121212] dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30' : 'bg-purple-500 text-[#121212] dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-400/30'}`}>
                           {t(risk.threat_type === 'Interna' ? 'threatInternal' : 'threatExternal')}
                         </span>
                       </TableCell>

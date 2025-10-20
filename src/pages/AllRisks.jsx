@@ -102,11 +102,11 @@ export default function AllRisks() {
   const getProbabilityColor = (probability) => {
     // Assuming 't' translates these keys to the Spanish strings "Remoto (0-20%)", etc.
     const colors = {
-      [t("Remoto (0-20%)")]: 'bg-green-500/20 text-green-300 border-green-400/30',
-      [t("Improbable (21-40%)")]: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30',
-      [t("Ocasional (41-60%)")]: 'bg-amber-500/20 text-amber-300 border-amber-400/30',
-      [t("Probable (61-80%)")]: 'bg-orange-500/20 text-orange-300 border-orange-400/30',
-      [t("Frecuente (81-100%)")]: 'bg-red-500/20 text-red-300 border-red-400/30'
+      [t("Remoto (0-20%)")]: 'bg-green-500 text-[#121212] dark:bg-green-500/20 dark:text-green-300 dark:border-green-400/30',
+      [t("Improbable (21-40%)")]: 'bg-yellow-500 text-[#121212] dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-400/30',
+      [t("Ocasional (41-60%)")]: 'bg-amber-500 text-[#121212] dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/30',
+      [t("Probable (61-80%)")]: 'bg-orange-500 text-[#121212] dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-400/30',
+      [t("Frecuente (81-100%)")]: 'bg-red-500 text-[#121212] dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/30'
     };
     return colors[probability] || 'border-transparent text-muted';
   };
@@ -114,11 +114,11 @@ export default function AllRisks() {
   const getImpactColor = (impact) => {
     // Assuming 't' translates these keys to the Spanish strings "Insignificante", etc.
     const colors = {
-      [t("Insignificante")]: 'bg-green-500/20 text-green-300 border-green-400/30',
-      [t("Menor")]: 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-      [t("Crítico")]: 'bg-amber-500/20 text-amber-300 border-amber-400/30',
-      [t("Mayor")]: 'bg-orange-500/20 text-orange-300 border-orange-400/30',
-      [t("Catastrófico")]: 'bg-red-500/20 text-red-300 border-red-400/30'
+      [t("Insignificante")]: 'bg-green-500 text-[#121212] dark:bg-green-500/20 dark:text-green-300 dark:border-green-400/30',
+      [t("Menor")]: 'bg-blue-500 text-[#121212] dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30',
+      [t("Crítico")]: 'bg-amber-500 text-[#121212] dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/30',
+      [t("Mayor")]: 'bg-orange-500 text-[#121212] dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-400/30',
+      [t("Catastrófico")]: 'bg-red-500 text-[#121212] dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/30'
     };
     return colors[impact] || 'border-transparent text-muted';
   };
@@ -179,14 +179,14 @@ export default function AllRisks() {
             </div>
             <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={deleting}>
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentLabel')} /></SelectTrigger>
-              <SelectContent className="glass">
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allDepartments')}</SelectItem>
                 {departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={riskLevelFilter} onValueChange={setRiskLevelFilter} disabled={deleting}>
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('riskLevelLabel')} /></SelectTrigger>
-              <SelectContent className="glass">
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allLevels')}</SelectItem>
                 {RISK_LEVELS_OPTIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
               </SelectContent>
