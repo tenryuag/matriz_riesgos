@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/api/supabaseClient";
 import { Department } from "@/api/entities";
 import { Risk } from "@/api/entities";
 import { useNavigate } from "react-router-dom";

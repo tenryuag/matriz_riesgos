@@ -11,6 +11,7 @@ export const Department = {
     if (error) throw error
     return data
   },
+
   // 🔹 Crear nuevo departamento
   async create(departmentData) {
     const { data, error } = await supabase
@@ -43,6 +44,56 @@ export const Risk = {
     if (error) throw error
     return data
   },
+
+  // 🔹 Filtrar riesgos por condiciones
+  async filter(filters) {
+    let query = supabase.from('risks').select('*')
+    for (const key in filters) {
+      query = query.eq(key, filters[key])
+    }
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  },
+
+  // 🔹 Crear nuevo riesgo
+  async create(riskData) {
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData?.user?.id
+
+    const { data, error } = await supabase
+      .from('risks')
+      .insert([{ ...riskData, created_by_id: userId }])
+      .select()
+
+    if (error) throw error
+    return data
+  },
+
+  // 🔹 Actualizar riesgo por ID
+  async update(id, riskData) {
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData?.user?.id
+
+    const { data, error } = await supabase
+      .from('risks')
+      .update({ ...riskData, created_by_id: userId })
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data
+  },
+
+  // 🔹 Eliminar riesgo por ID
+  async delete(id) {
+    const { data, error } = await supabase
+      .from('risks')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    return data
+  }
 }
 
 // auth
