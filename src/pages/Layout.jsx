@@ -1,6 +1,7 @@
 
 
-import React from "react";
+import React, { useState } from "react";
+import { Eye, EyeOff } from 'react-feather';
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/api/entities";
@@ -26,9 +27,10 @@ import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 
 const LoginScreen = ({ theme, toggleTheme }) => {
   const { language, changeLanguage, t } = useLanguage();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -159,13 +161,22 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-glass w-full p-3 rounded-xl"
               />
-              <input
-                type="password"
-                placeholder={t('Contraseña')}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-glass w-full p-3 rounded-xl"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t('Contraseña')}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-glass w-full p-3 rounded-xl pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <Button
                 onClick={handleLogin}
                 disabled={isLoading}
