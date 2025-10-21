@@ -54,7 +54,7 @@ const translations = {
     loginFeature3Description: "Herramientas avanzadas para la gestión completa de riesgos",
 
     // Dashboard
-    welcome: "¡Bienvenido, {name}!",
+    welcome: "¡Bienvenido!",
     dashboardHeaderSubtitle: "Gestiona los riesgos de tu organización de manera profesional",
     newRisk: "Nuevo Riesgo",
     active: "Activos",
@@ -251,7 +251,7 @@ const translations = {
     loginFeature3Description: "Advanced tools for comprehensive risk management",
 
     // Dashboard
-    welcome: "Welcome, {name}!",
+    welcome: "Welcome!",
     dashboardHeaderSubtitle: "Manage your organization's risks professionally.",
     newRisk: "New Risk",
     active: "Active",
