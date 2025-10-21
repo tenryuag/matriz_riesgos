@@ -14,6 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertTriangle } from "lucide-react";
 import { useLanguage } from '@/components/LanguageContext';
 
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
 export default function AllRisks() {
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
@@ -127,6 +130,45 @@ export default function AllRisks() {
     };
     return colors[impact] || 'border-transparent text-muted';
   };
+
+  const exportToExcel = useCallback(() => {
+    if (!filteredRisks || filteredRisks.length === 0) {
+      alert(t('noRisksToExport') || 'No hay riesgos para exportar');
+      return;
+    }
+
+    // Transformar los datos al formato que queremos exportar
+    const exportData = filteredRisks.map((r) => ({
+      'Departamento': departmentMap[r.department_id] || '',
+      'Tipo de amenaza': r.threat_type || '',
+      'Descripción': r.description || '',
+      'Prob. inherente': r.inherent_probability || '',
+      'Impacto inherente': r.inherent_impact || '',
+      'Nivel inherente': r.inherent_level || '',
+      'Estrategia': r.risk_strategy || '',
+      'Mitigante 1': r.mitigant_1 || '',
+      'Impacto mitigante 1': r.mitigant_impact_1 || '',
+      'Mitigante 2': r.mitigant_2 || '',
+      'Impacto mitigante 2': r.mitigant_impact_2 || '',
+      'Mitigante 3': r.mitigant_3 || '',
+      'Impacto mitigante 3': r.mitigant_impact_3 || '',
+      'Prob. residual': r.residual_probability || '',
+      'Impacto residual': r.residual_impact || '',
+      'Nivel residual': r.residual_level || '',
+      'Fecha creación': r.created_at || r.created_date || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Matriz de Riesgos');
+
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    const date = new Date();
+    const filename = `matriz_riesgos_${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}.xlsx`;
+    saveAs(blob, filename);
+  }, [filteredRisks, departmentMap, t]);
   
   if (loading) {
     return (
@@ -167,6 +209,9 @@ export default function AllRisks() {
               {deleting ? t('deleting') : t('deleteSelected', { count: selectedRisks.size })}
             </Button>
           )}
+          <Button onClick={exportToExcel} variant="outline" className="glass hover:border-accent" disabled={deleting}>
+            📥 {t('exportExcel') || 'Exportar Excel'}
+          </Button>
           <Button onClick={() => navigate(createPageUrl(`AddRisk`))} variant="outline" className="glass hover:border-accent" disabled={deleting}>
             <Plus className="w-4 h-4 mr-2" />
             {t('newRisk')}
