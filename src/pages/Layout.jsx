@@ -172,7 +172,7 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-black dark:text-white"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
