@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { InvitationCode } from "@/api/entities";
+import { InvitationCode, User } from "@/api/entities";
 import {
   Ticket,
   Plus,
@@ -8,10 +8,10 @@ import {
   XCircle,
   Calendar,
   Mail,
-  User,
   Copy,
   Check,
-  RefreshCw
+  RefreshCw,
+  ShieldAlert
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ export default function InvitationCodes() {
   const [isCreating, setIsCreating] = useState(false);
   const [codeToDelete, setCodeToDelete] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
@@ -54,8 +56,31 @@ export default function InvitationCodes() {
   });
 
   useEffect(() => {
-    loadData();
+    checkAdmin();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadData();
+    }
+  }, [isAdmin]);
+
+  const checkAdmin = async () => {
+    try {
+      const currentUser = await User.me();
+
+      // Verificar si el usuario es admin
+      const role = currentUser?.user_metadata?.role ||
+                   currentUser?.raw_user_meta_data?.role ||
+                   'user';
+
+      setIsAdmin(role === 'admin');
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+    }
+    setCheckingAuth(false);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -132,6 +157,49 @@ export default function InvitationCodes() {
     return new Date(dateString) < new Date();
   };
 
+  // Verificando autenticación
+  if (checkingAuth) {
+    return (
+      <div className="space-y-6">
+        <div className="glass rounded-3xl p-8 animate-pulse">
+          <div className="w-32 h-8 bg-gray-500/20 rounded mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-full h-24 bg-gray-500/20 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No es admin - Acceso denegado
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <Card className="glass border-border max-w-md">
+          <CardContent className="pt-12 pb-8">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-red-500/10 rounded-full flex items-center justify-center">
+                <ShieldAlert className="w-10 h-10 text-red-500" />
+              </div>
+              <h2 className="text-2xl font-title text-foreground mb-3">
+                {t('accessDenied') || 'Acceso Denegado'}
+              </h2>
+              <p className="text-muted mb-6">
+                {t('adminOnlyFeature') || 'Esta función está disponible solo para administradores.'}
+              </p>
+              <p className="text-sm text-muted">
+                {t('contactAdminAccess') || 'Si necesitas acceso, contacta al administrador del sistema.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Cargando datos
   if (loading) {
     return (
       <div className="space-y-6">

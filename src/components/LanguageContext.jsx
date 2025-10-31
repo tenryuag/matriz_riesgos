@@ -234,6 +234,11 @@ const translations = {
     "Mayor": "Mayor",
     "Catastrófico": "Catastrófico",
 
+    // Access Control
+    accessDenied: "Acceso Denegado",
+    adminOnlyFeature: "Esta función está disponible solo para administradores.",
+    contactAdminAccess: "Si necesitas acceso, contacta al administrador del sistema.",
+
     // Invitation Codes Page
     invitationCodes: "Códigos de Invitación",
     codesTitle: "Códigos de Invitación",
@@ -508,6 +513,11 @@ const translations = {
     "Crítico": "Critical",
     "Mayor": "Major",
     "Catastrófico": "Catastrophic",
+
+    // Access Control
+    accessDenied: "Access Denied",
+    adminOnlyFeature: "This feature is only available for administrators.",
+    contactAdminAccess: "If you need access, contact the system administrator.",
 
     // Invitation Codes Page
     invitationCodes: "Invitation Codes",
