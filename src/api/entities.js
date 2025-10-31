@@ -138,5 +138,165 @@ export const User = {
         console.error('Error al obtener usuario:', err.message)
         throw err
     }
+    },
+
+  // 🔹 Registrar nuevo usuario con código de invitación
+  async register(email, password, fullName, invitationCode) {
+    try {
+      // 1. Validar el código de invitación primero
+      const validationResult = await InvitationCode.validate(invitationCode, email)
+
+      if (!validationResult.valid) {
+        throw new Error(validationResult.message || 'Código de invitación inválido')
+      }
+
+      // 2. Crear el usuario en Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'user'
+          }
+        }
+      })
+
+      if (error) throw error
+
+      // 3. Marcar el código como usado
+      if (data.user) {
+        await InvitationCode.markAsUsed(invitationCode, data.user.id)
+      }
+
+      return data.user
+    } catch (err) {
+      console.error('Error al registrar usuario:', err.message)
+      throw err
     }
+  }
+}
+
+// 🔹 Gestión de códigos de invitación
+export const InvitationCode = {
+  // Validar un código de invitación
+  async validate(code, email = null) {
+    try {
+      const { data, error } = await supabase.rpc('validate_and_use_invitation_code', {
+        code_to_validate: code,
+        user_email: email
+      })
+
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al validar código:', err.message)
+      return {
+        valid: false,
+        error: 'VALIDATION_ERROR',
+        message: 'Error al validar el código de invitación'
+      }
+    }
+  },
+
+  // Marcar código como usado
+  async markAsUsed(code, userId) {
+    try {
+      const { data, error } = await supabase.rpc('mark_invitation_code_used', {
+        code_to_mark: code,
+        user_id: userId
+      })
+
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al marcar código como usado:', err.message)
+      throw err
+    }
+  },
+
+  // Listar todos los códigos (para admin)
+  async list(order = '-created_at') {
+    try {
+      const { data, error } = await supabase
+        .from('invitation_codes')
+        .select('*')
+        .order(order.replace('-', ''), { ascending: !order.startsWith('-') })
+
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al listar códigos:', err.message)
+      throw err
+    }
+  },
+
+  // Crear nuevo código de invitación
+  async create(codeData) {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id
+
+      // Generar código aleatorio si no se proporciona
+      let code = codeData.code
+      if (!code) {
+        const { data: generatedCode, error: genError } = await supabase.rpc('generate_random_code', { length: 12 })
+        if (genError) throw genError
+        code = generatedCode
+      }
+
+      const { data, error } = await supabase
+        .from('invitation_codes')
+        .insert([{
+          code,
+          email: codeData.email || null,
+          expires_at: codeData.expires_at || null,
+          notes: codeData.notes || null,
+          created_by_id: userId
+        }])
+        .select()
+
+      if (error) throw error
+      return data[0]
+    } catch (err) {
+      console.error('Error al crear código:', err.message)
+      throw err
+    }
+  },
+
+  // Eliminar código de invitación
+  async delete(id) {
+    try {
+      const { data, error } = await supabase
+        .from('invitation_codes')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al eliminar código:', err.message)
+      throw err
+    }
+  },
+
+  // Obtener estadísticas de códigos
+  async stats() {
+    try {
+      const { data, error } = await supabase
+        .from('invitation_codes')
+        .select('used')
+
+      if (error) throw error
+
+      const total = data.length
+      const used = data.filter(c => c.used).length
+      const available = total - used
+
+      return { total, used, available }
+    } catch (err) {
+      console.error('Error al obtener estadísticas:', err.message)
+      throw err
+    }
+  }
 }
