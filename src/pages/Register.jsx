@@ -151,19 +151,19 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
     }
 
     .dark {
-      --background-start: #0f0f0f;
+      --background-start: #121212;
       --background-end: #1a1a1a;
-      --foreground: #f5f5f5;
-      --foreground-muted: rgba(245, 245, 245, 0.7);
+      --foreground: #FAF7F6;
+      --foreground-muted: rgba(250, 247, 246, 0.7);
       --accent: #DDBF5A;
       --accent-foreground: #121212;
-      --card-bg: rgba(255, 255, 255, 0.05);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --sidebar-bg: rgba(15, 15, 15, 0.7);
-      --input-bg: rgba(255, 255, 255, 0.05);
+      --card-bg: rgba(250, 247, 246, 0.12);
+      --card-border: rgba(221, 191, 90, 0.3);
+      --sidebar-bg: rgba(250, 247, 246, 0.05);
+      --input-bg: rgba(250, 247, 246, 0.1);
       --shadow: rgba(0, 0, 0, 0.3);
-      --table-bg: rgba(255, 255, 255, 0.03);
-      --table-row-hover: rgba(221, 191, 90, 0.05);
+      --table-bg: rgba(250, 247, 246, 0.02);
+      --table-row-hover: rgba(250, 247, 246, 0.05);
     }
 
     .font-body { font-family: var(--font-body); }
@@ -266,7 +266,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 {language === 'es' ? 'ES' : 'EN'}
@@ -275,7 +275,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={toggleTheme}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>

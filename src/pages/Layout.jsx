@@ -112,20 +112,20 @@ const LoginScreen = ({ theme, toggleTheme }) => {
           {/* Language & Theme Controls */}
           <div className="flex justify-between items-center">
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
-                variant="outline" 
+                variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 {language === 'es' ? 'ES' : 'EN'}
               </Button>
-              <Button 
-                onClick={toggleTheme} 
-                variant="outline" 
+              <Button
+                onClick={toggleTheme}
+                variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
@@ -300,8 +300,8 @@ const AppLayout = ({ children }) => {
       --foreground-muted: rgba(250, 247, 246, 0.7);
       --accent: #DDBF5A;
       --accent-foreground: #121212;
-      --card-bg: rgba(250, 247, 246, 0.08);
-      --card-border: rgba(221, 191, 90, 0.2);
+      --card-bg: rgba(250, 247, 246, 0.12);
+      --card-border: rgba(221, 191, 90, 0.3);
       --sidebar-bg: rgba(250, 247, 246, 0.05);
       --input-bg: rgba(250, 247, 246, 0.1);
       --shadow: rgba(0, 0, 0, 0.3);
