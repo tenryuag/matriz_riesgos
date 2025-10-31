@@ -17,6 +17,8 @@ import Register from "./Register";
 
 import InvitationCodes from "./InvitationCodes";
 
+import AddInvitationCode from "./AddInvitationCode";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -34,6 +36,8 @@ const PAGES = {
     AllRisks: AllRisks,
 
     InvitationCodes: InvitationCodes,
+
+    AddInvitationCode: AddInvitationCode,
 
 }
 
@@ -113,6 +117,11 @@ function PagesContent() {
             <Route path="/InvitationCodes" element={
                 <Layout currentPageName={currentPage}>
                     <InvitationCodes />
+                </Layout>
+            } />
+            <Route path="/AddInvitationCode" element={
+                <Layout currentPageName={currentPage}>
+                    <AddInvitationCode />
                 </Layout>
             } />
         </Routes>

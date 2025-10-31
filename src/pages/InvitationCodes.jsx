@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { InvitationCode, User } from "@/api/entities";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import {
   Ticket,
   Plus,
@@ -10,20 +12,10 @@ import {
   Mail,
   Copy,
   Check,
-  RefreshCw,
   ShieldAlert
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,19 +33,11 @@ export default function InvitationCodes() {
   const [codes, setCodes] = useState([]);
   const [stats, setStats] = useState({ total: 0, used: 0, available: 0 });
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [codeToDelete, setCodeToDelete] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { t } = useLanguage();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    notes: '',
-    expires_at: ''
-  });
 
   useEffect(() => {
     checkAdmin();
@@ -96,26 +80,6 @@ export default function InvitationCodes() {
       toast.error(t('codesLoadError'));
     }
     setLoading(false);
-  };
-
-  const handleCreateCode = async () => {
-    setIsCreating(true);
-    try {
-      const newCode = await InvitationCode.create({
-        email: formData.email || null,
-        notes: formData.notes || null,
-        expires_at: formData.expires_at || null
-      });
-
-      toast.success(t('codeCreatedSuccess'));
-      setIsDialogOpen(false);
-      setFormData({ email: '', notes: '', expires_at: '' });
-      loadData();
-    } catch (error) {
-      console.error("Error creating code:", error);
-      toast.error(t('codeCreateError'));
-    }
-    setIsCreating(false);
   };
 
   const handleDeleteCode = async (id) => {
@@ -228,85 +192,12 @@ export default function InvitationCodes() {
           </h1>
           <p className="text-muted mt-2">{t('codesSubtitle')}</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('codesCreateButton')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-background border-border max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">{t('codesCreateTitle')}</DialogTitle>
-              <DialogDescription className="text-muted">
-                {t('codesCreateDescription')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
-                  {t('codesEmailLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <input
-                  type="email"
-                  placeholder={t('codesEmailPlaceholder')}
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl"
-                />
-                <p className="text-xs text-muted">{t('codesEmailHelp')}</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
-                  {t('codesNotesLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <textarea
-                  placeholder={t('codesNotesPlaceholder')}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl min-h-[80px] resize-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
-                  {t('codesExpiryLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.expires_at}
-                  onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="glass"
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleCreateCode}
-                disabled={isCreating}
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                {isCreating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    {t('creating')}
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t('create')}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Link to={createPageUrl("AddInvitationCode")}>
+          <Button variant="outline" className="glass hover:border-accent">
+            <Plus className="w-4 h-4 mr-2" />
+            {t('codesCreateButton')}
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -459,7 +350,7 @@ export default function InvitationCodes() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!codeToDelete} onOpenChange={() => setCodeToDelete(null)}>
-        <AlertDialogContent className="bg-background border-border">
+        <AlertDialogContent className="glass bg-background border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">{t('codesDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription className="text-muted">
