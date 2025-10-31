@@ -76,56 +76,66 @@ export default function InvitationCodes() {
       const styleElement = document.createElement('style');
       styleElement.id = styleId;
       styleElement.textContent = `
+        /* Inputs con bordes más visibles y colores adaptativos */
         .input-glass {
-          background: var(--input-bg, rgba(255, 255, 255, 0.12));
+          background: rgba(255, 255, 255, 0.25);
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--card-border, rgba(18, 18, 18, 0.15));
-          color: var(--foreground, #121212);
+          border: 2px solid rgba(18, 18, 18, 0.2);
+          color: #121212;
           transition: all 0.2s ease;
         }
 
         .dark .input-glass {
-          color: var(--foreground, #FAF7F6);
+          background: rgba(250, 247, 246, 0.15);
+          border: 2px solid rgba(221, 191, 90, 0.4);
+          color: #FAF7F6;
         }
 
         .input-glass::placeholder {
-          color: var(--foreground-muted, rgba(18, 18, 18, 0.6));
+          color: rgba(18, 18, 18, 0.5);
         }
 
         .dark .input-glass::placeholder {
-          color: var(--foreground-muted, rgba(250, 247, 246, 0.55));
+          color: rgba(250, 247, 246, 0.5);
         }
 
         .input-glass:focus {
           outline: none;
-          border-color: var(--accent, #DDBF5A);
-          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.12);
+          border-color: #DDBF5A;
+          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.2);
         }
 
+        /* Botones con bordes visibles sin movimiento en hover */
         .glass {
-          background: var(--card-bg, rgba(255, 255, 255, 0.18));
+          background: rgba(255, 255, 255, 0.25);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border: 1px solid var(--card-border, rgba(221, 191, 90, 0.35));
-          box-shadow: 0 8px 32px var(--shadow, rgba(0, 0, 0, 0.25));
-          color: var(--foreground, #121212);
+          border: 2px solid rgba(221, 191, 90, 0.4);
+          color: #121212;
           transition: all 0.2s ease;
         }
 
         .dark .glass {
-          color: var(--foreground, #FAF7F6);
+          background: rgba(250, 247, 246, 0.15);
+          border: 2px solid rgba(221, 191, 90, 0.5);
+          color: #FAF7F6;
         }
 
         .glass:hover:not(:disabled) {
-          border-color: var(--accent, #DDBF5A);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(221, 191, 90, 0.3);
+          border-color: #DDBF5A;
+          box-shadow: 0 0 8px rgba(221, 191, 90, 0.4);
         }
 
         .glass:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        /* Modal con fondo más claro en dark mode */
+        .dark [role="dialog"] {
+          background: rgba(26, 26, 26, 0.98) !important;
+          border: 2px solid rgba(221, 191, 90, 0.5) !important;
         }
       `;
       document.head.appendChild(styleElement);
@@ -310,7 +320,7 @@ export default function InvitationCodes() {
               {t('codesCreateButton')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass bg-background border-border max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-white dark:bg-zinc-900 border-2 border-accent/40 dark:border-accent/60 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">{t('codesCreateTitle')}</DialogTitle>
               <DialogDescription className="text-muted">
