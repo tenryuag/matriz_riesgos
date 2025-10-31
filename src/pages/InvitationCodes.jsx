@@ -110,10 +110,22 @@ export default function InvitationCodes() {
           border: 1px solid var(--card-border, rgba(221, 191, 90, 0.35));
           box-shadow: 0 8px 32px var(--shadow, rgba(0, 0, 0, 0.25));
           color: var(--foreground, #121212);
+          transition: all 0.2s ease;
         }
 
         .dark .glass {
           color: var(--foreground, #FAF7F6);
+        }
+
+        .glass:hover:not(:disabled) {
+          border-color: var(--accent, #DDBF5A);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(221, 191, 90, 0.3);
+        }
+
+        .glass:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
       `;
       document.head.appendChild(styleElement);
@@ -293,7 +305,7 @@ export default function InvitationCodes() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="glass hover:border-accent">
+            <Button variant="outline" className="glass text-foreground hover:border-accent">
               <Plus className="w-4 h-4 mr-2" />
               {t('codesCreateButton')}
             </Button>
@@ -307,7 +319,7 @@ export default function InvitationCodes() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="email">
+                <Label htmlFor="email" className="text-foreground">
                   {t('codesEmailLabel')} <span className="text-muted">({t('optional')})</span>
                 </Label>
                 <Input
@@ -321,7 +333,7 @@ export default function InvitationCodes() {
                 <p className="text-xs text-muted">{t('codesEmailHelp')}</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">
+                <Label htmlFor="notes" className="text-foreground">
                   {t('codesNotesLabel')} <span className="text-muted">({t('optional')})</span>
                 </Label>
                 <Textarea
@@ -334,7 +346,7 @@ export default function InvitationCodes() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expires_at">
+                <Label htmlFor="expires_at" className="text-foreground">
                   {t('codesExpiryLabel')} <span className="text-muted">({t('optional')})</span>
                 </Label>
                 <Input
@@ -350,7 +362,7 @@ export default function InvitationCodes() {
               <Button
                 variant="outline"
                 onClick={() => setIsDialogOpen(false)}
-                className="glass hover:border-accent"
+                className="glass text-foreground hover:border-accent"
               >
                 {t('cancel')}
               </Button>
@@ -358,7 +370,7 @@ export default function InvitationCodes() {
                 onClick={handleCreateCode}
                 disabled={isCreating}
                 variant="outline"
-                className="glass hover:border-accent"
+                className="glass text-foreground hover:border-accent"
               >
                 {isCreating ? (
                   <>
