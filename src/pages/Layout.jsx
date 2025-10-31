@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Eye, EyeOff } from 'react-feather';
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/api/entities";
 import {
@@ -20,13 +20,15 @@ import {
   ArrowRight,
   Shield,
   Lock,
-  CheckCircle
+  CheckCircle,
+  Ticket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 
 const LoginScreen = ({ theme, toggleTheme }) => {
   const { language, changeLanguage, t } = useLanguage();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -196,9 +198,20 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                 )}
               </Button>
 
-              <p className="text-center text-xs text-muted">
-                {t('loginDisclaimer')}
-              </p>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted">
+                  {t('loginNoAccount')}{' '}
+                  <button
+                    onClick={() => navigate('/register')}
+                    className="text-accent hover:underline font-subtitle"
+                  >
+                    {t('loginRegisterLink')}
+                  </button>
+                </p>
+                <p className="text-xs text-muted">
+                  {t('loginDisclaimer')}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -479,7 +492,8 @@ const AppLayout = ({ children }) => {
     { name: t("dashboard"), href: createPageUrl("Dashboard"), icon: LayoutDashboard },
     { name: t("departments"), href: createPageUrl("Departments"), icon: Building2 },
     { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
-    { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus }
+    { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
+    { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket }
   ];
 
   return (

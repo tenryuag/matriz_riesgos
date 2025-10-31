@@ -1,3 +1,4 @@
+import React from "react";
 import Layout from "./Layout.jsx";
 
 import Dashboard from "./Dashboard";
@@ -12,22 +13,28 @@ import DepartmentRisks from "./DepartmentRisks";
 
 import AllRisks from "./AllRisks";
 
+import Register from "./Register";
+
+import InvitationCodes from "./InvitationCodes";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
-    
+
     Dashboard: Dashboard,
-    
+
     Departments: Departments,
-    
+
     AddDepartment: AddDepartment,
-    
+
     AddRisk: AddRisk,
-    
+
     DepartmentRisks: DepartmentRisks,
-    
+
     AllRisks: AllRisks,
-    
+
+    InvitationCodes: InvitationCodes,
+
 }
 
 function _getCurrentPage(url) {
@@ -47,28 +54,68 @@ function _getCurrentPage(url) {
 function PagesContent() {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
-    
+    const [theme, setTheme] = React.useState("dark");
+
+    React.useEffect(() => {
+        const savedTheme = localStorage.getItem('app-theme') || 'dark';
+        setTheme(savedTheme);
+    }, []);
+
+    const toggleTheme = () => {
+        setTheme(currentTheme => {
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('app-theme', newTheme);
+            return newTheme;
+        });
+    };
+
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>            
-                
-                    <Route path="/" element={<Dashboard />} />
-                
-                
-                <Route path="/Dashboard" element={<Dashboard />} />
-                
-                <Route path="/Departments" element={<Departments />} />
-                
-                <Route path="/AddDepartment" element={<AddDepartment />} />
-                
-                <Route path="/AddRisk" element={<AddRisk />} />
-                
-                <Route path="/DepartmentRisks" element={<DepartmentRisks />} />
-                
-                <Route path="/AllRisks" element={<AllRisks />} />
-                
-            </Routes>
-        </Layout>
+        <Routes>
+            {/* Public routes - outside Layout */}
+            <Route path="/register" element={<Register theme={theme} toggleTheme={toggleTheme} />} />
+
+            {/* Protected routes - inside Layout */}
+            <Route path="/" element={
+                <Layout currentPageName={currentPage}>
+                    <Dashboard />
+                </Layout>
+            } />
+            <Route path="/Dashboard" element={
+                <Layout currentPageName={currentPage}>
+                    <Dashboard />
+                </Layout>
+            } />
+            <Route path="/Departments" element={
+                <Layout currentPageName={currentPage}>
+                    <Departments />
+                </Layout>
+            } />
+            <Route path="/AddDepartment" element={
+                <Layout currentPageName={currentPage}>
+                    <AddDepartment />
+                </Layout>
+            } />
+            <Route path="/AddRisk" element={
+                <Layout currentPageName={currentPage}>
+                    <AddRisk />
+                </Layout>
+            } />
+            <Route path="/DepartmentRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <DepartmentRisks />
+                </Layout>
+            } />
+            <Route path="/AllRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <AllRisks />
+                </Layout>
+            } />
+            <Route path="/InvitationCodes" element={
+                <Layout currentPageName={currentPage}>
+                    <InvitationCodes />
+                </Layout>
+            } />
+        </Routes>
     );
 }
 
