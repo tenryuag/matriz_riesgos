@@ -68,6 +68,52 @@ export default function InvitationCodes() {
     }
   }, [isAdmin]);
 
+  // Estilos CSS globales para el modal (sin imports de fuentes)
+  useEffect(() => {
+    // Crear elemento style si no existe
+    const styleId = 'invitation-codes-styles';
+    if (!document.getElementById(styleId)) {
+      const styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.textContent = `
+        .input-glass {
+          background: var(--input-bg);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid var(--card-border);
+          color: var(--foreground);
+          transition: all 0.2s ease;
+        }
+
+        .input-glass::placeholder {
+          color: var(--foreground-muted);
+        }
+
+        .input-glass:focus {
+          outline: none;
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
+        }
+
+        .glass {
+          background: var(--card-bg);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid var(--card-border);
+        }
+      `;
+      document.head.appendChild(styleElement);
+    }
+
+    // Cleanup: remover el style cuando el componente se desmonte
+    return () => {
+      const styleElement = document.getElementById(styleId);
+      if (styleElement) {
+        styleElement.remove();
+      }
+    };
+  }, []);
+
   const checkAdmin = async () => {
     try {
       const currentUser = await User.me();
@@ -217,52 +263,6 @@ export default function InvitationCodes() {
       </div>
     );
   }
-
-  // Estilos CSS globales para el modal (sin imports de fuentes)
-  React.useEffect(() => {
-    // Crear elemento style si no existe
-    const styleId = 'invitation-codes-styles';
-    if (!document.getElementById(styleId)) {
-      const styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      styleElement.textContent = `
-        .input-glass {
-          background: var(--input-bg);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--card-border);
-          color: var(--foreground);
-          transition: all 0.2s ease;
-        }
-
-        .input-glass::placeholder {
-          color: var(--foreground-muted);
-        }
-
-        .input-glass:focus {
-          outline: none;
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
-        }
-
-        .glass {
-          background: var(--card-bg);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--card-border);
-        }
-      `;
-      document.head.appendChild(styleElement);
-    }
-
-    // Cleanup: remover el style cuando el componente se desmonte
-    return () => {
-      const styleElement = document.getElementById(styleId);
-      if (styleElement) {
-        styleElement.remove();
-      }
-    };
-  }, []);
 
   return (
     <div className="space-y-6">
