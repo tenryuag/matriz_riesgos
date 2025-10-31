@@ -123,8 +123,115 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
     }
   ];
 
+  // Estilos del tema (igual que en Layout.jsx)
+  const themeStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Avenir+Next:wght@300;400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&display=swap');
+
+    :root {
+      --font-title: 'Frank Ruhl Libre', serif;
+      --font-subtitle: 'Avenir Next', sans-serif;
+      --font-body: 'Avenir Next', sans-serif;
+    }
+
+    .light {
+      --background-start: #FAF7F6;
+      --background-end: #EFEBE4;
+      --foreground: #121212;
+      --foreground-muted: rgba(18, 18, 18, 0.7);
+      --accent: #DDBF5A;
+      --accent-foreground: #121212;
+      --card-bg: rgba(255, 255, 255, 0.25);
+      --card-border: rgba(18, 18, 18, 0.15);
+      --sidebar-bg: rgba(250, 247, 246, 0.3);
+      --input-bg: rgba(255, 255, 255, 0.2);
+      --shadow: rgba(18, 18, 18, 0.1);
+      --table-bg: rgba(255, 255, 255, 0.3);
+      --table-row-hover: rgba(221, 191, 90, 0.1);
+    }
+
+    .dark {
+      --background-start: #121212;
+      --background-end: #1a1a1a;
+      --foreground: #FAF7F6;
+      --foreground-muted: rgba(250, 247, 246, 0.7);
+      --accent: #DDBF5A;
+      --accent-foreground: #121212;
+      --card-bg: rgba(250, 247, 246, 0.12);
+      --card-border: rgba(221, 191, 90, 0.3);
+      --sidebar-bg: rgba(250, 247, 246, 0.05);
+      --input-bg: rgba(250, 247, 246, 0.1);
+      --shadow: rgba(0, 0, 0, 0.3);
+      --table-bg: rgba(250, 247, 246, 0.02);
+      --table-row-hover: rgba(250, 247, 246, 0.05);
+    }
+
+    .font-body { font-family: var(--font-body); }
+    .font-title { font-family: var(--font-title); }
+    .font-subtitle { font-family: var(--font-subtitle); }
+
+    .text-foreground { color: var(--foreground); }
+    .text-muted { color: var(--foreground-muted); }
+    .text-accent { color: var(--accent); }
+    .text-accent-foreground { color: var(--accent-foreground); }
+
+    .bg-background { background: var(--background-start); }
+    .border-border { border-color: var(--card-border); }
+
+    .glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+    }
+
+    .input-glass {
+      background: var(--input-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+      color: var(--foreground);
+    }
+
+    .input-glass::placeholder {
+      color: var(--foreground-muted);
+    }
+
+    .input-glass:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
+    }
+
+    /* Estilos específicos para botones de tema e idioma */
+    .theme-button {
+      transition: all 0.2s ease;
+    }
+
+    .theme-button:hover {
+      background: var(--card-bg) !important;
+      border-color: var(--accent) !important;
+      color: var(--foreground) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(221, 191, 90, 0.2);
+    }
+
+    .theme-button:active {
+      transform: translateY(0);
+    }
+  `;
+
   return (
-    <div className="min-h-screen flex">
+    <div className={`min-h-screen ${theme} font-body`}>
+      <div
+        className="min-h-screen"
+        style={{
+          background: `linear-gradient(135deg, var(--background-start), var(--background-end))`
+        }}
+      >
+        <style>{themeStyles}</style>
+        <div className="min-h-screen flex"
+>
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div
@@ -176,7 +283,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass text-foreground border-2 theme-button"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 {language === 'es' ? 'ES' : 'EN'}
@@ -185,7 +292,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={toggleTheme}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass text-foreground border-2 theme-button"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
@@ -322,6 +429,8 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>

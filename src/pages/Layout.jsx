@@ -112,20 +112,20 @@ const LoginScreen = ({ theme, toggleTheme }) => {
           {/* Language & Theme Controls */}
           <div className="flex justify-between items-center">
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
-                variant="outline" 
+                variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 {language === 'es' ? 'ES' : 'EN'}
               </Button>
-              <Button 
-                onClick={toggleTheme} 
-                variant="outline" 
+              <Button
+                onClick={toggleTheme}
+                variant="outline"
                 size="sm"
-                className="glass hover:border-accent"
+                className="glass hover:border-accent text-foreground border-2"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
@@ -300,8 +300,8 @@ const AppLayout = ({ children }) => {
       --foreground-muted: rgba(250, 247, 246, 0.7);
       --accent: #DDBF5A;
       --accent-foreground: #121212;
-      --card-bg: rgba(250, 247, 246, 0.08);
-      --card-border: rgba(221, 191, 90, 0.2);
+      --card-bg: rgba(250, 247, 246, 0.12);
+      --card-border: rgba(221, 191, 90, 0.3);
       --sidebar-bg: rgba(250, 247, 246, 0.05);
       --input-bg: rgba(250, 247, 246, 0.1);
       --shadow: rgba(0, 0, 0, 0.3);
@@ -393,6 +393,23 @@ const AppLayout = ({ children }) => {
     .input-glass:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1), inset 0 2px 8px var(--shadow);
+    }
+
+    /* Estilos específicos para botones de tema e idioma */
+    .theme-button {
+      transition: all 0.2s ease;
+    }
+
+    .theme-button:hover {
+      background: var(--card-bg) !important;
+      border-color: var(--accent) !important;
+      color: var(--foreground) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(221, 191, 90, 0.2);
+    }
+
+    .theme-button:active {
+      transform: translateY(0);
     }
 
     .card-glass {
