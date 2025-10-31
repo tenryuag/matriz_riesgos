@@ -202,6 +202,23 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
     }
+
+    /* Estilos específicos para botones de tema e idioma */
+    .theme-button {
+      transition: all 0.2s ease;
+    }
+
+    .theme-button:hover {
+      background: var(--card-bg) !important;
+      border-color: var(--accent) !important;
+      color: var(--foreground) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(221, 191, 90, 0.2);
+    }
+
+    .theme-button:active {
+      transform: translateY(0);
+    }
   `;
 
   return (
@@ -266,7 +283,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent text-foreground border-2"
+                className="glass text-foreground border-2 theme-button"
               >
                 <Globe className="w-4 h-4 mr-2" />
                 {language === 'es' ? 'ES' : 'EN'}
@@ -275,7 +292,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 onClick={toggleTheme}
                 variant="outline"
                 size="sm"
-                className="glass hover:border-accent text-foreground border-2"
+                className="glass text-foreground border-2 theme-button"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
