@@ -225,6 +225,22 @@ La tabla `invitation_codes` incluye:
 
 ## 🐛 Solución de Problemas
 
+### Error: "Invalid login credentials" después del registro
+
+**Problema:** El usuario se registra correctamente pero no puede iniciar sesión.
+
+**Causa:** Supabase requiere confirmación de email por defecto.
+
+**Solución Rápida (para empezar):**
+1. Ve a Supabase Dashboard → **Authentication** → **Providers** → **Email**
+2. **Desactiva** la opción **"Confirm email"**
+3. Guarda los cambios
+4. Confirma manualmente los usuarios existentes o elimínalos para que se registren de nuevo
+
+**Para más detalles:** Ver el archivo `SOLUCION_EMAIL_CONFIRMATION.md` que explica 3 soluciones diferentes (desarrollo vs producción).
+
+---
+
 ### Error: "violates foreign key constraint invitation_codes_used_by_id_fkey"
 
 Este error ocurre si la tabla `invitation_codes` tiene una foreign key constraint que causa problemas de timing con `auth.users`.
