@@ -167,7 +167,7 @@ export default function InvitationCodes() {
               {t('codesCreateButton')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass border-border">
+          <DialogContent className="bg-background border-border max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">{t('codesCreateTitle')}</DialogTitle>
               <DialogDescription className="text-muted">
@@ -391,7 +391,7 @@ export default function InvitationCodes() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!codeToDelete} onOpenChange={() => setCodeToDelete(null)}>
-        <AlertDialogContent className="glass border-border">
+        <AlertDialogContent className="bg-background border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">{t('codesDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription className="text-muted">
