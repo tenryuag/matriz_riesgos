@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
   code TEXT NOT NULL UNIQUE,
   email TEXT,  -- opcional: vincular código a un email específico
   used BOOLEAN DEFAULT FALSE,
-  used_by_id UUID REFERENCES auth.users(id),
+  used_by_id UUID,  -- ID del usuario que usó el código (sin foreign key para evitar problemas de timing)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   expires_at TIMESTAMP WITH TIME ZONE,
-  created_by_id UUID REFERENCES auth.users(id),
+  created_by_id UUID,  -- ID del admin que creó el código (sin foreign key)
   notes TEXT  -- para guardar notas sobre el cliente/pago
 );
 
@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
 CREATE INDEX IF NOT EXISTS idx_invitation_codes_code ON invitation_codes(code);
 CREATE INDEX IF NOT EXISTS idx_invitation_codes_used ON invitation_codes(used);
 CREATE INDEX IF NOT EXISTS idx_invitation_codes_email ON invitation_codes(email);
+CREATE INDEX IF NOT EXISTS idx_invitation_codes_used_by_id ON invitation_codes(used_by_id);
 
 -- =====================================================
 -- INSTRUCCIONES DE INSTALACIÓN

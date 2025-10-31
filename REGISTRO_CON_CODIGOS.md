@@ -225,6 +225,27 @@ La tabla `invitation_codes` incluye:
 
 ## 🐛 Solución de Problemas
 
+### Error: "violates foreign key constraint invitation_codes_used_by_id_fkey"
+
+Este error ocurre si la tabla `invitation_codes` tiene una foreign key constraint que causa problemas de timing con `auth.users`.
+
+**Solución:**
+1. Ve a Supabase SQL Editor
+2. Ejecuta el archivo `supabase-fix-invitation-codes.sql` que elimina las foreign key constraints
+3. O ejecuta estos comandos manualmente:
+
+```sql
+ALTER TABLE invitation_codes
+DROP CONSTRAINT IF EXISTS invitation_codes_used_by_id_fkey;
+
+ALTER TABLE invitation_codes
+DROP CONSTRAINT IF EXISTS invitation_codes_created_by_id_fkey;
+```
+
+Esto elimina las constraints problemáticas y permite que el registro funcione correctamente.
+
+**Nota:** Si estás instalando por primera vez, usa el archivo `supabase-invitation-codes.sql` actualizado que ya NO incluye estas foreign keys.
+
 ### Error: "No se puede crear el código"
 - Verifica que ejecutaste el SQL en Supabase correctamente
 - Verifica que la función `generate_random_code()` exista
