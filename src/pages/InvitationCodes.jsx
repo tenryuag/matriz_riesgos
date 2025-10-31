@@ -77,29 +77,43 @@ export default function InvitationCodes() {
       styleElement.id = styleId;
       styleElement.textContent = `
         .input-glass {
-          background: var(--input-bg);
+          background: var(--input-bg, rgba(255, 255, 255, 0.12));
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--card-border);
-          color: var(--foreground);
+          border: 1px solid var(--card-border, rgba(18, 18, 18, 0.15));
+          color: var(--foreground, #121212);
           transition: all 0.2s ease;
         }
 
+        .dark .input-glass {
+          color: var(--foreground, #FAF7F6);
+        }
+
         .input-glass::placeholder {
-          color: var(--foreground-muted);
+          color: var(--foreground-muted, rgba(18, 18, 18, 0.6));
+        }
+
+        .dark .input-glass::placeholder {
+          color: var(--foreground-muted, rgba(250, 247, 246, 0.55));
         }
 
         .input-glass:focus {
           outline: none;
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
+          border-color: var(--accent, #DDBF5A);
+          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.12);
         }
 
         .glass {
-          background: var(--card-bg);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--card-border);
+          background: var(--card-bg, rgba(255, 255, 255, 0.18));
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--card-border, rgba(221, 191, 90, 0.35));
+          box-shadow: 0 8px 32px var(--shadow, rgba(0, 0, 0, 0.25));
+          color: var(--foreground, #121212);
+        }
+
+        .dark .glass {
+          color: var(--foreground, #FAF7F6);
         }
       `;
       document.head.appendChild(styleElement);
@@ -284,7 +298,7 @@ export default function InvitationCodes() {
               {t('codesCreateButton')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-background border-border max-h-[90vh] overflow-y-auto">
+          <DialogContent className="glass bg-background border-border max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">{t('codesCreateTitle')}</DialogTitle>
               <DialogDescription className="text-muted">
@@ -513,7 +527,7 @@ export default function InvitationCodes() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!codeToDelete} onOpenChange={() => setCodeToDelete(null)}>
-        <AlertDialogContent className="bg-background border-border">
+        <AlertDialogContent className="glass bg-background border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">{t('codesDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription className="text-muted">
