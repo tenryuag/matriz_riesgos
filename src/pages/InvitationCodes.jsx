@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { InvitationCode, User } from "@/api/entities";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import {
   Ticket,
   Plus,
@@ -10,23 +12,10 @@ import {
   Mail,
   Copy,
   Check,
-  RefreshCw,
   ShieldAlert
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,19 +33,11 @@ export default function InvitationCodes() {
   const [codes, setCodes] = useState([]);
   const [stats, setStats] = useState({ total: 0, used: 0, available: 0 });
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [codeToDelete, setCodeToDelete] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { t } = useLanguage();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    notes: '',
-    expires_at: ''
-  });
 
   useEffect(() => {
     checkAdmin();
@@ -67,88 +48,6 @@ export default function InvitationCodes() {
       loadData();
     }
   }, [isAdmin]);
-
-  // Estilos CSS globales para el modal (sin imports de fuentes)
-  useEffect(() => {
-    // Crear elemento style si no existe
-    const styleId = 'invitation-codes-styles';
-    if (!document.getElementById(styleId)) {
-      const styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      styleElement.textContent = `
-        /* Inputs con bordes más visibles y colores adaptativos */
-        .input-glass {
-          background: rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 2px solid rgba(18, 18, 18, 0.2);
-          color: #121212;
-          transition: all 0.2s ease;
-        }
-
-        .dark .input-glass {
-          background: rgba(250, 247, 246, 0.15);
-          border: 2px solid rgba(221, 191, 90, 0.4);
-          color: #FAF7F6;
-        }
-
-        .input-glass::placeholder {
-          color: rgba(18, 18, 18, 0.5);
-        }
-
-        .dark .input-glass::placeholder {
-          color: rgba(250, 247, 246, 0.5);
-        }
-
-        .input-glass:focus {
-          outline: none;
-          border-color: #DDBF5A;
-          box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.2);
-        }
-
-        /* Botones con bordes visibles sin movimiento en hover */
-        .glass {
-          background: rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 2px solid rgba(221, 191, 90, 0.4);
-          color: #121212;
-          transition: all 0.2s ease;
-        }
-
-        .dark .glass {
-          background: rgba(250, 247, 246, 0.15);
-          border: 2px solid rgba(221, 191, 90, 0.5);
-          color: #FAF7F6;
-        }
-
-        .glass:hover:not(:disabled) {
-          border-color: #DDBF5A;
-          box-shadow: 0 0 8px rgba(221, 191, 90, 0.4);
-        }
-
-        .glass:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        /* Modal con fondo más claro en dark mode */
-        .dark [role="dialog"] {
-          background: rgba(26, 26, 26, 0.98) !important;
-          border: 2px solid rgba(221, 191, 90, 0.5) !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
-    }
-
-    // Cleanup: remover el style cuando el componente se desmonte
-    return () => {
-      const styleElement = document.getElementById(styleId);
-      if (styleElement) {
-        styleElement.remove();
-      }
-    };
-  }, []);
 
   const checkAdmin = async () => {
     try {
@@ -181,26 +80,6 @@ export default function InvitationCodes() {
       toast.error(t('codesLoadError'));
     }
     setLoading(false);
-  };
-
-  const handleCreateCode = async () => {
-    setIsCreating(true);
-    try {
-      const newCode = await InvitationCode.create({
-        email: formData.email || null,
-        notes: formData.notes || null,
-        expires_at: formData.expires_at || null
-      });
-
-      toast.success(t('codeCreatedSuccess'));
-      setIsDialogOpen(false);
-      setFormData({ email: '', notes: '', expires_at: '' });
-      loadData();
-    } catch (error) {
-      console.error("Error creating code:", error);
-      toast.error(t('codeCreateError'));
-    }
-    setIsCreating(false);
   };
 
   const handleDeleteCode = async (id) => {
@@ -313,90 +192,12 @@ export default function InvitationCodes() {
           </h1>
           <p className="text-muted mt-2">{t('codesSubtitle')}</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="glass text-foreground hover:border-accent">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('codesCreateButton')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white dark:bg-zinc-900 border-2 border-accent/40 dark:border-accent/60 max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">{t('codesCreateTitle')}</DialogTitle>
-              <DialogDescription className="text-muted">
-                {t('codesCreateDescription')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">
-                  {t('codesEmailLabel')} <span className="text-muted">({t('optional')})</span>
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('codesEmailPlaceholder')}
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="input-glass"
-                />
-                <p className="text-xs text-muted">{t('codesEmailHelp')}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-foreground">
-                  {t('codesNotesLabel')} <span className="text-muted">({t('optional')})</span>
-                </Label>
-                <Textarea
-                  id="notes"
-                  placeholder={t('codesNotesPlaceholder')}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="input-glass resize-none"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expires_at" className="text-foreground">
-                  {t('codesExpiryLabel')} <span className="text-muted">({t('optional')})</span>
-                </Label>
-                <Input
-                  id="expires_at"
-                  type="datetime-local"
-                  value={formData.expires_at}
-                  onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  className="input-glass"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="glass text-foreground hover:border-accent"
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleCreateCode}
-                disabled={isCreating}
-                variant="outline"
-                className="glass text-foreground hover:border-accent"
-              >
-                {isCreating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    {t('creating')}
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t('create')}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Link to={createPageUrl("AddInvitationCode")}>
+          <Button variant="outline" className="glass hover:border-accent">
+            <Plus className="w-4 h-4 mr-2" />
+            {t('codesCreateButton')}
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
