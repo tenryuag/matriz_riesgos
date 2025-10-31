@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -244,38 +247,42 @@ export default function InvitationCodes() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
+                <Label htmlFor="email">
                   {t('codesEmailLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="email"
                   type="email"
                   placeholder={t('codesEmailPlaceholder')}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl"
+                  className="input-glass"
                 />
                 <p className="text-xs text-muted">{t('codesEmailHelp')}</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
+                <Label htmlFor="notes">
                   {t('codesNotesLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <textarea
+                </Label>
+                <Textarea
+                  id="notes"
                   placeholder={t('codesNotesPlaceholder')}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl min-h-[80px] resize-none"
+                  className="input-glass resize-none"
+                  rows={3}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-subtitle text-foreground">
+                <Label htmlFor="expires_at">
                   {t('codesExpiryLabel')} <span className="text-muted">({t('optional')})</span>
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="expires_at"
                   type="datetime-local"
                   value={formData.expires_at}
                   onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                  className="input-glass w-full p-3 rounded-xl"
+                  className="input-glass"
                 />
               </div>
             </div>
@@ -283,14 +290,15 @@ export default function InvitationCodes() {
               <Button
                 variant="outline"
                 onClick={() => setIsDialogOpen(false)}
-                className="glass"
+                className="glass hover:border-accent"
               >
                 {t('cancel')}
               </Button>
               <Button
                 onClick={handleCreateCode}
                 disabled={isCreating}
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                variant="outline"
+                className="glass hover:border-accent"
               >
                 {isCreating ? (
                   <>
