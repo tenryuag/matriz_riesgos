@@ -230,7 +230,7 @@ export default function InvitationCodes() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button variant="outline" className="glass hover:border-accent">
               <Plus className="w-4 h-4 mr-2" />
               {t('codesCreateButton')}
             </Button>
