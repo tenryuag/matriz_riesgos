@@ -17,7 +17,7 @@ import { supabase } from "@/api/supabaseClient";
 
 const PROBABILITY_LEVELS = ["Remoto (0-20%)", "Improbable (21-40%)", "Ocasional (41-60%)", "Probable (61-80%)", "Frecuente (81-100%)"];
 const IMPACT_LEVELS = ["Insignificante", "Menor", "Crítico", "Mayor", "Catastrófico"];
-const STRATEGY_LEVELS = ["Aceptar", "Reducir", "Transferir", "Evitar"];
+const STRATEGY_LEVELS = ["Aceptar", "Reducir", "Transferir"];
 const MITIGANT_IMPACT_OPTIONS = ["Mitiga la probabilidad", "Mitiga el impacto", "Mitiga la probabilidad e impacto"];
 
 export default function AddRisk() {
