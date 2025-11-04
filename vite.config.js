@@ -8,6 +8,21 @@ export default defineConfig({
   server: {
     allowedHosts: true
   },
+  preview: {
+    port: 4173,
+    strictPort: false,
+    // Configuración para SPA - redirigir todas las rutas a index.html
+    proxy: {
+      '/': {
+        target: 'http://localhost:4173',
+        bypass: (req) => {
+          if (req.url.indexOf('.') === -1) {
+            return '/index.html'
+          }
+        }
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
