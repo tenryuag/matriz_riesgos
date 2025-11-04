@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'react-feather';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import {
   LayoutDashboard,
   Building2,
@@ -233,6 +234,27 @@ const AppLayout = ({ children }) => {
     loadUser();
     const savedTheme = localStorage.getItem('app-theme') || 'dark';
     setTheme(savedTheme);
+
+    // Listener para cambios en el estado de autenticación
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        // Si la sesión expiró o el usuario cerró sesión
+        setUser(null);
+        setIsAdmin(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Si el usuario inició sesión
+        loadUser();
+      } else if (!session) {
+        // Cualquier otro caso donde no haya sesión
+        setUser(null);
+        setIsAdmin(false);
+      }
+    });
+
+    // Cleanup del listener cuando el componente se desmonte
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   const toggleTheme = () => {
