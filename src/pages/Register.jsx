@@ -395,12 +395,12 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
               <Button
                 onClick={handleRegister}
                 disabled={isLoading || success}
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 py-4 text-lg font-subtitle"
+                className="w-full bg-accent text-[#121212] dark:text-white hover:bg-accent/90 py-4 text-lg font-subtitle"
                 size="lg"
               >
                 {isLoading ? (
                   <div className="flex items-center">
-                    <div className="w-5 h-5 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin mr-3" />
+                    <div className="w-5 h-5 border-2 border-white border-t-gray-300 rounded-full animate-spin mr-3" />
                     {t('registerButtonLoading')}
                   </div>
                 ) : success ? (
