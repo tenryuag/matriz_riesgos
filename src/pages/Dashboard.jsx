@@ -68,7 +68,14 @@ export default function Dashboard() {
       acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {});
-    return { total, byLevel };
+
+    // Count high risks based ONLY on residual level (not inherent)
+    const highRisks = risks.filter(risk => {
+      if (!risk.residual_level) return false;
+      return risk.residual_level === t('high') || risk.residual_level === t('intolerable');
+    }).length;
+
+    return { total, byLevel, highRisks };
   };
 
   if (loading) {
@@ -160,7 +167,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-title text-red-500">
-              {(stats.byLevel[t('high')] || 0) + (stats.byLevel[t('intolerable')] || 0)}
+              {stats.highRisks}
             </div>
             <p className="text-xs text-muted mt-1">{t('immediateAttention')}</p>
           </CardContent>
