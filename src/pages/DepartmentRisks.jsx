@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useLanguage } from '@/components/LanguageContext';
+import { normalizeRiskLevel, getRiskLevelColorClasses } from '@/lib/utils';
 
 export default function DepartmentRisks() {
   const navigate = useNavigate();
@@ -76,19 +77,9 @@ export default function DepartmentRisks() {
   useEffect(() => { filterRisks(); }, [filterRisks]);
 
   const getRiskLevelColor = (level) => {
-    const colors = {
-      [t('intolerable')]:
-        'bg-red-300 text-red-900 border border-red-500 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/30',
-      [t('high')]:
-        'bg-orange-300 text-orange-900 border border-orange-500 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-400/30',
-      [t('medium')]:
-        'bg-amber-300 text-amber-900 border border-amber-500 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/30',
-      [t('low')]:
-        'bg-blue-300 text-blue-900 border border-blue-500 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30',
-      [t('tolerable')]:
-        'bg-green-300 text-green-900 border border-green-500 dark:bg-green-500/20 dark:text-green-300 dark:border-green-400/30',
-    };
-    return colors[level] || 'glass';
+    const normalized = normalizeRiskLevel(level);
+    const colors = getRiskLevelColorClasses();
+    return colors[normalized] || 'glass';
   };
   
   if (loading) {
