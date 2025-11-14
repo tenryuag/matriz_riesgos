@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from '@/components/LanguageContext';
+import { isHighRisk } from '@/lib/utils';
 
 export default function Departments() {
   const [departments, setDepartments] = useState([]);
@@ -58,8 +59,13 @@ export default function Departments() {
       acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {});
-    
-    const highRisks = (stats[t('high')] || 0) + (stats[t('veryHigh')] || 0);
+
+    // Count high risks using language-independent comparison
+    const highRisks = departmentRisks.filter(risk => {
+      const level = risk.residual_level || risk.inherent_level;
+      return level && isHighRisk(level);
+    }).length;
+
     return { total: departmentRisks.length, highRisks };
   };
 

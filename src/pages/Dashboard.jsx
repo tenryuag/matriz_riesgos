@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/components/LanguageContext';
+import { normalizeRiskLevel, isHighRisk, isLowRisk, getRiskLevelColorClasses } from '@/lib/utils';
 
 export default function Dashboard() {
   const [departments, setDepartments] = useState([]);
@@ -46,19 +47,9 @@ export default function Dashboard() {
   };
 
   const getRiskLevelColor = (level) => {
-    const colors = {
-      [t('intolerable')]:
-        'bg-red-300 text-red-900 border border-red-500 dark:bg-red-500/20 dark:text-red-300 dark:border-red-400/30',
-      [t('high')]:
-        'bg-orange-300 text-orange-900 border border-orange-500 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-400/30',
-      [t('medium')]:
-        'bg-amber-300 text-amber-900 border border-amber-500 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/30',
-      [t('low')]:
-        'bg-blue-300 text-blue-900 border border-blue-500 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30',
-      [t('tolerable')]:
-        'bg-green-300 text-green-900 border border-green-500 dark:bg-green-500/20 dark:text-green-300 dark:border-green-400/30',
-    };
-    return colors[level] || 'glass';
+    const normalized = normalizeRiskLevel(level);
+    const colors = getRiskLevelColorClasses();
+    return colors[normalized] || 'glass';
   };
 
   const getRiskStats = () => {
@@ -68,7 +59,21 @@ export default function Dashboard() {
       acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {});
-    return { total, byLevel };
+
+    // Count high risks based ONLY on residual level (not inherent)
+    // Using language-independent comparison
+    const highRisks = risks.filter(risk => {
+      if (!risk.residual_level) return false;
+      return isHighRisk(risk.residual_level);
+    }).length;
+
+    // Count low risks using language-independent comparison
+    const lowRisks = risks.filter(risk => {
+      const level = risk.residual_level || risk.inherent_level;
+      return level && isLowRisk(level);
+    }).length;
+
+    return { total, byLevel, highRisks, lowRisks };
   };
 
   if (loading) {
@@ -160,7 +165,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-title text-red-500">
-              {(stats.byLevel[t('high')] || 0) + (stats.byLevel[t('intolerable')] || 0)}
+              {stats.highRisks}
             </div>
             <p className="text-xs text-muted mt-1">{t('immediateAttention')}</p>
           </CardContent>
@@ -176,7 +181,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-title text-green-600">
-              {(stats.byLevel[t('low')] || 0) + (stats.byLevel[t('tolerable')] || 0)}
+              {stats.lowRisks}
             </div>
             <p className="text-xs text-muted mt-1">{t('underControl')}</p>
           </CardContent>
