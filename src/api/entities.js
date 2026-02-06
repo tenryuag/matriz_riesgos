@@ -175,6 +175,35 @@ export const User = {
       throw err
     }
   }
+  ,
+
+  // 🔹 Recuperar contraseña (enviar correo)
+  async recoverPassword(email) {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/update-password',
+      })
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al recuperar contraseña:', err.message)
+      throw err
+    }
+  },
+
+  // 🔹 Actualizar contraseña (usuario autenticado)
+  async updatePassword(newPassword) {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Error al actualizar contraseña:', err.message)
+      throw err
+    }
+  }
 }
 
 // 🔹 Gestión de códigos de invitación

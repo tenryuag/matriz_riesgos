@@ -54,6 +54,30 @@ const translations = {
     loginFeature3Description: "Herramientas avanzadas para la gestión completa de riesgos",
     loginNoAccount: "¿No tienes cuenta?",
     loginRegisterLink: "Regístrate aquí",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    loginError: "Error al iniciar sesión",
+    invalidCredentials: "Email o contraseña incorrectos",
+
+
+    // Forgot Password & Update Password
+    recoverPasswordTitle: "Recuperar Contraseña",
+    recoverPasswordSubtitle: "Ingresa tu email para recibir un enlace de recuperación.",
+    emailRequired: "El email es obligatorio",
+    recoverPasswordSuccess: "Revisa tu email para el enlace de recuperación",
+    recoverPasswordError: "Error al enviar el email. Intenta nuevamente.",
+    sending: "Enviando...",
+    emailSent: "Email Enviado",
+    sendRecoveryLink: "Enviar Enlace",
+    backToLogin: "Volver al Login",
+    
+    updatePasswordTitle: "Nueva Contraseña",
+    updatePasswordSubtitle: "Ingresa tu nueva contraseña continuación.",
+    passwordUpdatedSuccess: "Contraseña actualizada exitosamente",
+    updatePasswordError: "Error al actualizar contraseña. Intenta nuevamente.",
+    updating: "Actualizando...",
+    updated: "Actualizada",
+    updatePassword: "Actualizar Contraseña",
+
 
     // Register Page
     registerTitle: "Crear Nueva Cuenta",
@@ -333,6 +357,30 @@ const translations = {
     loginFeature3Description: "Advanced tools for comprehensive risk management",
     loginNoAccount: "Don't have an account?",
     loginRegisterLink: "Register here",
+    forgotPassword: "Forgot Password?",
+    loginError: "Login error",
+    invalidCredentials: "Invalid email or password",
+
+
+    // Forgot Password & Update Password
+    recoverPasswordTitle: "Recover Password",
+    recoverPasswordSubtitle: "Enter your email to receive a recovery link.",
+    emailRequired: "Email is required",
+    recoverPasswordSuccess: "Check your email for the recovery link",
+    recoverPasswordError: "Error sending email. Please try again.",
+    sending: "Sending...",
+    emailSent: "Email Sent",
+    sendRecoveryLink: "Send Recovery Link",
+    backToLogin: "Back to Login",
+
+    updatePasswordTitle: "New Password",
+    updatePasswordSubtitle: "Enter your new password below.",
+    passwordUpdatedSuccess: "Password updated successfully",
+    updatePasswordError: "Error updating password. Please try again.",
+    updating: "Updating...",
+    updated: "Updated",
+    updatePassword: "Update Password",
+
 
     // Register Page
     registerTitle: "Create New Account",
@@ -465,8 +513,6 @@ const translations = {
     filtersAndSearch: "Filters and Search",
     searchRisksPlaceholder: "Search risks...",
     riskLevelLabel: "Risk level",
-    allLevels: "All levels",
-    threatTypeLabel: "Threat type",
     allThreats: "All threats",
     riskList: "Risk List ({count})",
     tableDescription: "Description",
@@ -534,7 +580,6 @@ const translations = {
     codesExpiryLabel: "Expiration Date",
     optional: "optional",
     create: "Create",
-    creating: "Creating...",
     codesStatTotal: "Total Codes",
     codesStatUsed: "Codes Used",
     codesStatAvailable: "Codes Available",

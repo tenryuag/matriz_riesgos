@@ -35,13 +35,22 @@ const LoginScreen = ({ theme, toggleTheme }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const [error, setError] = useState('');
+
   const handleLogin = async () => {
     setIsLoading(true);
+    setError('');
     try {
       await User.login(email, password);
       window.location.reload();
     } catch (error) {
       console.error('Login error:', error);
+      // Check for specific error message
+      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid') || error.message.includes('credential')) {
+        setError(t('invalidCredentials'));
+      } else {
+        setError(t('loginError'));
+      }
       setIsLoading(false);
     }
   };
@@ -140,6 +149,14 @@ const LoginScreen = ({ theme, toggleTheme }) => {
               <p className="text-muted text-lg">{t('loginWelcomeSubtitle')}</p>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center">
+                <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Features for Mobile */}
             <div className="lg:hidden space-y-4">
               {features.map((feature, index) => (
@@ -161,7 +178,10 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                 type="email"
                 placeholder={t('Email')}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
                 className="input-glass w-full p-3 rounded-xl"
               />
               <div className="relative">
@@ -169,7 +189,10 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                   type={showPassword ? "text" : "password"}
                   placeholder={t('Contraseña')}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError('');
+                  }}
                   className="input-glass w-full p-3 rounded-xl pr-12"
                 />
                 <button
@@ -179,6 +202,14 @@ const LoginScreen = ({ theme, toggleTheme }) => {
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </div>
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-foreground-muted hover:text-accent transition-colors font-subtitle"
+                >
+                  {t('forgotPassword') || 'Forgot Password?'}
+                </Link>
               </div>
               <Button
                 onClick={handleLogin}
