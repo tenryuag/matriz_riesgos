@@ -19,6 +19,10 @@ import InvitationCodes from "./InvitationCodes";
 
 import AddInvitationCode from "./AddInvitationCode";
 
+import ForgotPassword from "./ForgotPassword";
+
+import UpdatePassword from "./UpdatePassword";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -77,6 +81,8 @@ function PagesContent() {
         <Routes>
             {/* Public routes - outside Layout */}
             <Route path="/register" element={<Register theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/forgot-password" element={<ForgotPassword theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/update-password" element={<UpdatePassword theme={theme} toggleTheme={toggleTheme} />} />
 
             {/* Protected routes - inside Layout */}
             <Route path="/" element={
