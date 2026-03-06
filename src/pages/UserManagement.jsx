@@ -390,26 +390,30 @@ export default function UserManagement() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={!!actionUser} onOpenChange={() => setActionUser(null)}>
-        <AlertDialogContent className="glass bg-background border-border">
+        <AlertDialogContent className="border border-white/10 rounded-xl" style={{ backgroundColor: '#1a1a2e' }}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">
+            <AlertDialogTitle className="text-lg" style={{ color: '#f0f0f0' }}>
               {actionUser?.action === 'suspend'
                 ? t('usersSuspendTitle')
                 : t('usersReactivateTitle')}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-muted">
+            <AlertDialogDescription style={{ color: '#a0a0b0' }}>
               {actionUser?.action === 'suspend'
                 ? t('usersSuspendDescription')
                 : t('usersReactivateDescription')}
               {actionUser && (
-                <span className="block mt-2 text-accent font-mono text-sm">
+                <span className="block mt-2 font-mono text-sm" style={{ color: '#f0c060' }}>
                   {actionUser.user.email}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="glass" disabled={processing}>
+            <AlertDialogCancel
+              className="border border-white/20 hover:bg-white/10"
+              style={{ color: '#d0d0d0', backgroundColor: 'transparent' }}
+              disabled={processing}
+            >
               {t('cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
