@@ -19,6 +19,8 @@ import InvitationCodes from "./InvitationCodes";
 
 import AddInvitationCode from "./AddInvitationCode";
 
+import UserManagement from "./UserManagement";
+
 import ForgotPassword from "./ForgotPassword";
 
 import UpdatePassword from "./UpdatePassword";
@@ -42,6 +44,8 @@ const PAGES = {
     InvitationCodes: InvitationCodes,
 
     AddInvitationCode: AddInvitationCode,
+
+    UserManagement: UserManagement,
 
 }
 
@@ -128,6 +132,11 @@ function PagesContent() {
             <Route path="/AddInvitationCode" element={
                 <Layout currentPageName={currentPage}>
                     <AddInvitationCode />
+                </Layout>
+            } />
+            <Route path="/UserManagement" element={
+                <Layout currentPageName={currentPage}>
+                    <UserManagement />
                 </Layout>
             } />
         </Routes>

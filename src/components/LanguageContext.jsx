@@ -57,6 +57,7 @@ const translations = {
     forgotPassword: "¿Olvidaste tu contraseña?",
     loginError: "Error al iniciar sesión",
     invalidCredentials: "Email o contraseña incorrectos",
+    accountSuspended: "Tu cuenta ha sido suspendida. Contacta al administrador.",
 
 
     // Forgot Password & Update Password
@@ -304,6 +305,39 @@ const translations = {
     codeDeleteError: "Error al eliminar el código",
     codeCopied: "Código copiado al portapapeles",
     codeCopyError: "Error al copiar el código",
+
+    // User Management Page
+    userManagement: "Gestión de Usuarios",
+    usersTitle: "Gestión de Usuarios",
+    usersSubtitle: "Administra las cuentas de usuario del sistema",
+    usersRefresh: "Actualizar",
+    usersStatTotal: "Total de Usuarios",
+    usersStatActive: "Usuarios Activos",
+    usersStatSuspended: "Usuarios Suspendidos",
+    usersSearchPlaceholder: "Buscar por nombre o email...",
+    usersListTitle: "Todos los Usuarios",
+    usersShowingCount: "Mostrando {count} de {total} usuarios",
+    usersEmpty: "No hay usuarios registrados",
+    usersTableName: "Nombre",
+    usersTableEmail: "Email",
+    usersTableRole: "Rol",
+    usersTableStatus: "Estado",
+    usersTableCreated: "Registrado",
+    usersTableLastLogin: "Último Acceso",
+    usersStatusActive: "Activo",
+    usersStatusSuspended: "Suspendido",
+    usersYou: "(Tú)",
+    usersSuspendBtn: "Suspender",
+    usersReactivateBtn: "Reactivar",
+    usersSuspendTitle: "¿Suspender usuario?",
+    usersSuspendDescription: "El usuario no podrá iniciar sesión hasta que sea reactivado. Sus datos se conservarán.",
+    usersReactivateTitle: "¿Reactivar usuario?",
+    usersReactivateDescription: "El usuario podrá iniciar sesión nuevamente.",
+    userSuspendedSuccess: "Usuario suspendido exitosamente",
+    userSuspendError: "Error al suspender el usuario",
+    userReactivatedSuccess: "Usuario reactivado exitosamente",
+    userReactivateError: "Error al reactivar el usuario",
+    usersLoadError: "Error al cargar los usuarios",
   },
   en: {
     // General
@@ -360,6 +394,7 @@ const translations = {
     forgotPassword: "Forgot Password?",
     loginError: "Login error",
     invalidCredentials: "Invalid email or password",
+    accountSuspended: "Your account has been suspended. Please contact the administrator.",
 
 
     // Forgot Password & Update Password
@@ -605,6 +640,39 @@ const translations = {
     codeDeleteError: "Error deleting code",
     codeCopied: "Code copied to clipboard",
     codeCopyError: "Error copying code",
+
+    // User Management Page
+    userManagement: "User Management",
+    usersTitle: "User Management",
+    usersSubtitle: "Manage system user accounts",
+    usersRefresh: "Refresh",
+    usersStatTotal: "Total Users",
+    usersStatActive: "Active Users",
+    usersStatSuspended: "Suspended Users",
+    usersSearchPlaceholder: "Search by name or email...",
+    usersListTitle: "All Users",
+    usersShowingCount: "Showing {count} of {total} users",
+    usersEmpty: "No users registered",
+    usersTableName: "Name",
+    usersTableEmail: "Email",
+    usersTableRole: "Role",
+    usersTableStatus: "Status",
+    usersTableCreated: "Registered",
+    usersTableLastLogin: "Last Login",
+    usersStatusActive: "Active",
+    usersStatusSuspended: "Suspended",
+    usersYou: "(You)",
+    usersSuspendBtn: "Suspend",
+    usersReactivateBtn: "Reactivate",
+    usersSuspendTitle: "Suspend user?",
+    usersSuspendDescription: "The user will not be able to sign in until reactivated. Their data will be preserved.",
+    usersReactivateTitle: "Reactivate user?",
+    usersReactivateDescription: "The user will be able to sign in again.",
+    userSuspendedSuccess: "User suspended successfully",
+    userSuspendError: "Error suspending user",
+    userReactivatedSuccess: "User reactivated successfully",
+    userReactivateError: "Error reactivating user",
+    usersLoadError: "Error loading users",
   }
 };
 

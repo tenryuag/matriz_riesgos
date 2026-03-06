@@ -22,7 +22,8 @@ import {
   Shield,
   Lock,
   CheckCircle,
-  Ticket
+  Ticket,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -45,8 +46,21 @@ const LoginScreen = ({ theme, toggleTheme }) => {
       window.location.reload();
     } catch (error) {
       console.error('Login error:', error);
-      // Check for specific error message
-      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid') || error.message.includes('credential')) {
+      
+      // Check for banned/suspended user
+      // Supabase may return different errors depending on configuration:
+      // - 403 with "User is banned" (standard)
+      // - 500 with "Database error querying schema" (some configurations)
+      const msg = (error.message || '').toLowerCase();
+      const isBanned = msg.includes('banned') || 
+                       msg.includes('ban') ||
+                       msg.includes('database error querying schema') ||
+                       error.status === 403 ||
+                       error.code === 'user_banned';
+      
+      if (isBanned) {
+        setError(t('accountSuspended'));
+      } else if (msg.includes('invalid login credentials') || msg.includes('invalid') || msg.includes('credential')) {
         setError(t('invalidCredentials'));
       } else {
         setError(t('loginError'));
@@ -572,7 +586,8 @@ const AppLayout = ({ children }) => {
     { name: t("departments"), href: createPageUrl("Departments"), icon: Building2 },
     { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
     { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
-    { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true }
+    { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true },
+    { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true }
   ];
 
   // Filtrar items del menú según el rol del usuario
