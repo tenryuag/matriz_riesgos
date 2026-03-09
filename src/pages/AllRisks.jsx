@@ -122,6 +122,24 @@ export default function AllRisks() {
     return colors[impact] || 'border-transparent text-muted';
   };
 
+  const getControlGradeColor = (grade) => {
+    switch (grade) {
+      case 'Fuerte': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      case 'Medio': return 'bg-amber-500/20 text-amber-300 border-amber-400/30';
+      case 'Débil': return 'bg-red-500/20 text-red-300 border-red-400/30';
+      default: return 'border-transparent text-muted';
+    }
+  };
+
+  const getControlGradeLabel = (grade) => {
+    switch (grade) {
+      case 'Fuerte': return t('gradeStrong');
+      case 'Medio': return t('gradeMedium');
+      case 'Débil': return t('gradeWeak');
+      default: return '';
+    }
+  };
+
   const exportToExcel = useCallback(() => {
     if (!filteredRisks || filteredRisks.length === 0) {
       alert(t('noRisksToExport') || 'No hay riesgos para exportar');
@@ -139,10 +157,16 @@ export default function AllRisks() {
       'Estrategia': r.risk_strategy || '',
       'Mitigante 1': r.mitigant_1 || '',
       'Impacto mitigante 1': r.mitigant_impact_1 || '',
+      'Tipo Control 1': r.control_type_1 || '',
+      'Grado Control 1': r.control_grade_1 || '',
       'Mitigante 2': r.mitigant_2 || '',
       'Impacto mitigante 2': r.mitigant_impact_2 || '',
+      'Tipo Control 2': r.control_type_2 || '',
+      'Grado Control 2': r.control_grade_2 || '',
       'Mitigante 3': r.mitigant_3 || '',
       'Impacto mitigante 3': r.mitigant_impact_3 || '',
+      'Tipo Control 3': r.control_type_3 || '',
+      'Grado Control 3': r.control_grade_3 || '',
       'Prob. residual': r.residual_probability || '',
       'Impacto residual': r.residual_impact || '',
       'Nivel residual': r.residual_level || '',
@@ -256,10 +280,16 @@ export default function AllRisks() {
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableHandling')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableMitigant1')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableImpact1')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlType1')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlGrade1')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableMitigant2')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableImpact2')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlType2')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlGrade2')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableMitigant3')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableImpact3')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlType3')}</TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableControlGrade3')}</TableHead>
                     <TableHead colSpan={3} className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('residualRisk')}</TableHead>
                   </TableRow>
                   <TableRow className="border-card-border hover:bg-transparent">
@@ -292,10 +322,16 @@ export default function AllRisks() {
                       <TableCell className="text-muted align-top border-r border-card-border">{risk.risk_strategy ? t(`strategy${risk.risk_strategy}`) : ''}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_1}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_impact_1}</TableCell>
+                      <TableCell className="text-center text-muted align-top border-r border-card-border text-xs">{risk.control_type_1}</TableCell>
+                      <TableCell className="text-center align-top border-r border-card-border">{risk.control_grade_1 && <span className={`px-2 py-1 rounded-full text-xs border ${getControlGradeColor(risk.control_grade_1)}`}>{getControlGradeLabel(risk.control_grade_1)}</span>}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_2}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_impact_2}</TableCell>
+                      <TableCell className="text-center text-muted align-top border-r border-card-border text-xs">{risk.control_type_2}</TableCell>
+                      <TableCell className="text-center align-top border-r border-card-border">{risk.control_grade_2 && <span className={`px-2 py-1 rounded-full text-xs border ${getControlGradeColor(risk.control_grade_2)}`}>{getControlGradeLabel(risk.control_grade_2)}</span>}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_3}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_impact_3}</TableCell>
+                      <TableCell className="text-center text-muted align-top border-r border-card-border text-xs">{risk.control_type_3}</TableCell>
+                      <TableCell className="text-center align-top border-r border-card-border">{risk.control_grade_3 && <span className={`px-2 py-1 rounded-full text-xs border ${getControlGradeColor(risk.control_grade_3)}`}>{getControlGradeLabel(risk.control_grade_3)}</span>}</TableCell>
                       <TableCell className="text-center border-r border-card-border align-top">
                         {risk.residual_probability && <span className={`px-2 py-1 rounded-full text-xs border ${getProbabilityColor(t(risk.residual_probability))}`}>{t(risk.residual_probability)}</span>}
                       </TableCell>

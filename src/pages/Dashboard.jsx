@@ -55,21 +55,21 @@ export default function Dashboard() {
   const getRiskStats = () => {
     const total = risks.length;
     const byLevel = risks.reduce((acc, risk) => {
-      const level = risk.residual_level || risk.inherent_level || t('unclassified');
+      const level = risk.inherent_level || t('unclassified');
       acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {});
 
-    // Count high risks based ONLY on residual level (not inherent)
+    // Count high risks based on inherent level
     // Using language-independent comparison
     const highRisks = risks.filter(risk => {
-      if (!risk.residual_level) return false;
-      return isHighRisk(risk.residual_level);
+      if (!risk.inherent_level) return false;
+      return isHighRisk(risk.inherent_level);
     }).length;
 
-    // Count low risks using language-independent comparison
+    // Count low risks based on inherent level
     const lowRisks = risks.filter(risk => {
-      const level = risk.residual_level || risk.inherent_level;
+      const level = risk.inherent_level;
       return level && isLowRisk(level);
     }).length;
 

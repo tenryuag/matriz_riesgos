@@ -4,7 +4,7 @@ import { Risk } from "@/api/entities";
 import { Department } from "@/api/entities";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { AlertTriangle, ArrowLeft, Save, Calculator } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Save, Calculator, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,16 +21,39 @@ const IMPACT_LEVELS = ["Insignificante", "Menor", "Crítico", "Mayor", "Catastr�
 const STRATEGY_LEVELS = ["Aceptar", "Reducir", "Transferir"];
 const MITIGANT_IMPACT_OPTIONS = ["Mitiga la probabilidad", "Mitiga el impacto", "Mitiga la probabilidad e impacto"];
 
+// Opciones de Evaluación del Control
+const CONTROL_TYPES = ["Control Preventivo", "Control Correctivo", "Control Detectivo"];
+const PROCESS_TYPES = ["Manual", "Automatizado", "Combinado"];
+const YES_NO_OPTIONS = ["Sí", "No"];
+
+// Puntajes para el cálculo del Grado de Control
+const CONTROL_TYPE_SCORES = { "Control Preventivo": 0.30, "Control Correctivo": 0.05, "Control Detectivo": 0.15 };
+const PROCESS_TYPE_SCORES = { "Manual": 0.10, "Automatizado": 0.40, "Combinado": 0.25 };
+const YES_SCORE = 0.10;
+const NO_SCORE = 0.01;
+
 export default function AddRisk() {
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [editingRisk, setEditingRisk] = useState(null);
   const [formData, setFormData] = useState({
-    department_id: "", threat_type: "", description: "", // Removed 'area' field
+    department_id: "", threat_type: "", description: "",
     inherent_probability: "", inherent_impact: "", inherent_level: "",
     risk_strategy: "", mitigant_1: "", mitigant_impact_1: "",
     mitigant_2: "", mitigant_impact_2: "", mitigant_3: "", mitigant_impact_3: "",
-    residual_probability: "", residual_impact: "", residual_level: ""
+    residual_probability: "", residual_impact: "", residual_level: "",
+    // Campos de Evaluación del Control — Mitigante 1
+    control_type_1: "", control_documented_1: "", process_type_1: "",
+    control_evidence_1: "", control_responsible_1: "", control_frequency_1: "",
+    control_grade_1: "",
+    // Campos de Evaluación del Control — Mitigante 2
+    control_type_2: "", control_documented_2: "", process_type_2: "",
+    control_evidence_2: "", control_responsible_2: "", control_frequency_2: "",
+    control_grade_2: "",
+    // Campos de Evaluación del Control — Mitigante 3
+    control_type_3: "", control_documented_3: "", process_type_3: "",
+    control_evidence_3: "", control_responsible_3: "", control_frequency_3: "",
+    control_grade_3: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -79,6 +102,35 @@ export default function AddRisk() {
     if (score <= 16) return t('high');
     return t('intolerable');
   };
+
+  const calculateControlGrade = (data, num) => {
+    const controlType = data[`control_type_${num}`];
+    const documented = data[`control_documented_${num}`];
+    const processType = data[`process_type_${num}`];
+    const evidence = data[`control_evidence_${num}`];
+    const responsible = data[`control_responsible_${num}`];
+    const frequency = data[`control_frequency_${num}`];
+
+    // Solo calcular si todos los campos tienen valor
+    if (!controlType || !documented || !processType || !evidence || !responsible || !frequency) {
+      return "";
+    }
+
+    const total =
+      (CONTROL_TYPE_SCORES[controlType] || 0) +
+      (documented === "Sí" ? YES_SCORE : NO_SCORE) +
+      (PROCESS_TYPE_SCORES[processType] || 0) +
+      (evidence === "Sí" ? YES_SCORE : NO_SCORE) +
+      (responsible === "Sí" ? YES_SCORE : NO_SCORE) +
+      (frequency === "Sí" ? YES_SCORE : NO_SCORE);
+
+    if (total >= 1.10) return "Fuerte";
+    if (total >= 0.70) return "Medio";
+    return "Débil";
+  };
+
+  // Campos de control que disparan el recálculo
+  const CONTROL_FIELDS = ['control_type', 'control_documented', 'process_type', 'control_evidence', 'control_responsible', 'control_frequency'];
   
   const handleChange = (field, value) => {
     setFormData(prev => {
@@ -89,6 +141,12 @@ export default function AddRisk() {
       if (field === "residual_probability" || field === "residual_impact") {
         updated.residual_level = calculateRiskLevel(field === "residual_probability" ? value : prev.residual_probability, field === "residual_impact" ? value : prev.residual_impact);
       }
+      // Recalcular grado de control si se cambió un sub-criterio
+      for (const num of [1, 2, 3]) {
+        if (CONTROL_FIELDS.some(f => field === `${f}_${num}`)) {
+          updated[`control_grade_${num}`] = calculateControlGrade(updated, num);
+        }
+      }
       return updated;
     });
     if (error) setError("");
@@ -96,7 +154,7 @@ export default function AddRisk() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['department_id', 'threat_type', 'description']; // Removed 'area' from required fields
+    const requiredFields = ['department_id', 'threat_type', 'description'];
     if (requiredFields.some(field => !formData[field]?.trim())) {
       setError(t('errorRequiredFields'));
       return;
@@ -128,6 +186,24 @@ export default function AddRisk() {
     return colors[normalized] || 'glass';
   };
 
+  const getControlGradeColor = (grade) => {
+    switch (grade) {
+      case 'Fuerte': return 'bg-green-500/20 text-green-300 border-green-400/40';
+      case 'Medio': return 'bg-amber-500/20 text-amber-300 border-amber-400/40';
+      case 'Débil': return 'bg-red-500/20 text-red-300 border-red-400/40';
+      default: return 'glass';
+    }
+  };
+
+  const getControlGradeLabel = (grade) => {
+    switch (grade) {
+      case 'Fuerte': return t('gradeStrong');
+      case 'Medio': return t('gradeMedium');
+      case 'Débil': return t('gradeWeak');
+      default: return '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -154,14 +230,13 @@ export default function AddRisk() {
         <Card className="glass">
           <CardHeader><CardTitle className="font-subtitle flex items-center gap-2"><AlertTriangle className="w-5 h-5" />{t('riskInfo')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2"> {/* This div no longer needs to be part of a grid */}
+            <div className="space-y-2">
               <Label>{t('departmentLabel')}</Label>
               <Select value={formData.department_id} onValueChange={(value) => handleChange("department_id", value)} disabled={loading}>
                 <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentPlaceholder')} /></SelectTrigger>
                 <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {/* Removed the 'area' input field */}
             <div className="space-y-2">
               <Label>{t('threatTypeLabel')}</Label>
               <Select value={formData.threat_type} onValueChange={(value) => handleChange("threat_type", value)} disabled={loading}>
@@ -224,6 +299,109 @@ export default function AddRisk() {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {/* ── Evaluación del Control ── */}
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck className="w-4 h-4 text-accent" />
+                      <span className="text-sm font-subtitle text-accent">{t('controlEvaluation')}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Tipo de Control */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('controlType')}</Label>
+                        <Select value={formData[`control_type_${num}`]} onValueChange={(v) => handleChange(`control_type_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectControlType')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {CONTROL_TYPES.map(ct => (
+                              <SelectItem key={ct} value={ct}>{t(`control${ct === "Control Preventivo" ? "Preventive" : ct === "Control Correctivo" ? "Corrective" : "Detective"}`)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* ¿Control documentado? */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('controlDocumented')}</Label>
+                        <Select value={formData[`control_documented_${num}`]} onValueChange={(v) => handleChange(`control_documented_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectYesNo')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {YES_NO_OPTIONS.map(yn => (
+                              <SelectItem key={yn} value={yn}>{yn === "Sí" ? t('yes') : t('no')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Tipo de procesos */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('processType')}</Label>
+                        <Select value={formData[`process_type_${num}`]} onValueChange={(v) => handleChange(`process_type_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectProcessType')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {PROCESS_TYPES.map(pt => (
+                              <SelectItem key={pt} value={pt}>{t(`process${pt === "Manual" ? "Manual" : pt === "Automatizado" ? "Automated" : "Combined"}`)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* ¿Genera evidencia auditable? */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('controlEvidence')}</Label>
+                        <Select value={formData[`control_evidence_${num}`]} onValueChange={(v) => handleChange(`control_evidence_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectYesNo')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {YES_NO_OPTIONS.map(yn => (
+                              <SelectItem key={yn} value={yn}>{yn === "Sí" ? t('yes') : t('no')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* ¿Tiene responsable? */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('controlResponsible')}</Label>
+                        <Select value={formData[`control_responsible_${num}`]} onValueChange={(v) => handleChange(`control_responsible_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectYesNo')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {YES_NO_OPTIONS.map(yn => (
+                              <SelectItem key={yn} value={yn}>{yn === "Sí" ? t('yes') : t('no')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* ¿Se ejecuta con frecuencia? */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted">{t('controlFrequency')}</Label>
+                        <Select value={formData[`control_frequency_${num}`]} onValueChange={(v) => handleChange(`control_frequency_${num}`, v)} disabled={loading}>
+                          <SelectTrigger className="input-glass text-sm">
+                            <SelectValue placeholder={t('selectYesNo')} />
+                          </SelectTrigger>
+                          <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                            {YES_NO_OPTIONS.map(yn => (
+                              <SelectItem key={yn} value={yn}>{yn === "Sí" ? t('yes') : t('no')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Indicador visual del Grado de Control */}
+                    {formData[`control_grade_${num}`] && (
+                      <div className="mt-3 p-3 glass rounded-lg flex items-center justify-between">
+                        <span className="text-sm text-muted">{t('controlGrade')}:</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getControlGradeColor(formData[`control_grade_${num}`])}`}>
+                          {getControlGradeLabel(formData[`control_grade_${num}`])}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
