@@ -28,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
 
-const LoginScreen = ({ theme, toggleTheme }) => {
+const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
   const { language, changeLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -42,8 +42,11 @@ const LoginScreen = ({ theme, toggleTheme }) => {
     setIsLoading(true);
     setError('');
     try {
+      // Limpiar cualquier sesión stale antes de iniciar sesión
+      // (importante para usuarios reactivados que tenían sesión previa)
+      await supabase.auth.signOut();
       await User.login(email, password);
-      window.location.reload();
+      onLoginSuccess();
     } catch (error) {
       console.error('Login error:', error);
       
@@ -286,8 +289,8 @@ const AppLayout = ({ children }) => {
         // Si la sesión expiró o el usuario cerró sesión
         setUser(null);
         setIsAdmin(false);
-      } else if (event === 'SIGNED_IN' && session) {
-        // Si el usuario inició sesión
+      } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session) {
+        // Si el usuario inició sesión, la sesión se restauró, o el token se renovó
         loadUser();
       } else if (!session) {
         // Cualquier otro caso donde no haya sesión
@@ -575,7 +578,7 @@ const AppLayout = ({ children }) => {
           }}
         >
           <style>{themeStyles}</style>
-          <LoginScreen theme={theme} toggleTheme={toggleTheme} />
+          <LoginScreen theme={theme} toggleTheme={toggleTheme} onLoginSuccess={loadUser} />
         </div>
       </div>
     );
@@ -673,10 +676,10 @@ const AppLayout = ({ children }) => {
               </div>
               
               <div className="glass rounded-2xl p-4">
-                <h3 className="font-subtitle text-sm text-foreground mb-1">{user.full_name}</h3>
+                <h3 className="font-subtitle text-sm text-foreground mb-1">{user.user_metadata?.full_name || user.full_name || user.email}</h3>
                 <p className="text-xs text-accent truncate mb-3">{user.email}</p>
                 <span className="inline-block px-3 py-1 text-xs rounded-full glass border border-accent/30 text-accent">
-                  {user.role}
+                  {user.user_metadata?.role || user.raw_user_meta_data?.role || 'user'}
                 </span>
               </div>
               
