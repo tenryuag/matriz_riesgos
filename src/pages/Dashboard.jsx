@@ -94,12 +94,12 @@ export default function Dashboard() {
     LEVEL_ORDER.forEach(level => { byNormalized[level] = 0; });
 
     risks.forEach(risk => {
-      const normalized = normalizeRiskLevel(risk.inherent_level);
+      const normalized = normalizeRiskLevel(risk.residual_level);
       byNormalized[normalized] = (byNormalized[normalized] || 0) + 1;
     });
 
-    const criticalRisks = risks.filter(r => isHighRisk(r.inherent_level));
-    const lowRisks = risks.filter(r => isLowRisk(r.inherent_level));
+    const criticalRisks = risks.filter(r => isHighRisk(r.residual_level));
+    const lowRisks = risks.filter(r => isLowRisk(r.residual_level));
     const mediumCount = byNormalized.MEDIUM || 0;
 
     // Risks by department
@@ -110,16 +110,12 @@ export default function Dashboard() {
         byDepartment[deptId] = { total: 0, critical: 0, medium: 0, low: 0 };
       }
       byDepartment[deptId].total++;
-      if (isHighRisk(risk.inherent_level)) byDepartment[deptId].critical++;
-      else if (normalizeRiskLevel(risk.inherent_level) === 'MEDIUM') byDepartment[deptId].medium++;
+      if (isHighRisk(risk.residual_level)) byDepartment[deptId].critical++;
+      else if (normalizeRiskLevel(risk.residual_level) === 'MEDIUM') byDepartment[deptId].medium++;
       else byDepartment[deptId].low++;
     });
 
-    // Critical risks without residual improvement
-    const unmitigatedCritical = criticalRisks.filter(r => {
-      if (!r.residual_level) return true;
-      return isHighRisk(r.residual_level);
-    });
+    const unmitigatedCritical = criticalRisks;
 
     // Inherent vs residual improvement
     const improved = risks.filter(r => {
@@ -276,8 +272,8 @@ export default function Dashboard() {
                         <span className="font-subtitle text-sm truncate block">{risk.description?.substring(0, 80) || t('noDescription')}{risk.description?.length > 80 ? "..." : ""}</span>
                         <span className="text-xs text-muted">{dept?.name || "—"}</span>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-subtitle border flex-shrink-0 ${getRiskLevelColor(risk.inherent_level)}`}>
-                        {risk.inherent_level}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-subtitle border flex-shrink-0 ${getRiskLevelColor(risk.residual_level)}`}>
+                        {risk.residual_level}
                       </span>
                     </div>
                   );
