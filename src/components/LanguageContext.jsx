@@ -360,6 +360,9 @@ const translations = {
     codeCopied: "Código copiado al portapapeles",
     codeCopyError: "Error al copiar el código",
 
+    // Documentation
+    documentation: "Documentación",
+
     // User Management Page
     userManagement: "Gestión de Usuarios",
     usersTitle: "Gestión de Usuarios",
@@ -748,6 +751,9 @@ const translations = {
     codeDeleteError: "Error deleting code",
     codeCopied: "Code copied to clipboard",
     codeCopyError: "Error copying code",
+
+    // Documentation
+    documentation: "Documentation",
 
     // User Management Page
     userManagement: "User Management",

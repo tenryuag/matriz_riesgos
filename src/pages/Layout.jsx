@@ -23,7 +23,8 @@ import {
   Lock,
   CheckCircle,
   Ticket,
-  Users
+  Users,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -590,7 +591,8 @@ const AppLayout = ({ children }) => {
     { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
     { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
     { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true },
-    { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true }
+    { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true },
+    { name: t("documentation"), href: "/documentacion.html", icon: BookOpen, adminOnly: true, external: true }
   ];
 
   // Filtrar items del menú según el rol del usuario
@@ -632,8 +634,27 @@ const AppLayout = ({ children }) => {
               {navigationItems.map((item) => {
                 const currentPath = location.pathname;
                 const itemPath = item.href;
-                const isActive = currentPath === itemPath;
-                
+                const isActive = !item.external && currentPath === itemPath;
+                const className = `flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
+                  isActive ? 'nav-glass active' : 'nav-glass'
+                }`;
+
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setSidebarOpen(false)}
+                      className={className}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-subtitle text-sm">{item.name}</span>
+                    </a>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}
@@ -641,9 +662,7 @@ const AppLayout = ({ children }) => {
                     onClick={(e) => {
                       setSidebarOpen(false);
                     }}
-                    className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
-                      isActive ? 'nav-glass active' : 'nav-glass'
-                    }`}
+                    className={className}
                   >
                     <item.icon className="w-5 h-5" />
                     <span className="font-subtitle text-sm">{item.name}</span>

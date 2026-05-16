@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentación · Matriz de Riesgos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="icon" href="/favicon.png" />
+<style>
+  :root {
+    --accent: #DDBF5A;
+    --accent-foreground: #121212;
+    --accent-soft: rgba(221, 191, 90, 0.12);
+    --accent-border: rgba(221, 191, 90, 0.35);
+    --bg-start: #121212;
+    --bg-end: #1a1a1a;
+    --fg: #FAF7F6;
+    --fg-muted: rgba(250, 247, 246, 0.65);
+    --card-bg: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --code-bg: rgba(255, 255, 255, 0.05);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+
+    --c-tolerable: #22c55e;
+    --c-low: #3b82f6;
+    --c-medium: #eab308;
+    --c-high: #f97316;
+    --c-intolerable: #ef4444;
+    --c-unclassified: #6b7280;
+
+    --font-title: 'Frank Ruhl Libre', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+  }
+
+  html[data-theme="light"] {
+    --bg-start: #FAF7F6;
+    --bg-end: #EFEBE4;
+    --fg: #121212;
+    --fg-muted: rgba(18, 18, 18, 0.65);
+    --card-bg: rgba(255, 255, 255, 0.65);
+    --card-border: rgba(18, 18, 18, 0.08);
+    --card-hover: rgba(255, 255, 255, 0.85);
+    --code-bg: rgba(18, 18, 18, 0.04);
+    --accent-soft: rgba(221, 191, 90, 0.18);
+    --shadow: 0 12px 40px rgba(18, 18, 18, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-body);
+    color: var(--fg);
+    background:
+      radial-gradient(ellipse at top left, var(--accent-soft), transparent 60%),
+      radial-gradient(ellipse at bottom right, var(--accent-soft), transparent 70%),
+      linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+
+  ::selection { background: var(--accent); color: var(--accent-foreground); }
+
+  h1, h2, h3, h4 { font-family: var(--font-title); font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; }
+  h1 { font-size: clamp(2rem, 4vw, 3rem); margin: 0 0 .5rem; }
+  h2 { font-size: clamp(1.5rem, 2.5vw, 2rem); margin: 0 0 1rem; }
+  h3 { font-size: 1.25rem; margin: 1.5rem 0 .75rem; }
+  h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+
+  p { margin: 0 0 1rem; color: var(--fg); }
+  small, .muted { color: var(--fg-muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  code, .code {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: .15em .4em;
+    border-radius: .35em;
+    font-size: .92em;
+    border: 1px solid var(--card-border);
+  }
+
+  /* ============ LAYOUT ============ */
+  .app { display: grid; grid-template-columns: 300px 1fr; min-height: 100vh; }
+
+  /* Sidebar (TOC) */
+  aside.toc {
+    position: sticky; top: 0; height: 100vh;
+    padding: 2rem 1.25rem;
+    border-right: 1px solid var(--card-border);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    overflow-y: auto;
+    z-index: 10;
+  }
+  .brand {
+    display: flex; flex-direction: column; gap: .15rem; margin-bottom: 1.5rem;
+  }
+  .brand .title { font-family: var(--font-title); font-size: 1.35rem; color: var(--fg); }
+  .brand .sub { font-size: .8rem; color: var(--accent); letter-spacing: .05em; text-transform: uppercase; }
+
+  .search-wrap { position: relative; margin-bottom: 1.25rem; }
+  .search-wrap input {
+    width: 100%; padding: .65rem .85rem .65rem 2.2rem;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    color: var(--fg); border-radius: 12px; font-family: inherit; font-size: .9rem;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search-wrap::before {
+    content: ""; position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px;
+    background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23DDBF5A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+  }
+  .search-empty { display:none; font-size:.85rem; color:var(--fg-muted); padding:.5rem 0; }
+
+  nav.toc-nav ul { list-style: none; padding: 0; margin: 0; }
+  nav.toc-nav li { margin: 0; }
+  nav.toc-nav a {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .55rem .75rem; border-radius: 10px;
+    color: var(--fg-muted); font-size: .9rem; transition: background .15s, color .15s;
+    text-decoration: none;
+  }
+  nav.toc-nav a:hover { background: var(--card-hover); color: var(--fg); }
+  nav.toc-nav a.active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+  nav.toc-nav a .num {
+    display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center;
+    background: var(--card-border); border-radius: 6px; font-size: .72rem; font-weight: 600; color: var(--fg-muted);
+  }
+  nav.toc-nav a.active .num { background: var(--accent); color: var(--accent-foreground); }
+
+  .toc-footer {
+    margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--card-border);
+    display: flex; gap: .5rem;
+  }
+  .theme-toggle, .top-btn {
+    flex: 1; padding: .55rem; border-radius: 10px; border: 1px solid var(--card-border);
+    background: var(--card-bg); color: var(--fg); cursor: pointer; font-family: inherit;
+    font-size: .8rem; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+  }
+  .theme-toggle:hover, .top-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Main */
+  main { padding: 3rem 3.5rem; max-width: 980px; }
+  .lead {
+    color: var(--fg-muted); font-size: 1.1rem; margin-bottom: 2rem;
+    padding-bottom: 1.25rem; border-bottom: 1px solid var(--card-border);
+  }
+  .lead .badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .25rem .65rem; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: .75rem;
+    text-transform: uppercase; letter-spacing: .08em; font-weight: 600;
+    margin-bottom: .75rem;
+  }
+
+  section.doc {
+    margin: 0 0 3.5rem;
+    scroll-margin-top: 1.5rem;
+  }
+  section.doc h2 .anchor {
+    color: var(--accent); margin-right: .5rem; opacity: .5;
+  }
+
+  /* Card components */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    margin: 1rem 0;
+    transition: border-color .15s;
+  }
+  .card.tip { border-color: var(--accent-border); }
+  .card.tip .icon-row { color: var(--accent); }
+
+  .icon-row { display: flex; align-items: center; gap: .55rem; font-weight: 500; margin-bottom: .5rem; }
+
+  .grid { display: grid; gap: 1rem; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+  /* Risk-level badge */
+  .badge-level {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .2rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 500;
+    border: 1px solid;
+  }
+  .lvl-tolerable { background: rgba(34,197,94,.12); color: var(--c-tolerable); border-color: rgba(34,197,94,.4); }
+  .lvl-low { background: rgba(59,130,246,.12); color: var(--c-low); border-color: rgba(59,130,246,.4); }
+  .lvl-medium { background: rgba(234,179,8,.12); color: var(--c-medium); border-color: rgba(234,179,8,.4); }
+  .lvl-high { background: rgba(249,115,22,.12); color: var(--c-high); border-color: rgba(249,115,22,.4); }
+  .lvl-intolerable { background: rgba(239,68,68,.12); color: var(--c-intolerable); border-color: rgba(239,68,68,.4); }
+
+  /* Tables */
+  table.docs {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 16px; overflow: hidden; margin: 1rem 0;
+  }
+  table.docs th, table.docs td {
+    padding: .85rem 1rem; text-align: left; border-bottom: 1px solid var(--card-border);
+    font-size: .92rem;
+  }
+  table.docs thead th {
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 600; font-size: .82rem; letter-spacing: .04em; text-transform: uppercase;
+  }
+  table.docs tbody tr:last-child td { border-bottom: 0; }
+  table.docs tbody tr:hover { background: var(--card-hover); }
+
+  /* Risk matrix */
+  .matrix-wrap { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start; margin: 1rem 0; }
+  .matrix {
+    display: grid; grid-template-columns: auto repeat(5, 1fr); gap: 4px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 1rem; min-width: 360px; flex: 1 1 480px;
+  }
+  .matrix .axis-y, .matrix .axis-x {
+    font-size: .72rem; color: var(--fg-muted); text-align: center;
+    display: flex; align-items: center; justify-content: center; padding: .35rem;
+  }
+  .matrix .axis-y { writing-mode: horizontal-tb; font-weight: 500; }
+  .matrix .corner { background: transparent; }
+  .matrix .cell {
+    border-radius: 8px; aspect-ratio: 1.4; min-height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; color: white; font-size: .85rem; cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .matrix .cell:hover { transform: scale(1.06); box-shadow: 0 0 0 2px var(--accent); z-index:2; }
+  .matrix .header { background: transparent; color: var(--fg-muted); font-weight: 500; }
+  .matrix-legend { display: flex; flex-direction: column; gap: .4rem; min-width: 200px; flex: 0 0 200px; }
+  .matrix-legend > div {
+    display: flex; align-items: center; gap: .55rem; font-size: .85rem;
+    padding: .4rem .6rem; border-radius: 8px; background: var(--card-bg); border: 1px solid var(--card-border);
+  }
+  .matrix-legend .dot { width: 14px; height: 14px; border-radius: 4px; }
+
+  /* Component mockups */
+  .mockup {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px;
+    padding: 1.5rem; backdrop-filter: blur(20px); margin: 1rem 0;
+    box-shadow: var(--shadow);
+  }
+  .mockup-label { font-size: .7rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .75rem; }
+
+  .stat-card-mock {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px;
+    padding: 1rem; min-width: 140px;
+  }
+  .stat-card-mock .label { font-size: .72rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .stat-card-mock .value { font-family: var(--font-title); font-size: 2rem; margin-top: .25rem; }
+  .stat-card-mock.danger { border-color: rgba(239,68,68,.3); }
+  .stat-card-mock.danger .value { color: var(--c-intolerable); }
+  .stat-card-mock.warn { border-color: rgba(249,115,22,.3); }
+  .stat-card-mock.warn .value { color: var(--c-high); }
+
+  /* Form mockup */
+  .form-mock { display: grid; gap: .85rem; }
+  .form-mock .field label { font-size: .8rem; color: var(--fg-muted); display: block; margin-bottom: .3rem; }
+  .form-mock .field input, .form-mock .field select, .form-mock .field textarea {
+    width: 100%; padding: .6rem .8rem; background: var(--code-bg); color: var(--fg);
+    border: 1px solid var(--card-border); border-radius: 10px; font-family: inherit; font-size: .9rem;
+  }
+  .form-mock .row { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+  .btn-mock {
+    background: var(--accent); color: var(--accent-foreground); padding: .55rem 1rem;
+    border-radius: 10px; border: 0; font-family: inherit; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: .4rem;
+  }
+  .btn-mock.ghost { background: transparent; color: var(--fg); border: 1px solid var(--card-border); }
+
+  /* Collapsible */
+  details.collapsible {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
+    padding: 0; margin: .65rem 0; overflow: hidden;
+  }
+  details.collapsible summary {
+    list-style: none; cursor: pointer; padding: 1rem 1.25rem;
+    font-weight: 500; display: flex; align-items: center; gap: .6rem;
+    user-select: none;
+  }
+  details.collapsible summary::-webkit-details-marker { display: none; }
+  details.collapsible summary::after {
+    content: ""; margin-left: auto; width: 12px; height: 12px;
+    border-right: 2px solid var(--fg-muted); border-bottom: 2px solid var(--fg-muted);
+    transform: rotate(45deg); transition: transform .2s;
+  }
+  details.collapsible[open] summary::after { transform: rotate(-135deg); }
+  details.collapsible summary:hover { color: var(--accent); }
+  details.collapsible .content { padding: 0 1.25rem 1.25rem; color: var(--fg-muted); }
+  details.collapsible .content p { color: var(--fg-muted); }
+  details.collapsible .content strong { color: var(--fg); }
+
+  /* Step flow */
+  .steps { counter-reset: step; display: grid; gap: .85rem; }
+  .step {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px;
+    padding: 1rem 1.25rem 1rem 3.25rem; position: relative;
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-foreground);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-family: var(--font-title);
+  }
+  .step strong { display: block; margin-bottom: .15rem; }
+  .step p { margin: 0; color: var(--fg-muted); font-size: .92rem; }
+
+  /* Diagram: role permissions */
+  .roles-diag { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .role-box {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem;
+  }
+  .role-box.admin { border-color: var(--accent-border); }
+  .role-box h4 { margin: 0 0 .75rem; display: flex; align-items: center; gap: .5rem; }
+  .role-box ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; }
+  .role-box li { display: flex; gap: .55rem; font-size: .9rem; align-items: center; }
+  .role-box li .yes { color: var(--c-tolerable); }
+  .role-box li .no { color: var(--c-intolerable); }
+
+  /* Inherent vs residual diagram */
+  .inh-res {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 1.25rem; margin: 1rem 0;
+  }
+  .inh-res .arrow { font-size: 1.5rem; color: var(--accent); }
+  .inh-res .block { flex: 1; min-width: 200px; }
+  .inh-res .label { font-size: .72rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .08em; }
+  .inh-res .desc { font-size: .88rem; color: var(--fg-muted); margin-top: .25rem; }
+
+  /* Mobile */
+  .menu-toggle { display: none; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    aside.toc {
+      position: fixed; left: 0; top: 0; height: 100vh; width: 280px;
+      transform: translateX(-100%); transition: transform .25s; z-index: 100;
+    }
+    aside.toc.open { transform: translateX(0); }
+    main { padding: 5rem 1.25rem 3rem; }
+    .menu-toggle {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; top: 1rem; left: 1rem; z-index: 50;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px); color: var(--fg); cursor: pointer;
+    }
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 90;
+    }
+    .overlay.open { display: block; }
+    .roles-diag { grid-template-columns: 1fr; }
+    .matrix { min-width: 0; }
+  }
+
+  /* Hidden state for search */
+  .doc.hidden { display: none; }
+  nav.toc-nav a.hidden { display: none; }
+
+  /* Print */
+  @media print {
+    aside.toc, .menu-toggle, .toc-footer { display: none; }
+    .app { display: block; }
+    main { padding: 1.5rem; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Menú">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="app">
+
+  <aside class="toc" id="toc">
+    <div class="brand">
+      <span class="sub">Documentación</span>
+      <span class="title">Matriz de Riesgos</span>
+    </div>
+
+    <div class="search-wrap">
+      <input type="search" id="search" placeholder="Buscar en la guía…" autocomplete="off" />
+    </div>
+    <div class="search-empty" id="searchEmpty">Sin resultados</div>
+
+    <nav class="toc-nav" id="tocNav">
+      <ul>
+        <li><a href="#intro" data-keywords="introduccion bienvenida que es"><span class="num">1</span> Introducción</a></li>
+        <li><a href="#conceptos" data-keywords="conceptos glosario riesgo inherente residual probabilidad impacto"><span class="num">2</span> Conceptos clave</a></li>
+        <li><a href="#roles" data-keywords="roles admin usuario permisos acceso"><span class="num">3</span> Roles y accesos</a></li>
+        <li><a href="#dashboard" data-keywords="dashboard tablero estadisticas graficas"><span class="num">4</span> Dashboard</a></li>
+        <li><a href="#departamentos" data-keywords="departamentos areas crear editar"><span class="num">5</span> Departamentos</a></li>
+        <li><a href="#riesgos" data-keywords="riesgos crear evaluar amenaza"><span class="num">6</span> Crear riesgos</a></li>
+        <li><a href="#matriz" data-keywords="matriz probabilidad impacto niveles colores"><span class="num">7</span> La matriz 5×5</a></li>
+        <li><a href="#mitigacion" data-keywords="mitigacion controles estrategia reducir transferir aceptar"><span class="num">8</span> Mitigación y controles</a></li>
+        <li><a href="#residual" data-keywords="residual inherente comparacion"><span class="num">9</span> Inherente vs residual</a></li>
+        <li><a href="#exportar" data-keywords="exportar excel descargar reporte xlsx"><span class="num">10</span> Exportar a Excel</a></li>
+        <li><a href="#invitaciones" data-keywords="invitaciones codigos registrar usuarios"><span class="num">11</span> Códigos de invitación</a></li>
+        <li><a href="#usuarios" data-keywords="usuarios gestion suspender activar admin"><span class="num">12</span> Gestión de usuarios</a></li>
+        <li><a href="#faq" data-keywords="preguntas frecuentes ayuda dudas faq"><span class="num">13</span> Preguntas frecuentes</a></li>
+      </ul>
+    </nav>
+
+    <div class="toc-footer">
+      <button class="theme-toggle" id="themeToggle" title="Cambiar tema">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <span id="themeLabel">Claro</span>
+      </button>
+      <button class="top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Ir al inicio">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+        Inicio
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="lead">
+      <div class="badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Guía de uso
+      </div>
+      <h1>Documentación de la plataforma</h1>
+      <p>Aprende a identificar, evaluar y mitigar riesgos organizacionales con la Matriz de Riesgos. Esta guía está pensada para cualquier persona que use el sistema, no requiere conocimientos técnicos.</p>
+    </div>
+
+    <!-- 1. Introducción -->
+    <section class="doc" id="intro">
+      <h2><span class="anchor">#</span>Introducción</h2>
+      <p>La <strong>Matriz de Riesgos</strong> es una aplicación web que ayuda a las organizaciones a tener una vista clara y centralizada de los riesgos a los que están expuestas, departamento por departamento. Permite registrar cada riesgo, calificarlo según su probabilidad e impacto, definir cómo se va a manejar y dar seguimiento al resultado después de aplicar controles.</p>
+
+      <div class="grid grid-3" style="margin: 1.5rem 0;">
+        <div class="card">
+          <div class="icon-row" style="color: var(--accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Identifica
+          </div>
+          <p class="muted" style="margin:0; font-size:.9rem;">Registra riesgos internos y externos por área de la organización.</p>
+        </div>
+        <div class="card">
+          <div class="icon-row" style="color: var(--accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            Evalúa
+          </div>
+          <p class="muted" style="margin:0; font-size:.9rem;">Califica cada riesgo por probabilidad e impacto en una escala visual.</p>
+        </div>
+        <div class="card">
+          <div class="icon-row" style="color: var(--accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Mitiga
+          </div>
+          <p class="muted" style="margin:0; font-size:.9rem;">Define hasta 3 medidas por riesgo y mide el impacto real.</p>
+        </div>
+      </div>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+          ¿Por dónde empezar?
+        </div>
+        <p style="margin:0;">Si es la primera vez que usas la plataforma, ve directamente a <a href="#departamentos">Departamentos</a> para crear las áreas de tu organización. Después puedes comenzar a registrar riesgos.</p>
+      </div>
+    </section>
+
+    <!-- 2. Conceptos -->
+    <section class="doc" id="conceptos">
+      <h2><span class="anchor">#</span>Conceptos clave</h2>
+      <p>Estos son los términos que vas a ver en toda la plataforma. Tenerlos claros hace mucho más fácil el día a día.</p>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h4 style="margin-top:0;">Riesgo</h4>
+          <p class="muted" style="margin:0;">Cualquier evento que pueda afectar negativamente los objetivos de un departamento o de la organización.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Amenaza</h4>
+          <p class="muted" style="margin:0;">El origen del riesgo. Puede ser <strong>interna</strong> (proceso, persona, sistema propio) o <strong>externa</strong> (mercado, proveedores, clima).</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Probabilidad</h4>
+          <p class="muted" style="margin:0;">Qué tan posible es que el riesgo ocurra, en una escala de 1 (remoto) a 5 (frecuente).</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Impacto</h4>
+          <p class="muted" style="margin:0;">Qué tan graves serían las consecuencias si el riesgo se materializa, de 1 (insignificante) a 5 (catastrófico).</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Riesgo inherente</h4>
+          <p class="muted" style="margin:0;">El nivel del riesgo <strong>antes</strong> de aplicar cualquier control o mitigación. Es la "fotografía" del riesgo en bruto.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Riesgo residual</h4>
+          <p class="muted" style="margin:0;">El nivel del riesgo <strong>después</strong> de aplicar las medidas de mitigación. Es el riesgo real que queda.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Mitigante</h4>
+          <p class="muted" style="margin:0;">Acción o control que se implementa para reducir la probabilidad, el impacto o ambos.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Estrategia</h4>
+          <p class="muted" style="margin:0;">Cómo se decide manejar el riesgo: <strong>Aceptar</strong>, <strong>Reducir</strong> o <strong>Transferir</strong>.</p>
+        </div>
+      </div>
+
+      <h3>Niveles de riesgo</h3>
+      <p>Cada riesgo se clasifica automáticamente en uno de estos cinco niveles según el resultado de <code>probabilidad × impacto</code>:</p>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
+        <span class="badge-level lvl-tolerable">Tolerable (1–4)</span>
+        <span class="badge-level lvl-low">Bajo (5–8)</span>
+        <span class="badge-level lvl-medium">Medio (9–12)</span>
+        <span class="badge-level lvl-high">Alto (13–16)</span>
+        <span class="badge-level lvl-intolerable">Intolerable (17–25)</span>
+      </div>
+    </section>
+
+    <!-- 3. Roles -->
+    <section class="doc" id="roles">
+      <h2><span class="anchor">#</span>Roles y accesos</h2>
+      <p>La plataforma maneja dos tipos de usuario. El rol determina qué puede ver y qué puede hacer cada persona.</p>
+
+      <div class="roles-diag">
+        <div class="role-box admin">
+          <h4>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Administrador
+          </h4>
+          <ul>
+            <li><span class="yes">✓</span> Ver el dashboard completo</li>
+            <li><span class="yes">✓</span> Crear y editar departamentos</li>
+            <li><span class="yes">✓</span> Crear, editar y eliminar riesgos</li>
+            <li><span class="yes">✓</span> Exportar a Excel</li>
+            <li><span class="yes">✓</span> Generar y eliminar códigos de invitación</li>
+            <li><span class="yes">✓</span> Gestionar usuarios (suspender, cambiar rol)</li>
+            <li><span class="yes">✓</span> Acceso a esta documentación</li>
+          </ul>
+        </div>
+        <div class="role-box">
+          <h4>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Usuario
+          </h4>
+          <ul>
+            <li><span class="yes">✓</span> Ver el dashboard</li>
+            <li><span class="yes">✓</span> Ver y editar departamentos</li>
+            <li><span class="yes">✓</span> Ver, crear y editar riesgos</li>
+            <li><span class="yes">✓</span> Exportar a Excel</li>
+            <li><span class="no">✕</span> Sin acceso a códigos de invitación</li>
+            <li><span class="no">✕</span> Sin acceso a gestión de usuarios</li>
+            <li><span class="no">✕</span> Sin acceso a esta documentación</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Cómo verifico mi rol
+        </div>
+        <p style="margin:0;">Tu rol aparece en el menú lateral, debajo de tu nombre. Si necesitas cambiar el rol de alguien, debes ser administrador y entrar a <em>Gestión de usuarios</em>.</p>
+      </div>
+    </section>
+
+    <!-- 4. Dashboard -->
+    <section class="doc" id="dashboard">
+      <h2><span class="anchor">#</span>Dashboard</h2>
+      <p>El dashboard es la primera pantalla que ves al entrar. Muestra de un vistazo el estado de toda la organización: cuántos riesgos hay, cuántos son críticos y cómo están distribuidos.</p>
+
+      <h3>Tarjetas de estadísticas</h3>
+      <div class="mockup">
+        <div class="mockup-label">Vista previa del componente</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:.75rem;">
+          <div class="stat-card-mock"><div class="label">Departamentos</div><div class="value">4</div></div>
+          <div class="stat-card-mock"><div class="label">Riesgos totales</div><div class="value">27</div></div>
+          <div class="stat-card-mock danger"><div class="label">Intolerable</div><div class="value">3</div></div>
+          <div class="stat-card-mock warn"><div class="label">Alto</div><div class="value">5</div></div>
+          <div class="stat-card-mock"><div class="label">Controlados</div><div class="value">12</div></div>
+        </div>
+      </div>
+
+      <h3>Indicadores principales</h3>
+      <table class="docs">
+        <thead><tr><th>Indicador</th><th>Qué significa</th></tr></thead>
+        <tbody>
+          <tr><td><strong>% de riesgos críticos</strong></td><td>Porcentaje de riesgos cuyo nivel residual es Alto o Intolerable. Si supera 30% el indicador se pone rojo.</td></tr>
+          <tr><td><strong>Tasa de mitigación</strong></td><td>Porcentaje de riesgos en los que el nivel residual es menor al inherente. Mide qué tanto están funcionando los controles.</td></tr>
+          <tr><td><strong>Distribución por nivel</strong></td><td>Cuántos riesgos hay en cada nivel (Intolerable, Alto, Medio, Bajo, Tolerable).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+          Banner de alerta
+        </div>
+        <p style="margin:0;">Cuando hay riesgos críticos sin mitigar aparece un banner rojo en la parte superior del dashboard, con los 3 más urgentes listados. Sirve como recordatorio diario.</p>
+      </div>
+
+      <h3>Gráficas</h3>
+      <div class="grid grid-2">
+        <div class="card">
+          <h4 style="margin-top:0;">Distribución de riesgos</h4>
+          <p class="muted" style="margin:0; font-size:.9rem;">Gráfica de dona que muestra qué porcentaje de los riesgos cae en cada nivel. Usa el <strong>nivel residual</strong>.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0;">Riesgos por departamento</h4>
+          <p class="muted" style="margin:0; font-size:.9rem;">Gráfica de barras que compara cada departamento: cuántos riesgos críticos, medios y controlados tiene.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Departamentos -->
+    <section class="doc" id="departamentos">
+      <h2><span class="anchor">#</span>Departamentos</h2>
+      <p>Los departamentos son las áreas de tu organización (por ejemplo: Finanzas, Operaciones, TI, Recursos Humanos). Cada riesgo siempre pertenece a un departamento.</p>
+
+      <h3>Crear un departamento</h3>
+      <div class="steps">
+        <div class="step"><strong>Abre Departamentos</strong><p>Desde el menú lateral selecciona "Departamentos".</p></div>
+        <div class="step"><strong>Pulsa "Nuevo departamento"</strong><p>Botón con el ícono de "+" en la esquina superior derecha.</p></div>
+        <div class="step"><strong>Llena el nombre</strong><p>El nombre es obligatorio. La descripción es opcional pero ayuda a otros usuarios a entender de qué se trata el área.</p></div>
+        <div class="step"><strong>Guarda</strong><p>El departamento aparecerá en la lista listo para recibir riesgos.</p></div>
+      </div>
+
+      <div class="mockup">
+        <div class="mockup-label">Formulario</div>
+        <div class="form-mock">
+          <div class="field">
+            <label>Nombre del departamento *</label>
+            <input value="Tecnología de la Información" readonly />
+          </div>
+          <div class="field">
+            <label>Descripción</label>
+            <textarea readonly>Responsable de la infraestructura tecnológica y los sistemas internos.</textarea>
+          </div>
+          <div style="display:flex; gap:.5rem; justify-content:flex-end;">
+            <button class="btn-mock ghost" type="button">Cancelar</button>
+            <button class="btn-mock" type="button">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="icon-row" style="color: var(--accent);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          ¿Qué pasa si elimino un departamento?
+        </div>
+        <p style="margin:0;">Al eliminar un departamento se eliminan todos los riesgos asociados a él. Asegúrate de revisar primero o exportar la información si la vas a necesitar.</p>
+      </div>
+    </section>
+
+    <!-- 6. Crear riesgos -->
+    <section class="doc" id="riesgos">
+      <h2><span class="anchor">#</span>Crear y evaluar riesgos</h2>
+      <p>Registrar un riesgo se hace en dos partes: primero lo describes, luego lo evalúas. La plataforma calcula el nivel automáticamente.</p>
+
+      <h3>Campos del riesgo</h3>
+      <table class="docs">
+        <thead><tr><th>Campo</th><th>Obligatorio</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td>Departamento</td><td>Sí</td><td>Área al que pertenece el riesgo.</td></tr>
+          <tr><td>Tipo de amenaza</td><td>Sí</td><td>Interna o Externa.</td></tr>
+          <tr><td>Descripción</td><td>Sí</td><td>Una explicación clara del riesgo (qué podría pasar y por qué).</td></tr>
+          <tr><td>Probabilidad inherente</td><td>Recomendado</td><td>Del 1 al 5 según la escala.</td></tr>
+          <tr><td>Impacto inherente</td><td>Recomendado</td><td>Del 1 al 5 según la escala.</td></tr>
+          <tr><td>Estrategia</td><td>Recomendado</td><td>Aceptar, Reducir o Transferir.</td></tr>
+          <tr><td>Mitigantes (hasta 3)</td><td>Opcional</td><td>Acciones concretas con su tipo de impacto.</td></tr>
+          <tr><td>Probabilidad e impacto residual</td><td>Opcional</td><td>Reevaluación después de aplicar mitigantes.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Pasos para registrar un riesgo</h3>
+      <div class="steps">
+        <div class="step"><strong>Botón "Nuevo riesgo"</strong><p>Desde el dashboard o desde el listado de riesgos del departamento.</p></div>
+        <div class="step"><strong>Selecciona el departamento y el tipo</strong><p>Tipo Interna si el origen está dentro de la organización; Externa si viene del entorno.</p></div>
+        <div class="step"><strong>Describe el riesgo</strong><p>Sé específico: "Caída del sistema de facturación por sobrecarga" es mejor que "Falla de TI".</p></div>
+        <div class="step"><strong>Evalúa probabilidad e impacto inherente</strong><p>Como si no existiera ningún control. Tira el número honesto.</p></div>
+        <div class="step"><strong>Define la estrategia y mitigantes</strong><p>¿Vas a aceptarlo tal cual, reducirlo con controles, o pasárselo a un tercero?</p></div>
+        <div class="step"><strong>Evalúa el residual</strong><p>Después de tus mitigantes, ¿cuál es la probabilidad e impacto real?</p></div>
+        <div class="step"><strong>Guarda</strong><p>El riesgo queda registrado y suma a las estadísticas del dashboard.</p></div>
+      </div>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+          Buenas prácticas al describir un riesgo
+        </div>
+        <p style="margin:0;">Usa la estructura <em>"Causa → Evento → Consecuencia"</em>. Por ejemplo: <em>"Por falta de respaldos automáticos (causa), si el servidor falla (evento), perderíamos hasta 7 días de información de clientes (consecuencia)"</em>.</p>
+      </div>
+    </section>
+
+    <!-- 7. Matriz -->
+    <section class="doc" id="matriz">
+      <h2><span class="anchor">#</span>La matriz 5×5</h2>
+      <p>El nivel de un riesgo sale de multiplicar probabilidad por impacto. La siguiente tabla es interactiva: <strong>pasa el cursor sobre cualquier celda</strong> para ver el resultado.</p>
+
+      <div class="matrix-wrap">
+        <div class="matrix" id="matrix">
+          <div class="corner"></div>
+          <div class="header axis-x">Insignificante</div>
+          <div class="header axis-x">Menor</div>
+          <div class="header axis-x">Crítico</div>
+          <div class="header axis-x">Mayor</div>
+          <div class="header axis-x">Catastrófico</div>
+          <!-- Generated by JS -->
+        </div>
+        <div class="matrix-legend">
+          <div><span class="dot" style="background: var(--c-tolerable);"></span> Tolerable · 1–4</div>
+          <div><span class="dot" style="background: var(--c-low);"></span> Bajo · 5–8</div>
+          <div><span class="dot" style="background: var(--c-medium);"></span> Medio · 9–12</div>
+          <div><span class="dot" style="background: var(--c-high);"></span> Alto · 13–16</div>
+          <div><span class="dot" style="background: var(--c-intolerable);"></span> Intolerable · 17–25</div>
+        </div>
+      </div>
+
+      <h3>Escala de probabilidad</h3>
+      <table class="docs">
+        <thead><tr><th style="width:80px;">Nivel</th><th>Etiqueta</th><th>Rango</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1</strong></td><td>Remoto</td><td>0–20%</td></tr>
+          <tr><td><strong>2</strong></td><td>Improbable</td><td>21–40%</td></tr>
+          <tr><td><strong>3</strong></td><td>Ocasional</td><td>41–60%</td></tr>
+          <tr><td><strong>4</strong></td><td>Probable</td><td>61–80%</td></tr>
+          <tr><td><strong>5</strong></td><td>Frecuente</td><td>81–100%</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Escala de impacto</h3>
+      <table class="docs">
+        <thead><tr><th style="width:80px;">Nivel</th><th>Etiqueta</th><th>Descripción típica</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1</strong></td><td>Insignificante</td><td>Sin consecuencias operativas.</td></tr>
+          <tr><td><strong>2</strong></td><td>Menor</td><td>Molestia que se resuelve con esfuerzo bajo.</td></tr>
+          <tr><td><strong>3</strong></td><td>Crítico</td><td>Afecta operación de un área por horas o un día.</td></tr>
+          <tr><td><strong>4</strong></td><td>Mayor</td><td>Afecta operación de varias áreas o tiene costo significativo.</td></tr>
+          <tr><td><strong>5</strong></td><td>Catastrófico</td><td>Compromete continuidad del negocio, reputación o cumplimiento legal.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 8. Mitigación -->
+    <section class="doc" id="mitigacion">
+      <h2><span class="anchor">#</span>Mitigación y controles</h2>
+      <p>Una vez evaluado el riesgo inherente, decides cómo manejarlo. La plataforma soporta tres estrategias y hasta tres mitigantes por riesgo.</p>
+
+      <h3>Estrategias</h3>
+      <div class="grid grid-3">
+        <div class="card">
+          <h4 style="margin-top:0; color: var(--c-tolerable);">Aceptar</h4>
+          <p class="muted" style="margin:0; font-size:.9rem;">Reconoces el riesgo y decides convivir con él porque mitigar cuesta más que el daño potencial. No se aplican controles.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0; color: var(--c-medium);">Reducir</h4>
+          <p class="muted" style="margin:0; font-size:.9rem;">Implementas controles que bajan la probabilidad, el impacto o ambos. Es la estrategia más común.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0; color: var(--c-low);">Transferir</h4>
+          <p class="muted" style="margin:0; font-size:.9rem;">Pasas el riesgo a un tercero: seguros, outsourcing, contratos con cláusulas específicas.</p>
+        </div>
+      </div>
+
+      <h3>Tipos de mitigante</h3>
+      <p>Cada mitigante debe declarar qué parte del riesgo ataca:</p>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Mitiga la probabilidad</strong> — reduce la posibilidad de que el evento ocurra.</li>
+        <li><strong>Mitiga el impacto</strong> — reduce el daño si el evento ocurre.</li>
+        <li><strong>Mitiga la probabilidad e impacto</strong> — actúa sobre ambos.</li>
+      </ul>
+
+      <div class="card">
+        <div class="icon-row" style="color: var(--accent);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Evaluación del control
+        </div>
+        <p style="margin:0;">Además del tipo, cada mitigante puede evaluarse en su <strong>diseño</strong> (qué tan bien planteado está) y su <strong>operación</strong> (qué tan bien se ejecuta en la práctica). El resultado es un <em>grado de control</em> que ayuda a justificar el nivel residual.</p>
+      </div>
+    </section>
+
+    <!-- 9. Inherente vs residual -->
+    <section class="doc" id="residual">
+      <h2><span class="anchor">#</span>Inherente vs residual</h2>
+      <p>Esta es probablemente la distinción más importante de toda la metodología. La plataforma siempre registra ambos.</p>
+
+      <div class="inh-res">
+        <div class="block">
+          <div class="label">Riesgo inherente</div>
+          <div style="display:flex; gap:.4rem; margin-top:.4rem;"><span class="badge-level lvl-intolerable">Intolerable</span></div>
+          <div class="desc">Cómo se ve el riesgo "en bruto", sin ningún control.</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="block" style="text-align:center;">
+          <div class="label">Mitigantes</div>
+          <div class="desc" style="margin-top:.4rem;">Controles, seguros, procesos…</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="block">
+          <div class="label">Riesgo residual</div>
+          <div style="display:flex; gap:.4rem; margin-top:.4rem;"><span class="badge-level lvl-medium">Medio</span></div>
+          <div class="desc">Lo que queda en realidad después de aplicar todo.</div>
+        </div>
+      </div>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          ¿Cuál se usa en el dashboard?
+        </div>
+        <p style="margin:0;">El dashboard utiliza el <strong>nivel residual</strong> para todos los conteos, gráficas y alertas. Eso refleja el riesgo real al que está expuesta la organización hoy. El nivel inherente se usa para comparar y medir qué tan efectivas son las mitigaciones.</p>
+      </div>
+    </section>
+
+    <!-- 10. Exportar -->
+    <section class="doc" id="exportar">
+      <h2><span class="anchor">#</span>Exportar a Excel</h2>
+      <p>Desde la pantalla <em>Todos los riesgos</em> puedes descargar la matriz completa en formato Excel. Sirve para reportes, auditorías o trabajar fuera de la plataforma.</p>
+
+      <h3>Cómo hacerlo</h3>
+      <div class="steps">
+        <div class="step"><strong>Ve a "Todos los riesgos"</strong><p>Desde el menú lateral.</p></div>
+        <div class="step"><strong>Aplica filtros si quieres</strong><p>Por departamento, nivel, tipo de amenaza, etc. Solo se exporta lo filtrado.</p></div>
+        <div class="step"><strong>Pulsa "Exportar a Excel"</strong><p>El archivo se descarga con nombre <code>matriz_riesgos_AAAA-MM-DD.xlsx</code>.</p></div>
+      </div>
+
+      <h3>Qué incluye el archivo</h3>
+      <p>Una hoja con una fila por riesgo y estas columnas:</p>
+      <ul style="padding-left: 1.25rem;">
+        <li>Departamento, tipo de amenaza, descripción</li>
+        <li>Probabilidad, impacto y nivel inherente</li>
+        <li>Estrategia y los 3 mitigantes con su tipo</li>
+        <li>Probabilidad, impacto y nivel residual</li>
+        <li>Fecha de creación</li>
+      </ul>
+    </section>
+
+    <!-- 11. Invitaciones -->
+    <section class="doc" id="invitaciones">
+      <h2><span class="anchor">#</span>Códigos de invitación</h2>
+      <p>El registro de nuevos usuarios está protegido por códigos de invitación. Solo los administradores pueden generarlos. Esto evita que cualquier persona se cree una cuenta sin autorización.</p>
+
+      <h3>Cómo funciona un código</h3>
+      <ul style="padding-left: 1.25rem;">
+        <li>Tiene formato <code>XXXX-XXXX-XXXX</code> (12 caracteres alfanuméricos).</li>
+        <li>Se excluyen letras y números que se confunden visualmente (O, 0, I, 1).</li>
+        <li>Cada código solo se puede usar <strong>una vez</strong>.</li>
+        <li>Opcionalmente puede tener fecha de expiración y estar vinculado a un email específico.</li>
+      </ul>
+
+      <h3>Generar un código (solo admin)</h3>
+      <div class="steps">
+        <div class="step"><strong>Entra a "Códigos de invitación"</strong><p>Aparece en el menú lateral solo si eres administrador.</p></div>
+        <div class="step"><strong>Pulsa "Nuevo código"</strong><p>Se genera un código aleatorio automáticamente.</p></div>
+        <div class="step"><strong>(Opcional) Restringe el código</strong><p>Puedes vincularlo a un email concreto y/o ponerle expiración. Agrega notas para recordar a quién se lo diste.</p></div>
+        <div class="step"><strong>Compártelo</strong><p>Envíalo de forma segura a la persona que quieres invitar.</p></div>
+      </div>
+
+      <div class="card">
+        <div class="icon-row" style="color: var(--accent);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Caracteres confiables
+        </div>
+        <p style="margin:0;">No tengas que pedirle al destinatario que repita el código por teléfono: las letras O e I, y los números 0 y 1, nunca aparecen, así que no hay confusión.</p>
+      </div>
+    </section>
+
+    <!-- 12. Usuarios -->
+    <section class="doc" id="usuarios">
+      <h2><span class="anchor">#</span>Gestión de usuarios</h2>
+      <p>La sección <em>Gestión de usuarios</em> (solo admin) te permite ver a todas las personas con acceso al sistema, cambiar sus roles y suspender cuentas cuando ya no deban tener acceso.</p>
+
+      <h3>Acciones disponibles</h3>
+      <table class="docs">
+        <thead><tr><th>Acción</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Cambiar rol</strong></td><td>Promueve un usuario a admin o lo degrada a usuario normal.</td></tr>
+          <tr><td><strong>Suspender</strong></td><td>Bloquea el acceso del usuario sin borrar sus datos. Puede reactivarse después.</td></tr>
+          <tr><td><strong>Reactivar</strong></td><td>Devuelve el acceso a un usuario suspendido.</td></tr>
+          <tr><td><strong>Ver actividad</strong></td><td>Identifica qué departamentos y riesgos fueron creados por cada persona.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card tip">
+        <div class="icon-row">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Cuándo suspender en vez de eliminar
+        </div>
+        <p style="margin:0;">Cuando una persona deja la organización, suspende su cuenta. Así conservas la trazabilidad de qué riesgos y departamentos creó, sin que pueda seguir entrando.</p>
+      </div>
+    </section>
+
+    <!-- 13. FAQ -->
+    <section class="doc" id="faq">
+      <h2><span class="anchor">#</span>Preguntas frecuentes</h2>
+
+      <details class="collapsible">
+        <summary>¿Tengo que llenar el riesgo residual obligatoriamente?</summary>
+        <div class="content"><p>No es obligatorio para guardar el riesgo, pero <strong>sí lo recomendamos</strong>. El dashboard usa el nivel residual para todos los indicadores; un riesgo sin nivel residual no aparece en las gráficas con el color correcto.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Puedo registrar más de 3 mitigantes para un mismo riesgo?</summary>
+        <div class="content"><p>La plataforma soporta hasta 3 mitigantes por riesgo. Si necesitas más, lo recomendable es agruparlos: por ejemplo, "Programa de capacitación trimestral" en lugar de listar cada curso por separado.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Qué pasa si me equivoqué al calificar un riesgo?</summary>
+        <div class="content"><p>Puedes editar cualquier riesgo en cualquier momento. Abre el riesgo desde el listado del departamento o desde "Todos los riesgos", ajusta los valores y guarda. El historial de cambios no se conserva, así que asegúrate de revisar bien antes de borrar mitigantes.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Cómo sé qué estrategia elegir: aceptar, reducir o transferir?</summary>
+        <div class="content"><p>Una regla práctica: si el riesgo es <strong>Tolerable o Bajo</strong> y mitigar cuesta más que la consecuencia, <em>acepta</em>. Si es <strong>Medio o Alto</strong>, casi siempre debes <em>reducir</em>. Si es <strong>Intolerable</strong> y tu organización no puede absorber el impacto, considera <em>transferir</em> (seguros, contratos).</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>El sistema dice "Código inválido" al registrarme, ¿qué hago?</summary>
+        <div class="content"><p>Verifica que escribiste el código exactamente como te lo enviaron, incluyendo los guiones. Si el código está vinculado a un email específico, debes registrarte con ese email. Si ya lo usaste antes, no funciona dos veces. Si nada de esto aplica, contacta al administrador que te envió el código.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Puedo cambiar el idioma de la aplicación?</summary>
+        <div class="content"><p>Sí. En el menú lateral hay un selector de idioma (ES/EN). Esta documentación, por ahora, está disponible únicamente en español.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Cómo cierro sesión?</summary>
+        <div class="content"><p>En la parte inferior del menú lateral hay un botón "Cerrar sesión". Te regresa a la pantalla de inicio y elimina tu sesión activa.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿La información está respaldada?</summary>
+        <div class="content"><p>Sí. Toda la información se guarda en una base de datos administrada con respaldos automáticos. Aun así, si vas a hacer un cambio masivo (por ejemplo, eliminar muchos riesgos), recomendamos <em>exportar a Excel</em> antes como respaldo manual.</p></div>
+      </details>
+    </section>
+
+    <footer style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border); color: var(--fg-muted); font-size: .85rem;">
+      <p>Documentación · Matriz de Riesgos · Acceso restringido a administradores</p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // ===== Theme toggle =====
+  const themeBtn = document.getElementById('themeToggle');
+  const themeLabel = document.getElementById('themeLabel');
+  const root = document.documentElement;
+  const savedTheme = localStorage.getItem('docs-theme') || 'dark';
+  root.setAttribute('data-theme', savedTheme);
+  themeLabel.textContent = savedTheme === 'dark' ? 'Claro' : 'Oscuro';
+  themeBtn.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('docs-theme', next);
+    themeLabel.textContent = next === 'dark' ? 'Claro' : 'Oscuro';
+  });
+
+  // ===== Mobile menu =====
+  const toc = document.getElementById('toc');
+  const overlay = document.getElementById('overlay');
+  const menuBtn = document.getElementById('menuToggle');
+  function toggleMenu(open) {
+    toc.classList.toggle('open', open);
+    overlay.classList.toggle('open', open);
+  }
+  menuBtn.addEventListener('click', () => toggleMenu(!toc.classList.contains('open')));
+  overlay.addEventListener('click', () => toggleMenu(false));
+  document.querySelectorAll('nav.toc-nav a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth < 900) toggleMenu(false); });
+  });
+
+  // ===== Build matrix =====
+  const matrix = document.getElementById('matrix');
+  const colorFor = (score) => {
+    if (score <= 4) return 'var(--c-tolerable)';
+    if (score <= 8) return 'var(--c-low)';
+    if (score <= 12) return 'var(--c-medium)';
+    if (score <= 16) return 'var(--c-high)';
+    return 'var(--c-intolerable)';
+  };
+  const labelFor = (score) => {
+    if (score <= 4) return 'Tolerable';
+    if (score <= 8) return 'Bajo';
+    if (score <= 12) return 'Medio';
+    if (score <= 16) return 'Alto';
+    return 'Intolerable';
+  };
+  const probLabels = ['Remoto', 'Improbable', 'Ocasional', 'Probable', 'Frecuente'];
+  // Build rows: prob 5 → 1 (top to bottom)
+  for (let p = 5; p >= 1; p--) {
+    const yLabel = document.createElement('div');
+    yLabel.className = 'axis-y header';
+    yLabel.textContent = probLabels[p-1];
+    matrix.appendChild(yLabel);
+    for (let i = 1; i <= 5; i++) {
+      const score = p * i;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.background = colorFor(score);
+      cell.textContent = score;
+      cell.title = `Probabilidad ${p} × Impacto ${i} = ${score} (${labelFor(score)})`;
+      matrix.appendChild(cell);
+    }
+  }
+
+  // ===== Scroll spy =====
+  const sections = document.querySelectorAll('section.doc');
+  const links = document.querySelectorAll('nav.toc-nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // ===== Search =====
+  const search = document.getElementById('search');
+  const searchEmpty = document.getElementById('searchEmpty');
+  function normalize(s) {
+    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+  search.addEventListener('input', () => {
+    const q = normalize(search.value.trim());
+    let visibleCount = 0;
+    sections.forEach(sec => {
+      const text = normalize(sec.textContent);
+      const id = sec.id;
+      const navLink = document.querySelector(`nav.toc-nav a[href="#${id}"]`);
+      const keywords = navLink ? normalize(navLink.dataset.keywords || '') : '';
+      const match = q === '' || text.includes(q) || keywords.includes(q);
+      sec.classList.toggle('hidden', !match);
+      if (navLink) navLink.classList.toggle('hidden', !match);
+      if (match) visibleCount++;
+    });
+    searchEmpty.style.display = visibleCount === 0 ? 'block' : 'none';
+  });
+</script>
+
+</body>
+</html>
