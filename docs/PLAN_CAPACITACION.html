@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Plan de Capacitación — Matriz de Riesgos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap');
+
+  :root {
+    --accent: #DDBF5A;
+    --accent-dark: #C8972B;
+    --foreground: #121212;
+    --foreground-muted: rgba(18, 18, 18, 0.7);
+    --background: #FAF7F6;
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(221, 191, 90, 0.35);
+    --glass-shadow: 0 8px 32px rgba(18, 18, 18, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Avenir Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 300;
+    color: var(--foreground);
+    background:
+      radial-gradient(circle at 10% 20%, rgba(221, 191, 90, 0.15), transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(221, 191, 90, 0.10), transparent 40%),
+      var(--background);
+    line-height: 1.6;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header / Cover ---------- */
+  .cover {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    padding: 60px 50px;
+    box-shadow: var(--glass-shadow);
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(221, 191, 90, 0.35), transparent 70%);
+    border-radius: 50%;
+  }
+
+  .brand {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent-dark);
+    margin-bottom: 24px;
+  }
+
+  .cover h1 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    color: var(--foreground);
+  }
+
+  .cover .subtitle {
+    font-size: 18px;
+    color: var(--foreground-muted);
+    margin-bottom: 32px;
+    max-width: 600px;
+  }
+
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .pill {
+    background: rgba(221, 191, 90, 0.18);
+    border: 1px solid rgba(221, 191, 90, 0.45);
+    color: var(--accent-dark);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 36px 40px;
+    box-shadow: var(--glass-shadow);
+    margin-bottom: 24px;
+  }
+
+  .card h2 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: var(--foreground);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .card h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: white;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .card h3 {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--accent-dark);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .duration {
+    display: inline-block;
+    background: rgba(221, 191, 90, 0.15);
+    color: var(--accent-dark);
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: auto;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .audience {
+    font-size: 14px;
+    color: var(--foreground-muted);
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+
+  /* ---------- Lists ---------- */
+  ul.checklist {
+    list-style: none;
+    padding: 0;
+  }
+
+  ul.checklist li {
+    padding: 10px 0 10px 32px;
+    position: relative;
+    color: var(--foreground);
+    font-size: 15px;
+    border-bottom: 1px solid rgba(221, 191, 90, 0.15);
+  }
+
+  ul.checklist li:last-child {
+    border-bottom: none;
+  }
+
+  ul.checklist li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(221, 191, 90, 0.4);
+  }
+
+  ul.checklist li::after {
+    content: '✓';
+    position: absolute;
+    left: 4px;
+    top: 13px;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ---------- Summary table ---------- */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .summary-item {
+    background: rgba(221, 191, 90, 0.08);
+    border: 1px solid rgba(221, 191, 90, 0.25);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .summary-item .label {
+    font-size: 12px;
+    color: var(--foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .summary-item .value {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--accent-dark);
+  }
+
+  /* ---------- Highlight ---------- */
+  .highlight {
+    background: linear-gradient(135deg, rgba(221, 191, 90, 0.15), rgba(200, 151, 43, 0.08));
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+    color: var(--foreground);
+  }
+
+  .highlight strong {
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
+  /* ---------- Objetivos ---------- */
+  .objective-main {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 20px;
+    line-height: 1.4;
+    color: var(--foreground);
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(221, 191, 90, 0.18), rgba(200, 151, 43, 0.06));
+    border-radius: 16px;
+    border-left: 4px solid var(--accent);
+  }
+
+  /* ---------- Participantes ---------- */
+  .roster {
+    display: grid;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .participant {
+    display: grid;
+    grid-template-columns: 56px 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(221, 191, 90, 0.06);
+    border: 1px solid rgba(221, 191, 90, 0.2);
+    border-radius: 14px;
+    transition: border-color .15s;
+  }
+
+  .participant.facilitator {
+    background: linear-gradient(135deg, rgba(221, 191, 90, 0.18), rgba(200, 151, 43, 0.05));
+    border-color: rgba(221, 191, 90, 0.5);
+  }
+
+  .participant.required {
+    border-color: rgba(221, 191, 90, 0.4);
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Frank Ruhl Libre', serif;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .participant.facilitator .avatar {
+    background: var(--foreground);
+    color: var(--accent);
+  }
+
+  .participant-info .name {
+    font-weight: 600;
+    color: var(--foreground);
+    font-size: 16px;
+  }
+
+  .participant-info .role {
+    font-size: 13px;
+    color: var(--foreground-muted);
+    margin-top: 2px;
+  }
+
+  .badge-role {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .badge-role.facilitator {
+    background: var(--foreground);
+    color: var(--accent);
+  }
+
+  .badge-role.required {
+    background: var(--accent-dark);
+    color: white;
+  }
+
+  .badge-role.optional {
+    background: rgba(221, 191, 90, 0.2);
+    color: var(--accent-dark);
+    border: 1px solid rgba(221, 191, 90, 0.4);
+  }
+
+  .signature-cell {
+    width: 130px;
+    height: 32px;
+    border-bottom: 1px dashed rgba(18, 18, 18, 0.3);
+  }
+
+  .attendance-header {
+    display: grid;
+    grid-template-columns: 56px 1fr auto 130px;
+    gap: 16px;
+    padding: 0 20px 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--foreground-muted);
+    font-weight: 600;
+  }
+
+  /* ---------- Materiales ---------- */
+  .materials-group {
+    margin-top: 24px;
+    padding: 20px 22px;
+    background: rgba(221, 191, 90, 0.05);
+    border: 1px solid rgba(221, 191, 90, 0.18);
+    border-radius: 16px;
+  }
+
+  .materials-group:first-of-type {
+    margin-top: 8px;
+  }
+
+  .materials-group .group-title {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent-dark);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .materials-group .group-title .icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+  }
+
+  .materials-group .group-desc {
+    font-size: 13px;
+    color: var(--foreground-muted);
+    margin-bottom: 12px;
+    margin-left: 38px;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    text-align: center;
+    margin-top: 32px;
+    padding: 24px;
+    color: var(--foreground-muted);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .footer .divider {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 0 auto 16px;
+  }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body {
+      background: white;
+      padding: 0;
+    }
+    .card, .cover {
+      box-shadow: none;
+      page-break-inside: avoid;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: white;
+    }
+    .cover { page-break-after: always; }
+  }
+
+  @media (max-width: 640px) {
+    .cover { padding: 40px 28px; }
+    .cover h1 { font-size: 32px; }
+    .card { padding: 28px 24px; }
+    .summary { grid-template-columns: 1fr; }
+    .participant,
+    .attendance-header {
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+    }
+    .participant .badge-role,
+    .participant .signature-cell,
+    .attendance-header > :nth-child(3),
+    .attendance-header > :nth-child(4) {
+      grid-column: 2;
+    }
+    .signature-cell { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Cover -->
+  <header class="cover">
+    <div class="brand">Mara Pérez · Matriz de Riesgos</div>
+    <h1>Plan de Capacitación</h1>
+    <p class="subtitle">Programa práctico de uso del sistema para usuarios y administradores. Diseñado para capacitar al equipo en una sola sesión.</p>
+    <div class="cover-meta">
+      <span class="pill">Duración total · 50 min</span>
+      <span class="pill">3 módulos</span>
+      <span class="pill">Práctica directa</span>
+    </div>
+  </header>
+
+  <!-- Resumen -->
+  <section class="card">
+    <h2><span class="num">·</span> Resumen del Programa</h2>
+    <div class="summary">
+      <div class="summary-item">
+        <div class="label">Duración</div>
+        <div class="value">50 min</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Módulos</div>
+        <div class="value">3</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Modalidad</div>
+        <div class="value">Práctica</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Objetivos -->
+  <section class="card">
+    <h2><span class="num">·</span> Objetivos de la Capacitación</h2>
+
+    <h3>Objetivo General</h3>
+    <p class="objective-main">
+      Que el equipo aprenda a usar el sistema de Matriz de Riesgos de extremo a extremo: identificar y registrar riesgos en su área, evaluarlos con la metodología de probabilidad × impacto, aplicar mitigantes y consultar la información para tomar decisiones informadas sobre los riesgos altos e intolerables.
+    </p>
+
+    <h3>Objetivos Específicos</h3>
+    <ul class="checklist">
+      <li>Acceder al sistema con seguridad y reconocer las funciones del Dashboard.</li>
+      <li>Crear y mantener departamentos de acuerdo con la estructura de la organización.</li>
+      <li>Registrar un riesgo completo, incluyendo amenaza, evaluación inherente, mitigantes y evaluación residual.</li>
+      <li>Diferenciar entre riesgo inherente y residual y comprender por qué el residual guía las decisiones.</li>
+      <li>Filtrar, buscar y exportar la matriz de riesgos para reportes internos.</li>
+      <li>(Administradores) Gestionar códigos de invitación y cuentas de usuario.</li>
+    </ul>
+  </section>
+
+  <!-- Participantes -->
+  <section class="card">
+    <h2><span class="num">·</span> Participantes y Roles</h2>
+    <p style="color: var(--foreground-muted); margin-bottom: 20px;">Equipo asignado a la sesión. La columna de firma se utiliza al cierre de la capacitación como registro de asistencia.</p>
+
+    <div class="attendance-header">
+      <span>&nbsp;</span>
+      <span>Participante</span>
+      <span>Rol</span>
+      <span>Firma</span>
+    </div>
+
+    <div class="roster">
+      <div class="participant facilitator">
+        <div class="avatar">T</div>
+        <div class="participant-info">
+          <div class="name">Tenryu</div>
+          <div class="role">Facilitador · Imparte la capacitación, resuelve dudas y guía los ejercicios prácticos.</div>
+        </div>
+        <span class="badge-role facilitator">Facilitador</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">L</div>
+        <div class="participant-info">
+          <div class="name">Lucero</div>
+          <div class="role">Participante obligatoria · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">P</div>
+        <div class="participant-info">
+          <div class="name">Pepe</div>
+          <div class="role">Participante obligatorio · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">R</div>
+        <div class="participant-info">
+          <div class="name">Roger</div>
+          <div class="role">Participante obligatorio · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">R</div>
+        <div class="participant-info">
+          <div class="name">Rober</div>
+          <div class="role">Participante obligatorio · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">A</div>
+        <div class="participant-info">
+          <div class="name">Ana Pau</div>
+          <div class="role">Participante obligatoria · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">I</div>
+        <div class="participant-info">
+          <div class="name">Irving</div>
+          <div class="role">Participante obligatorio · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+
+      <div class="participant required">
+        <div class="avatar">M</div>
+        <div class="participant-info">
+          <div class="name">Mara</div>
+          <div class="role">Participante obligatoria · Debe completar todos los módulos y la evaluación práctica.</div>
+        </div>
+        <span class="badge-role required">Obligatorio</span>
+        <div class="signature-cell"></div>
+      </div>
+    </div>
+
+    <div class="highlight" style="margin-top: 24px;">
+      <strong>Responsabilidades del facilitador:</strong> preparar el material, gestionar el tiempo de cada módulo, garantizar que todos los participantes completen la práctica guiada y recolectar las firmas al finalizar.
+    </div>
+  </section>
+
+  <!-- Módulo 1 -->
+  <section class="card">
+    <div class="card-header">
+      <h2><span class="num">1</span> Acceso y Navegación</h2>
+      <span class="duration">10 min</span>
+    </div>
+    <p class="audience">Audiencia: Todos los usuarios</p>
+
+    <h3>Contenido</h3>
+    <ul class="checklist">
+      <li>Registro con código de invitación</li>
+      <li>Inicio de sesión y recuperación de contraseña</li>
+      <li>Recorrido por el menú lateral</li>
+      <li>Cambio de idioma (Español / Inglés)</li>
+      <li>Cambio de tema (claro / oscuro)</li>
+      <li>Lectura del Dashboard: indicadores, gráficas y alertas</li>
+    </ul>
+  </section>
+
+  <!-- Módulo 2 -->
+  <section class="card">
+    <div class="card-header">
+      <h2><span class="num">2</span> Departamentos y Riesgos</h2>
+      <span class="duration">25 min</span>
+    </div>
+    <p class="audience">Audiencia: Usuarios operativos</p>
+
+    <h3>Departamentos</h3>
+    <ul class="checklist">
+      <li>Crear, editar y eliminar departamentos</li>
+      <li>Visualizar los riesgos asociados a cada departamento</li>
+    </ul>
+
+    <h3>Riesgos</h3>
+    <ul class="checklist">
+      <li>Registrar un nuevo riesgo desde "Nuevo Riesgo"</li>
+      <li>Llenar el formulario: amenaza, descripción, evaluación inherente</li>
+      <li>Definir mitigantes y evaluar tipo y grado de control</li>
+      <li>Verificar el cálculo automático del riesgo residual</li>
+      <li>Editar y eliminar riesgos existentes</li>
+    </ul>
+
+    <div class="highlight">
+      <strong>Práctica guiada:</strong> Cada participante registra al menos un riesgo completo de su área.
+    </div>
+  </section>
+
+  <!-- Módulo 3 -->
+  <section class="card">
+    <div class="card-header">
+      <h2><span class="num">3</span> Consulta y Administración</h2>
+      <span class="duration">15 min</span>
+    </div>
+    <p class="audience">Audiencia: Líderes y administradores</p>
+
+    <h3>Matriz de Riesgos</h3>
+    <ul class="checklist">
+      <li>Vista de "Todos los Riesgos" con filtros y búsqueda</li>
+      <li>Identificar riesgos altos e intolerables</li>
+      <li>Exportar el listado a Excel</li>
+    </ul>
+
+    <h3>Solo Administradores</h3>
+    <ul class="checklist">
+      <li>Crear y gestionar códigos de invitación</li>
+      <li>Suspender o reactivar cuentas de usuario</li>
+    </ul>
+  </section>
+
+  <!-- Evaluación -->
+  <section class="card">
+    <h2><span class="num">·</span> Evaluación Práctica</h2>
+    <p style="color: var(--foreground-muted); margin-bottom: 16px;">Ejercicio integrador (opcional, 10 min adicionales):</p>
+    <ul class="checklist">
+      <li>Crear un departamento de prueba</li>
+      <li>Registrar un riesgo completo (inherente, mitigantes y residual)</li>
+      <li>Filtrar la matriz por nivel "Alto" y exportar a Excel</li>
+    </ul>
+  </section>
+
+  <!-- Desglose de Materiales -->
+  <section class="card">
+    <h2><span class="num">·</span> Desglose de Materiales</h2>
+    <p style="color: var(--foreground-muted); margin-bottom: 8px;">Recursos necesarios para impartir y dar seguimiento a la sesión, organizados por responsable.</p>
+
+    <div class="materials-group">
+      <div class="group-title">
+        <span class="icon">★</span> Material del Facilitador
+      </div>
+      <div class="group-desc">Lo prepara y trae Tenryu antes de iniciar la sesión.</div>
+      <ul class="checklist">
+        <li>Laptop con acceso al sistema en producción y a la documentación interactiva</li>
+        <li>Proyector o pantalla compartida para demostraciones en vivo</li>
+        <li>Plan de capacitación impreso (este documento) para llevar tiempo y firmas</li>
+        <li>Códigos de invitación generados con anticipación para los participantes nuevos</li>
+        <li>Casos de ejemplo (riesgo de muestra por departamento) listos para la práctica guiada</li>
+      </ul>
+    </div>
+
+    <div class="materials-group">
+      <div class="group-title">
+        <span class="icon">◆</span> Material Didáctico
+      </div>
+      <div class="group-desc">Recursos que se usan durante la capacitación.</div>
+      <ul class="checklist">
+        <li>Documentación interactiva del sistema (sección admin · "Documentación")</li>
+        <li>Demostración en vivo de cada flujo principal sobre el sistema</li>
+        <li>Plantilla de ejercicio: registro de un riesgo completo por participante</li>
+        <li>Matriz 5×5 de referencia (incluida en la documentación interactiva)</li>
+      </ul>
+    </div>
+
+    <div class="materials-group">
+      <div class="group-title">
+        <span class="icon">●</span> Material del Participante
+      </div>
+      <div class="group-desc">Lo que necesita tener cada asistente para participar.</div>
+      <ul class="checklist">
+        <li>Dispositivo con navegador (laptop o tablet) y conexión a internet</li>
+        <li>Código de invitación entregado por el facilitador (si aún no tiene cuenta)</li>
+        <li>Credenciales de acceso al sistema (correo y contraseña)</li>
+        <li>Cuaderno o bloc digital para anotar dudas y observaciones</li>
+      </ul>
+    </div>
+
+    <div class="materials-group">
+      <div class="group-title">
+        <span class="icon">↺</span> Material de Seguimiento
+      </div>
+      <div class="group-desc">Disponible después de la sesión para resolver dudas.</div>
+      <ul class="checklist">
+        <li>Acceso permanente a la documentación interactiva desde el sistema</li>
+        <li>Canal de soporte directo con el facilitador para dudas posteriores</li>
+        <li>Registro de asistencia firmado y archivado</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="divider"></div>
+    Mara Pérez · Sistema de Matriz de Riesgos<br>
+    Documento de capacitación interna
+  </footer>
+
+</div>
+
+</body>
+</html>
