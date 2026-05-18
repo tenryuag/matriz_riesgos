@@ -640,118 +640,62 @@ export default function Dashboard() {
       )}
 
       {/* Bottom Row: Recent Departments */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="glass">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 font-subtitle">
-                <Building2 className="w-5 h-5" />
-                {t('recentDepartments')}
-              </CardTitle>
-              <Link to={createPageUrl("Departments")}>
-                <Button variant="ghost" size="sm" className="hover:glass text-accent">
-                  {t('seeAll')}
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {departments.slice(0, 5).map((dept) => {
-                const deptStats = stats.byDepartment[dept.id] || { total: 0, critical: 0 };
-                return (
-                  <div key={dept.id} className="flex items-center justify-between p-3 glass rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${deptStats.critical > 0 ? "bg-red-500/20" : "bg-accent text-accent-foreground"}`}>
-                        <Building2 className={`w-5 h-5 ${deptStats.critical > 0 ? "text-red-500" : ""}`} />
-                      </div>
-                      <div>
-                        <h3 className="font-subtitle text-sm">{dept.name}</h3>
-                        <p className="text-xs text-muted">
-                          {deptStats.total} {t('totalRisks').toLowerCase()}
-                          {deptStats.critical > 0 && (
-                            <span className="text-red-400 ml-2">{deptStats.critical} {t('dashCritical').toLowerCase()}</span>
-                          )}
-                        </p>
-                      </div>
+      <Card className="glass">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 font-subtitle">
+              <Building2 className="w-5 h-5" />
+              {t('recentDepartments')}
+            </CardTitle>
+            <Link to={createPageUrl("Departments")}>
+              <Button variant="ghost" size="sm" className="hover:glass text-accent">
+                {t('seeAll')}
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {departments.slice(0, 5).map((dept) => {
+              const deptStats = stats.byDepartment[dept.id] || { total: 0, critical: 0 };
+              return (
+                <div key={dept.id} className="flex items-center justify-between p-3 glass rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${deptStats.critical > 0 ? "bg-red-500/20" : "bg-accent text-accent-foreground"}`}>
+                      <Building2 className={`w-5 h-5 ${deptStats.critical > 0 ? "text-red-500" : ""}`} />
                     </div>
-                    <Link to={createPageUrl(`DepartmentRisks?id=${dept.id}`)}>
-                      <Button size="sm" variant="ghost" className="hover:glass text-accent">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </Link>
+                    <div>
+                      <h3 className="font-subtitle text-sm">{dept.name}</h3>
+                      <p className="text-xs text-muted">
+                        {deptStats.total} {t('totalRisks').toLowerCase()}
+                        {deptStats.critical > 0 && (
+                          <span className="text-red-400 ml-2">{deptStats.critical} {t('dashCritical').toLowerCase()}</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                );
-              })}
-              {departments.length === 0 && (
-                <div className="text-center py-8 text-muted">
-                  <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{t('noDepartmentsRegistered')}</p>
-                  <Link to={createPageUrl("AddDepartment")}>
-                    <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">
-                      {t('createFirstDepartment')}
+                  <Link to={createPageUrl(`DepartmentRisks?id=${dept.id}`)}>
+                    <Button size="sm" variant="ghost" className="hover:glass text-accent">
+                      <Eye className="w-4 h-4" />
                     </Button>
                   </Link>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* No-risk empty state OR Inherent vs Residual comparison */}
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-subtitle">
-              <TrendingDown className="w-5 h-5" />
-              {t('dashInherentVsResidual')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.total > 0 ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted mb-2">{t('dashInherentVsResidualDesc')}</p>
-                {stats.criticalRisks.slice(0, 5).map((risk) => {
-                  const inherentNorm = normalizeRiskLevel(risk.inherent_level);
-                  const residualNorm = normalizeRiskLevel(risk.residual_level);
-                  const improved = LEVEL_ORDER.indexOf(residualNorm) > LEVEL_ORDER.indexOf(inherentNorm);
-                  return (
-                    <div key={risk.id} className="flex items-center gap-3 p-3 glass rounded-xl">
-                      <div className="flex items-center gap-2 flex-grow min-w-0">
-                        <span className={`px-2 py-0.5 rounded-full text-xs border flex-shrink-0 ${getRiskLevelColor(risk.inherent_level)}`}>
-                          {risk.inherent_level}
-                        </span>
-                        <ArrowRight className={`w-4 h-4 flex-shrink-0 ${improved ? "text-green-500" : "text-red-400"}`} />
-                        <span className={`px-2 py-0.5 rounded-full text-xs border flex-shrink-0 ${getRiskLevelColor(risk.residual_level || risk.inherent_level)}`}>
-                          {risk.residual_level || "—"}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted truncate max-w-[120px]" title={risk.description}>
-                        {risk.description?.substring(0, 25) || "—"}{risk.description?.length > 25 ? "..." : ""}
-                      </span>
-                    </div>
-                  );
-                })}
-                {stats.criticalRisks.length === 0 && (
-                  <div className="text-center py-8 text-muted">
-                    <Shield className="w-10 h-10 mx-auto mb-3 text-green-500 opacity-60" />
-                    <p className="text-sm">{t('dashNoCritical')}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
+              );
+            })}
+            {departments.length === 0 && (
               <div className="text-center py-8 text-muted">
-                <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>{t('noRisksRegistered')}</p>
-                <Link to={createPageUrl("AddRisk")}>
+                <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>{t('noDepartmentsRegistered')}</p>
+                <Link to={createPageUrl("AddDepartment")}>
                   <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">
-                    {t('registerFirstRisk')}
+                    {t('createFirstDepartment')}
                   </Button>
                 </Link>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
