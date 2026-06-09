@@ -24,7 +24,8 @@ import {
   CheckCircle,
   Ticket,
   Users,
-  BookOpen
+  BookOpen,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -590,6 +591,7 @@ const AppLayout = ({ children }) => {
     { name: t("departments"), href: createPageUrl("Departments"), icon: Building2 },
     { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
     { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
+    { name: t("finPlanning"), href: createPageUrl("FinanceDashboard"), icon: TrendingUp },
     { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true },
     { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true },
     { name: t("documentation"), href: "/documentacion.html", icon: BookOpen, adminOnly: true, external: true }

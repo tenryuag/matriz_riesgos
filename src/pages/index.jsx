@@ -25,6 +25,18 @@ import ForgotPassword from "./ForgotPassword";
 
 import UpdatePassword from "./UpdatePassword";
 
+import FinanceDashboard from "./FinanceDashboard";
+
+import BusinessAnalysis from "./BusinessAnalysis";
+
+import SwotAnalysis from "./SwotAnalysis";
+
+import FinancialHistory from "./FinancialHistory";
+
+import FinancialProjection from "./FinancialProjection";
+
+import FinancialCurrent from "./FinancialCurrent";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -46,6 +58,18 @@ const PAGES = {
     AddInvitationCode: AddInvitationCode,
 
     UserManagement: UserManagement,
+
+    FinanceDashboard: FinanceDashboard,
+
+    BusinessAnalysis: BusinessAnalysis,
+
+    SwotAnalysis: SwotAnalysis,
+
+    FinancialHistory: FinancialHistory,
+
+    FinancialProjection: FinancialProjection,
+
+    FinancialCurrent: FinancialCurrent,
 
 }
 
@@ -137,6 +161,36 @@ function PagesContent() {
             <Route path="/UserManagement" element={
                 <Layout currentPageName={currentPage}>
                     <UserManagement />
+                </Layout>
+            } />
+            <Route path="/FinanceDashboard" element={
+                <Layout currentPageName={currentPage}>
+                    <FinanceDashboard />
+                </Layout>
+            } />
+            <Route path="/BusinessAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <BusinessAnalysis />
+                </Layout>
+            } />
+            <Route path="/SwotAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <SwotAnalysis />
+                </Layout>
+            } />
+            <Route path="/FinancialHistory" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialHistory />
+                </Layout>
+            } />
+            <Route path="/FinancialProjection" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialProjection />
+                </Layout>
+            } />
+            <Route path="/FinancialCurrent" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialCurrent />
                 </Layout>
             } />
         </Routes>
