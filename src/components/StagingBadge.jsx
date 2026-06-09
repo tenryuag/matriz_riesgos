@@ -5,7 +5,11 @@ const detectStaging = () => {
   if (import.meta.env.VITE_ENVIRONMENT === 'staging') return true;
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
-  return host.includes('-git-staging-') || host.startsWith('staging.');
+  return (
+    host.startsWith('staging--') ||      // Netlify branch deploy
+    host.includes('-git-staging-') ||    // Vercel branch deploy
+    host.startsWith('staging.')          // custom subdomain
+  );
 };
 
 const StagingBadge = () => {
