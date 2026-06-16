@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLanguage } from '@/components/LanguageContext';
 import { supabase } from "@/api/supabaseClient";
+import { isAuthError } from "@/api/authHelpers";
 import { normalizeRiskLevel, getRiskLevelColorClasses } from '@/lib/utils';
 
 const PROBABILITY_LEVELS = ["Remoto (0-20%)", "Improbable (21-40%)", "Ocasional (41-60%)", "Probable (61-80%)", "Frecuente (81-100%)"];
@@ -173,10 +174,14 @@ export default function AddRisk() {
       }
       navigate(createPageUrl(`DepartmentRisks?id=${formData.department_id}`));
     } catch (error) {
-      setError(t('errorSavingRisk'));
+      // Si la sesión expiró, ya se está cerrando sesión y redirigiendo al
+      // login; no mostramos el error genérico para evitar el parpadeo.
+      const sessionEnded = isAuthError(error) || error?.message === "Sesión expirada";
+      if (!sessionEnded) {
+        setError(t('errorSavingRisk'));
+        setLoading(false);
+      }
       console.error("Error saving risk:", error);
-    } finally {
-      setLoading(false);
     }
   };
   
