@@ -1,11 +1,12 @@
 
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff } from 'react-feather';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
+import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
 import {
   LayoutDashboard,
   Building2,
@@ -38,6 +39,18 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const [error, setError] = useState('');
+
+  // Si llegamos aquí porque la sesión expiró, avisar al usuario.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(SESSION_EXPIRED_KEY)) {
+        setError(t('sessionExpired'));
+        window.sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+      }
+    } catch (_) {
+      // sessionStorage no disponible; ignorar.
+    }
+  }, [t]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -326,7 +339,11 @@ const AppLayout = ({ children }) => {
 
       setIsAdmin(role === 'admin');
     } catch (error) {
+      // Ante cualquier fallo al resolver la sesión, tratar como no autenticado
+      // para que la app muestre el login en vez de quedarse rota.
       console.log("Usuario no autenticado");
+      setUser(null);
+      setIsAdmin(false);
     }
     setLoading(false);
   };

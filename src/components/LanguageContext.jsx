@@ -58,6 +58,7 @@ const translations = {
     loginError: "Error al iniciar sesión",
     invalidCredentials: "Email o contraseña incorrectos",
     accountSuspended: "Tu cuenta ha sido suspendida. Contacta al administrador.",
+    sessionExpired: "Tu sesión expiró. Por favor inicia sesión de nuevo.",
 
 
     // Forgot Password & Update Password
@@ -452,6 +453,7 @@ const translations = {
     loginError: "Login error",
     invalidCredentials: "Invalid email or password",
     accountSuspended: "Your account has been suspended. Please contact the administrator.",
+    sessionExpired: "Your session expired. Please sign in again.",
 
 
     // Forgot Password & Update Password
