@@ -33,6 +33,41 @@ export const Department = {
     if (error) handleQueryError(error);
     return data;
   },
+
+  // 🔹 Eliminar departamento (solo si no tiene riesgos asociados)
+  async delete(id) {
+    // 1. Verificar que no haya riesgos enlazados a este departamento.
+    const { count, error: countError } = await supabase
+      .from("risks")
+      .select("id", { count: "exact", head: true })
+      .eq("department_id", id);
+    if (countError) handleQueryError(countError);
+
+    if ((count ?? 0) > 0) {
+      const err = new Error("DEPARTMENT_HAS_RISKS");
+      err.code = "DEPARTMENT_HAS_RISKS";
+      err.riskCount = count;
+      throw err;
+    }
+
+    // 2. Eliminar. Pedimos las filas borradas para confirmar que sí se borró.
+    const { data, error } = await supabase
+      .from("departments")
+      .delete()
+      .eq("id", id)
+      .select();
+    if (error) handleQueryError(error);
+
+    // Si no se borró ninguna fila, suele ser por permisos (RLS) o porque ya
+    // no existe. Lo reportamos para no "fingir" un borrado exitoso.
+    if (!data || data.length === 0) {
+      const err = new Error("DEPARTMENT_DELETE_FAILED");
+      err.code = "DEPARTMENT_DELETE_FAILED";
+      throw err;
+    }
+
+    return true;
+  },
 };
 
 export const Risk = {
