@@ -319,6 +319,16 @@ const AppLayout = ({ children }) => {
     };
   }, []);
 
+  // Sincroniza la clase de tema en <html> para que el contenido renderizado
+  // en portales (menús desplegables, selects, popovers) herede las variables
+  // de color del tema actual. Sin esto, esos menús caen al tema claro por
+  // defecto y el texto queda con mal contraste en modo oscuro.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
+
   const toggleTheme = () => {
     setTheme(currentTheme => {
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
