@@ -10,6 +10,7 @@ import {
   Eye,
   AlertTriangle,
   Edit,
+  Trash2,
   MoreVertical
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,29 @@ export default function Departments() {
 
   const getDepartmentRisks = (departmentId) => {
     return risks.filter(risk => risk.department_id === departmentId);
+  };
+
+  const handleDelete = async (department, riskCount) => {
+    // No permitir borrar si tiene riesgos: avisar y salir.
+    if (riskCount > 0) {
+      window.alert(t('deptDeleteBlocked', { count: riskCount }));
+      return;
+    }
+    if (!window.confirm(t('deptDeleteConfirm', { name: department.name }))) return;
+
+    try {
+      await Department.delete(department.id);
+      setDepartments(prev => prev.filter(d => d.id !== department.id));
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      if (error?.code === 'DEPARTMENT_HAS_RISKS') {
+        // Por si se crearon riesgos entre la carga y el borrado.
+        window.alert(t('deptDeleteBlocked', { count: error.riskCount ?? riskCount }));
+        loadData();
+      } else {
+        window.alert(t('deptDeleteError'));
+      }
+    }
   };
 
   const getRiskLevelStats = (departmentId) => {
@@ -130,12 +154,20 @@ export default function Departments() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="glass">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => navigate(createPageUrl(`AddDepartment?id=${department.id}`))}
                           className="hover:bg-white/10 dark:hover:bg-black/10 cursor-pointer"
                         >
                           <Edit className="w-4 h-4 mr-2" />
                           {t('edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(department, riskStats.total)}
+                          className={`cursor-pointer text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-500 ${riskStats.total > 0 ? 'opacity-60' : ''}`}
+                          title={riskStats.total > 0 ? t('deptDeleteBlocked', { count: riskStats.total }) : undefined}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          {t('delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

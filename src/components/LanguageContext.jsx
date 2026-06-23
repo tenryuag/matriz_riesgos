@@ -9,6 +9,9 @@ const translations = {
     save: "Guardar",
     edit: "Editar",
     delete: "Eliminar",
+    deptDeleteConfirm: "¿Eliminar el departamento \"{name}\"? Esta acción no se puede deshacer.",
+    deptDeleteBlocked: "No puedes eliminar este departamento porque tiene {count} riesgo(s) asociado(s). Elimina primero esos riesgos.",
+    deptDeleteError: "No se pudo eliminar el departamento. Inténtalo de nuevo.",
     view: "Ver",
     actions: "Acciones",
     search: "Buscar...",
@@ -58,6 +61,7 @@ const translations = {
     loginError: "Error al iniciar sesión",
     invalidCredentials: "Email o contraseña incorrectos",
     accountSuspended: "Tu cuenta ha sido suspendida. Contacta al administrador.",
+    sessionExpired: "Tu sesión expiró. Por favor inicia sesión de nuevo.",
 
 
     // Forgot Password & Update Password
@@ -533,6 +537,9 @@ const translations = {
     save: "Save",
     edit: "Edit",
     delete: "Delete",
+    deptDeleteConfirm: "Delete the \"{name}\" department? This action cannot be undone.",
+    deptDeleteBlocked: "You can't delete this department because it has {count} associated risk(s). Delete those risks first.",
+    deptDeleteError: "The department could not be deleted. Please try again.",
     view: "View",
     actions: "Actions",
     search: "Search...",
@@ -582,6 +589,7 @@ const translations = {
     loginError: "Login error",
     invalidCredentials: "Invalid email or password",
     accountSuspended: "Your account has been suspended. Please contact the administrator.",
+    sessionExpired: "Your session expired. Please sign in again.",
 
 
     // Forgot Password & Update Password

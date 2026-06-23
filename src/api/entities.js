@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { handleQueryError, forceLogout } from "./authHelpers";
 
 export const Department = {
   // 🔹 Obtener lista de departamentos
@@ -8,7 +9,7 @@ export const Department = {
       .select("*")
       .order(order.replace("-", ""), { ascending: !order.startsWith("-") });
 
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
@@ -18,7 +19,7 @@ export const Department = {
       .from("departments")
       .insert([departmentData])
       .select(); // opcional: para obtener el resultado insertado
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
@@ -29,8 +30,43 @@ export const Department = {
       query = query.eq(key, filters[key]);
     }
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
+  },
+
+  // 🔹 Eliminar departamento (solo si no tiene riesgos asociados)
+  async delete(id) {
+    // 1. Verificar que no haya riesgos enlazados a este departamento.
+    const { count, error: countError } = await supabase
+      .from("risks")
+      .select("id", { count: "exact", head: true })
+      .eq("department_id", id);
+    if (countError) handleQueryError(countError);
+
+    if ((count ?? 0) > 0) {
+      const err = new Error("DEPARTMENT_HAS_RISKS");
+      err.code = "DEPARTMENT_HAS_RISKS";
+      err.riskCount = count;
+      throw err;
+    }
+
+    // 2. Eliminar. Pedimos las filas borradas para confirmar que sí se borró.
+    const { data, error } = await supabase
+      .from("departments")
+      .delete()
+      .eq("id", id)
+      .select();
+    if (error) handleQueryError(error);
+
+    // Si no se borró ninguna fila, suele ser por permisos (RLS) o porque ya
+    // no existe. Lo reportamos para no "fingir" un borrado exitoso.
+    if (!data || data.length === 0) {
+      const err = new Error("DEPARTMENT_DELETE_FAILED");
+      err.code = "DEPARTMENT_DELETE_FAILED";
+      throw err;
+    }
+
+    return true;
   },
 };
 
@@ -41,7 +77,7 @@ export const Risk = {
       .select("*")
       .order(order.replace("-", ""), { ascending: !order.startsWith("-") });
 
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
@@ -52,28 +88,42 @@ export const Risk = {
       query = query.eq(key, filters[key]);
     }
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
   // 🔹 Crear nuevo riesgo
   async create(riskData) {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) handleQueryError(authError);
+
     const userId = userData?.user?.id;
+    // Sin usuario válido = sesión expirada: enviar al login en vez de
+    // intentar un insert que fallaría por RLS.
+    if (!userId) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
 
     const { data, error } = await supabase
       .from("risks")
       .insert([{ ...riskData, created_by_id: userId }])
       .select();
 
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
   // 🔹 Actualizar riesgo por ID
   async update(id, riskData) {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) handleQueryError(authError);
+
     const userId = userData?.user?.id;
+    if (!userId) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
 
     const { data, error } = await supabase
       .from("risks")
@@ -81,14 +131,14 @@ export const Risk = {
       .eq("id", id)
       .select();
 
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 
   // 🔹 Eliminar riesgo por ID
   async delete(id) {
     const { data, error } = await supabase.from("risks").delete().eq("id", id);
-    if (error) throw error;
+    if (error) handleQueryError(error);
     return data;
   },
 };
@@ -136,17 +186,20 @@ export const User = {
 
   // 🔹 Obtener usuario actual
   async me() {
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        if (error.message === "Auth session missing!") return null;
-        throw error;
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      // Cualquier error aquí (sesión faltante, token de refresco inválido,
+      // sesión expirada) significa "no autenticado". Limpiamos cualquier
+      // sesión rota guardada en el navegador para que la próxima recarga no
+      // vuelva a fallar, y devolvemos null para que la app muestre el login.
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (_) {
+        // ignorar
       }
-      return data.user;
-    } catch (err) {
-      console.error("Error al obtener usuario:", err.message);
-      throw err;
+      return null;
     }
+    return data?.user ?? null;
   },
 
   // 🔹 Registrar nuevo usuario con código de invitación
