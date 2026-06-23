@@ -10,17 +10,19 @@ import {
   Eye,
   AlertTriangle,
   Edit,
-  Trash2,
-  MoreVertical
+  Trash2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { useLanguage } from '@/components/LanguageContext';
 import { isHighRisk } from '@/lib/utils';
 
@@ -28,6 +30,10 @@ export default function Departments() {
   const [departments, setDepartments] = useState([]);
   const [risks, setRisks] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Departamento que el usuario quiere eliminar: { department, riskCount }
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -53,26 +59,39 @@ export default function Departments() {
     return risks.filter(risk => risk.department_id === departmentId);
   };
 
-  const handleDelete = async (department, riskCount) => {
-    // No permitir borrar si tiene riesgos: avisar y salir.
-    if (riskCount > 0) {
-      window.alert(t('deptDeleteBlocked', { count: riskCount }));
-      return;
-    }
-    if (!window.confirm(t('deptDeleteConfirm', { name: department.name }))) return;
+  // Abre el modal de eliminación para el departamento indicado.
+  const requestDelete = (department, riskCount) => {
+    setDeleteError('');
+    setDeleteTarget({ department, riskCount });
+  };
 
+  const closeDeleteModal = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError('');
+  };
+
+  // Ejecuta el borrado desde el modal (solo aplica si no tiene riesgos).
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { department } = deleteTarget;
+    setDeleting(true);
+    setDeleteError('');
     try {
       await Department.delete(department.id);
       setDepartments(prev => prev.filter(d => d.id !== department.id));
+      setDeleteTarget(null);
     } catch (error) {
       console.error("Error deleting department:", error);
       if (error?.code === 'DEPARTMENT_HAS_RISKS') {
-        // Por si se crearon riesgos entre la carga y el borrado.
-        window.alert(t('deptDeleteBlocked', { count: error.riskCount ?? riskCount }));
+        // Se crearon riesgos entre la carga y el borrado: pasar a modo bloqueado.
+        setDeleteTarget({ department, riskCount: error.riskCount ?? 1 });
         loadData();
       } else {
-        window.alert(t('deptDeleteError'));
+        setDeleteError(t('deptDeleteError'));
       }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -147,30 +166,28 @@ export default function Departments() {
                         )}
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-muted hover:bg-white/10 dark:hover:bg-black/10">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="glass">
-                        <DropdownMenuItem
-                          onClick={() => navigate(createPageUrl(`AddDepartment?id=${department.id}`))}
-                          className="hover:bg-white/10 dark:hover:bg-black/10 cursor-pointer"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          {t('edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(department, riskStats.total)}
-                          className={`cursor-pointer text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-500 ${riskStats.total > 0 ? 'opacity-60' : ''}`}
-                          title={riskStats.total > 0 ? t('deptDeleteBlocked', { count: riskStats.total }) : undefined}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {t('delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(createPageUrl(`AddDepartment?id=${department.id}`))}
+                        className="text-muted hover:text-foreground hover:bg-white/10 dark:hover:bg-black/10"
+                        title={t('edit')}
+                        aria-label={t('edit')}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => requestDelete(department, riskStats.total)}
+                        className="text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                        title={t('delete')}
+                        aria-label={t('delete')}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -227,6 +244,69 @@ export default function Departments() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de eliminación de departamento */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDeleteModal(); }}>
+        <AlertDialogContent className="glass">
+          {deleteTarget && deleteTarget.riskCount > 0 ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  {t('deptDeleteBlockedTitle')}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('deptDeleteBlocked', { count: deleteTarget.riskCount })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="glass hover:border-accent">
+                  {t('understood')}
+                </AlertDialogCancel>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                  {t('deptDeleteTitle')}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {deleteTarget && t('deptDeleteConfirm', { name: deleteTarget.department.name })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {deleteError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                  {deleteError}
+                </div>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel className="glass hover:border-accent" disabled={deleting}>
+                  {t('cancel')}
+                </AlertDialogCancel>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="bg-red-500 text-white hover:bg-red-600"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      {t('deleting')}
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('delete')}
+                    </>
+                  )}
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
