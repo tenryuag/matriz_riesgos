@@ -45,8 +45,10 @@ export async function forceLogout() {
   if (typeof window !== "undefined") {
     try {
       window.sessionStorage.setItem(SESSION_EXPIRED_KEY, "1");
+      // Limpia la marca de inactividad para que el próximo login arranque limpio.
+      window.localStorage.removeItem("last_activity");
     } catch (_) {
-      // sessionStorage puede no estar disponible en modo privado; ignorar.
+      // storage puede no estar disponible en modo privado; ignorar.
     }
     window.location.assign("/");
   }

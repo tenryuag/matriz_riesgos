@@ -7,6 +7,7 @@ import { createPageUrl } from "@/utils";
 import { User } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
+import { useIdleTimeout, resetIdleTimer } from "@/hooks/useIdleTimeout";
 import {
   LayoutDashboard,
   Building2,
@@ -60,6 +61,8 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
       // (importante para usuarios reactivados que tenían sesión previa)
       await supabase.auth.signOut();
       await User.login(email, password);
+      // Inicia la ventana de inactividad desde cero al autenticarse.
+      resetIdleTimer();
       onLoginSuccess();
     } catch (error) {
       console.error('Login error:', error);
@@ -291,6 +294,9 @@ const AppLayout = ({ children }) => {
   const [theme, setTheme] = React.useState("dark");
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { language, changeLanguage, t } = useLanguage();
+
+  // Cierra la sesión tras 8 horas de inactividad (solo con sesión activa).
+  useIdleTimeout(!!user);
 
   React.useEffect(() => {
     loadUser();
