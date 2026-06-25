@@ -1,12 +1,12 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw, Home, LogOut } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, LogOut, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 class GlobalErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, copied: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -22,6 +22,23 @@ class GlobalErrorBoundary extends React.Component {
 
   handleReload = () => {
     window.location.reload();
+  };
+
+  // Copia el detalle del error al portapapeles para poder compartirlo en soporte.
+  handleCopyError = () => {
+    const detail = [
+      this.state.error?.toString() || '',
+      this.state.errorInfo?.componentStack || '',
+      `URL: ${window.location.href}`,
+      `UA: ${navigator.userAgent}`,
+    ].join('\n');
+    try {
+      navigator.clipboard?.writeText(detail);
+      this.setState({ copied: true });
+      setTimeout(() => this.setState({ copied: false }), 2000);
+    } catch (_) {
+      // clipboard no disponible; el usuario puede seleccionar el texto a mano.
+    }
   };
 
   handleHome = () => {
@@ -62,11 +79,29 @@ class GlobalErrorBoundary extends React.Component {
                 La aplicación ha encontrado un error inesperado. Hemos registrado el problema para investigarlo.
               </p>
               
-              {import.meta.env.DEV && this.state.error && (
-                <div className="mt-4 p-4 bg-muted rounded-md text-left text-xs font-mono overflow-auto max-h-40">
-                  <p className="font-bold text-red-500 mb-2">{this.state.error.toString()}</p>
-                  <pre className="text-muted-foreground">{this.state.errorInfo?.componentStack}</pre>
-                </div>
+              {this.state.error && (
+                <details className="mt-2 text-left">
+                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none">
+                    Ver detalles técnicos
+                  </summary>
+                  <div className="mt-2 p-3 bg-muted rounded-md text-left text-xs font-mono overflow-auto max-h-40">
+                    <p className="font-bold text-red-500 mb-2 whitespace-pre-wrap break-words">
+                      {this.state.error.toString()}
+                    </p>
+                    <pre className="text-muted-foreground whitespace-pre-wrap break-words">
+                      {this.state.errorInfo?.componentStack}
+                    </pre>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={this.handleCopyError}
+                    className="mt-2 gap-2 text-xs"
+                  >
+                    <Copy className="w-3 h-3" />
+                    {this.state.copied ? 'Copiado' : 'Copiar error'}
+                  </Button>
+                </details>
               )}
 
               <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:justify-center">
