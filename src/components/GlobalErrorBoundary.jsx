@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -26,6 +26,24 @@ class GlobalErrorBoundary extends React.Component {
 
   handleHome = () => {
     window.location.href = '/';
+  };
+
+  // Limpia la sesión de Supabase y los datos locales que pudieran estar
+  // corruptos, y vuelve al login. Rompe el bucle de "recargar y volver a
+  // fallar" cuando el crash viene de una sesión/estado dañado en el navegador.
+  handleClearSession = () => {
+    try {
+      Object.keys(window.localStorage).forEach((key) => {
+        // Tokens de sesión de Supabase (sb-*) + nuestras marcas internas.
+        if (key.startsWith('sb-') || key === 'last_activity') {
+          window.localStorage.removeItem(key);
+        }
+      });
+      window.sessionStorage.clear();
+    } catch (_) {
+      // storage no disponible; continuar al redirect de todos modos.
+    }
+    window.location.assign('/');
   };
 
   render() {
@@ -59,6 +77,20 @@ class GlobalErrorBoundary extends React.Component {
                 <Button variant="outline" onClick={this.handleHome} className="w-full sm:w-auto gap-2">
                   <Home className="w-4 h-4" />
                   Ir al Inicio
+                </Button>
+              </div>
+
+              <div className="pt-2">
+                <p className="text-xs text-muted-foreground mb-2">
+                  ¿El problema persiste al recargar?
+                </p>
+                <Button
+                  variant="ghost"
+                  onClick={this.handleClearSession}
+                  className="w-full sm:w-auto gap-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar sesión y volver al login
                 </Button>
               </div>
             </CardContent>

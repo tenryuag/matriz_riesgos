@@ -64,9 +64,12 @@ BEGIN
     );
   END IF;
 
-  -- Suspender al usuario (banned_until = infinity = suspensión indefinida)
+  -- Suspender al usuario con una fecha futura lejana (~100 años).
+  -- NO usar 'infinity': PostgreSQL lo acepta, pero el servicio de Auth de
+  -- Supabase (Go) no puede parsearlo y devuelve un error 500 al intentar
+  -- iniciar sesión. Una fecha real sí la reconoce como baneo de forma nativa.
   UPDATE auth.users
-  SET banned_until = 'infinity'
+  SET banned_until = (now() + interval '100 years')
   WHERE id = target_user_id;
 
   RETURN jsonb_build_object(
