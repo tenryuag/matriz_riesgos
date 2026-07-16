@@ -12,7 +12,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  FileText
+  FileText,
+  Info,
+  Search
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,11 +53,13 @@ export default function BusinessAnalysis() {
   const [marketSubTab, setMarketSubTab] = useState("competitors");
 
   const mainTabs = [
-    { id: "market", label: t('finTabMarket'), icon: Globe },
-    { id: "internal", label: t('finTabInternal'), icon: Building },
-    { id: "customer", label: t('finTabCustomer'), icon: Users },
-    { id: "financial", label: t('finTabFinStatus'), icon: BarChart3 },
+    { id: "market", label: "El mercado", help: "Cómo estás frente a la competencia y qué pasa afuera.", icon: Globe },
+    { id: "internal", label: "Por dentro", help: "Con qué recursos cuentas: dinero, gente, contactos y herramientas.", icon: Building },
+    { id: "customer", label: "Mis clientes", help: "Quiénes son y qué necesitan.", icon: Users },
+    { id: "financial", label: "Mis números", help: "Cómo está la salud financiera del negocio.", icon: BarChart3 },
   ];
+
+  const activeTabHelp = mainTabs.find((tab) => tab.id === activeTab)?.help;
 
   const marketSubTabs = [
     { id: "competitors", label: t('finSubTabCompetitors') },
@@ -73,16 +77,45 @@ export default function BusinessAnalysis() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to={createPageUrl("FinanceDashboard")}>
+        <Link to={createPageUrl("StrategicPlanning")}>
           <Button variant="ghost" size="icon" className="glass">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-title">{t('finBizAnalysis')}</h1>
-          <p className="text-muted">{t('finBizAnalysisPageDesc')}</p>
+          <h1 className="text-3xl font-title">Entiende tu negocio</h1>
+          <p className="text-muted">Conoce tu empresa en 4 áreas antes de definir tu estrategia.</p>
         </div>
       </div>
+
+      {/* Aviso de datos de ejemplo */}
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
+        <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground">
+          <span className="font-subtitle">Datos de ejemplo.</span>{" "}
+          Estás viendo una demostración con información de muestra.
+        </p>
+      </div>
+
+      {/* ¿Qué es esto? */}
+      <Card className="glass">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Search className="w-5 h-5 text-accent" />
+            </div>
+            <div>
+              <h2 className="font-subtitle text-lg mb-1">¿Qué hago aquí?</h2>
+              <p className="text-sm text-muted leading-relaxed">
+                Revisa tu negocio en 4 áreas para conocerlo bien: el mercado, cómo estás por
+                dentro, tus clientes y tus números. No tienes que llenar todo de golpe —
+                explora una pestaña a la vez. Esto te preparará para el siguiente paso: definir
+                tu estrategia.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Tabs - Icon navigation */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -101,6 +134,14 @@ export default function BusinessAnalysis() {
           </button>
         ))}
       </div>
+
+      {/* Ayuda contextual de la pestaña activa */}
+      {activeTabHelp && (
+        <p className="text-sm text-muted flex items-center gap-2 -mt-2">
+          <Info className="w-4 h-4 text-accent flex-shrink-0" />
+          {activeTabHelp}
+        </p>
+      )}
 
       {/* Tab Content */}
       {activeTab === "market" && (
@@ -322,7 +363,7 @@ export default function BusinessAnalysis() {
       <div className="flex justify-end">
         <Link to={createPageUrl("SwotAnalysis")}>
           <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle">
-            {t('finGoToConclusions')} <ChevronRight className="w-4 h-4 ml-2" />
+            Paso 2: Define tu estrategia <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </Link>
       </div>

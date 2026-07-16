@@ -22,25 +22,6 @@ import { useLanguage } from '@/components/LanguageContext';
 export default function FinanceDashboard() {
   const { t } = useLanguage();
 
-  const businessModules = [
-    {
-      icon: Target,
-      title: t('finBizAnalysis'),
-      description: t('finBizAnalysisDesc'),
-      href: createPageUrl("BusinessAnalysis"),
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/20"
-    },
-    {
-      icon: PieChart,
-      title: t('finSwot'),
-      description: t('finSwotDesc'),
-      href: createPageUrl("SwotAnalysis"),
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/20"
-    }
-  ];
-
   const financeModules = [
     {
       icon: BarChart3,
@@ -71,7 +52,6 @@ export default function FinanceDashboard() {
   const summaryStats = [
     { label: t('finStatRevenue'), value: "$2,450,000", icon: DollarSign, trend: "+12.5%" },
     { label: t('finStatMargin'), value: "34.2%", icon: TrendingUp, trend: "+2.1%" },
-    { label: t('finStatStrategies'), value: "8", icon: Briefcase, trend: "3 " + t('finStatActive') },
     { label: t('finStatPeriod'), value: "Q1 2026", icon: Calendar, trend: t('finStatInProgress') }
   ];
 
@@ -81,8 +61,8 @@ export default function FinanceDashboard() {
       <div className="glass rounded-3xl p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h1 className="text-3xl font-title mb-2">{t('finDashboardTitle')}</h1>
-            <p className="text-lg text-muted">{t('finDashboardSubtitle')}</p>
+            <h1 className="text-3xl font-title mb-2">{t('finFinPlanningTitle')}</h1>
+            <p className="text-lg text-muted">{t('finFinPlanningSubtitle')}</p>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 glass rounded-xl">
             <Building className="w-4 h-4 text-accent" />
@@ -92,7 +72,7 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {summaryStats.map((stat, i) => (
           <Card key={i} className="glass">
             <CardHeader className="pb-3">
@@ -109,52 +89,8 @@ export default function FinanceDashboard() {
         ))}
       </div>
 
-      {/* Business Planning Section */}
-      <div>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center">
-            <Briefcase className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-xl font-title">{t('finBizPlanningTitle')}</h2>
-            <p className="text-sm text-muted">{t('finBizPlanningSubtitle')}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {businessModules.map((mod, i) => (
-            <Link key={i} to={mod.href}>
-              <Card className="glass glass-hover cursor-pointer h-full">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 ${mod.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <mod.icon className={`w-6 h-6 ${mod.color}`} />
-                    </div>
-                    <div className="flex-grow">
-                      <h3 className="font-subtitle text-lg mb-2">{mod.title}</h3>
-                      <p className="text-sm text-muted mb-4">{mod.description}</p>
-                      <div className="flex items-center text-accent text-sm font-subtitle">
-                        {t('finEnter')} <ArrowRight className="w-4 h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
-
       {/* Financial Planning Section */}
       <div>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center">
-            <DollarSign className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <h2 className="text-xl font-title">{t('finFinPlanningTitle')}</h2>
-            <p className="text-sm text-muted">{t('finFinPlanningSubtitle')}</p>
-          </div>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {financeModules.map((mod, i) => (
             <Link key={i} to={mod.href}>

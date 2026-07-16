@@ -27,6 +27,8 @@ import UpdatePassword from "./UpdatePassword";
 
 import FinanceDashboard from "./FinanceDashboard";
 
+import StrategicPlanning from "./StrategicPlanning";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -60,6 +62,8 @@ const PAGES = {
     UserManagement: UserManagement,
 
     FinanceDashboard: FinanceDashboard,
+
+    StrategicPlanning: StrategicPlanning,
 
     BusinessAnalysis: BusinessAnalysis,
 
@@ -166,6 +170,11 @@ function PagesContent() {
             <Route path="/FinanceDashboard" element={
                 <Layout currentPageName={currentPage}>
                     <FinanceDashboard />
+                </Layout>
+            } />
+            <Route path="/StrategicPlanning" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicPlanning />
                 </Layout>
             } />
             <Route path="/BusinessAnalysis" element={
