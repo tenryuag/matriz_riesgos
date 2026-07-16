@@ -428,6 +428,8 @@ const translations = {
     finStatPeriod: "Período Actual",
     finStatInProgress: "En curso",
     finPlanning: "Planeación",
+    navStrategicPlanning: "Planeación Estratégica",
+    navFinancialPlanning: "Planeación Financiera",
 
     // Finance - Business Analysis
     finBizAnalysisPageDesc: "Análisis comparativo del mercado, interno, del cliente y financiero",
@@ -957,6 +959,8 @@ const translations = {
     finStatPeriod: "Current Period",
     finStatInProgress: "In progress",
     finPlanning: "Planning",
+    navStrategicPlanning: "Strategic Planning",
+    navFinancialPlanning: "Financial Planning",
 
     // Finance - Business Analysis
     finBizAnalysisPageDesc: "Comparative market, internal, customer and financial analysis",
