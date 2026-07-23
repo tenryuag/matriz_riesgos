@@ -8,6 +8,7 @@ import { User } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
 import { useIdleTimeout, resetIdleTimer } from "@/hooks/useIdleTimeout";
+import { findModuleByPage } from "@/config/modules";
 import {
   LayoutDashboard,
   Building2,
@@ -28,7 +29,8 @@ import {
   Users,
   BookOpen,
   TrendingUp,
-  Target
+  Target,
+  LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -288,7 +290,7 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
   );
 };
 
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, currentPageName }) => {
   const location = useLocation();
   const [user, setUser] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -620,25 +622,22 @@ const AppLayout = ({ children }) => {
     );
   }
 
-  const allNavigationItems = [
-    { name: t("dashboard"), href: createPageUrl("Dashboard"), icon: LayoutDashboard },
-    { name: t("departments"), href: createPageUrl("Departments"), icon: Building2 },
-    { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
-    { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
-    { name: t("navStrategicPlanning"), href: createPageUrl("StrategicPlanning"), icon: Target },
-    { name: t("navFinancialPlanning"), href: createPageUrl("FinanceDashboard"), icon: TrendingUp },
-    { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true },
-    { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true },
-    { name: t("documentation"), href: "/documentacion.html", icon: BookOpen, adminOnly: true, external: true }
-  ];
+  // El menú lateral se acota al módulo activo (según la página actual).
+  // En el selector de módulos y el placeholder "en desarrollo" no hay módulo,
+  // así que se muestra una barra superior mínima en vez del menú de módulo.
+  const activeModule = findModuleByPage(currentPageName);
+  const isLauncherMode = !activeModule;
 
-  // Filtrar items del menú según el rol del usuario
-  const navigationItems = allNavigationItems.filter(item => {
-    if (item.adminOnly) {
-      return isAdmin;
-    }
-    return true;
-  });
+  const navigationItems = activeModule
+    ? activeModule.pages
+        .filter((p) => !p.hidden)
+        .map((p) => ({
+          name: t(p.nameKey),
+          href: p.external || createPageUrl(p.pageKey),
+          icon: p.icon,
+          external: !!p.external,
+        }))
+    : [];
 
   return (
     <div className={`min-h-screen font-body ${theme}`}>
@@ -650,20 +649,62 @@ const AppLayout = ({ children }) => {
       >
         <style>{themeStyles}</style>
 
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-6 left-6 z-50">
-          <Button onClick={() => setSidebarOpen(!sidebarOpen)} size="icon" className="glass">
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </div>
+        {/* Barra superior: selector de módulos y placeholder "en desarrollo" */}
+        {isLauncherMode && (
+          <header className="sticky top-0 z-30 glass-darker">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
+              <div>
+                <h1 className="font-title text-lg text-foreground">{t('riskManagement')}</h1>
+                <p className="text-xs text-accent">{t('professionalManagement')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={toggleTheme} variant="ghost" size="icon" className="nav-glass" title={theme === 'light' ? t('darkMode') : t('lightMode')}>
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                </Button>
+                <Button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} variant="ghost" size="icon" className="nav-glass">
+                  <Globe className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleLogout} variant="ghost" size="icon" className="nav-glass text-foreground" title={t('logout')}>
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </header>
+        )}
 
-        {/* Sidebar */}
+        {/* Mobile Menu Button (solo dentro de un módulo) */}
+        {!isLauncherMode && (
+          <div className="lg:hidden fixed top-6 left-6 z-50">
+            <Button onClick={() => setSidebarOpen(!sidebarOpen)} size="icon" className="glass">
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        )}
+
+        {/* Sidebar (solo dentro de un módulo) */}
+        {!isLauncherMode && (
         <div className={`fixed inset-y-0 left-0 z-40 w-80 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
           <div className="h-full glass-darker p-8 flex flex-col">
-            <div className="flex items-center gap-4 mb-12">
-              <div>
-                <h1 className="font-title text-xl text-foreground">Gestión del Riesgo</h1>
-                <p className="text-sm text-accent">{t('professionalManagement')}</p>
+            <div className="mb-8">
+              <Link
+                to={createPageUrl('ModuleLauncher')}
+                onClick={() => setSidebarOpen(false)}
+                className="inline-flex items-center gap-2 text-sm text-muted hover:text-accent transition-colors mb-4"
+              >
+                <LayoutGrid className="w-4 h-4" /> {t('moduleBackToLauncher')}
+              </Link>
+              <div className="flex items-center gap-3">
+                {activeModule?.icon && (
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeModule.bg}`}>
+                    <activeModule.icon className={`w-5 h-5 ${activeModule.accent}`} />
+                  </div>
+                )}
+                <div>
+                  <h1 className="font-title text-lg text-foreground leading-tight">
+                    {activeModule ? t(activeModule.nameKey) : ''}
+                  </h1>
+                  <p className="text-xs text-accent">{t('professionalManagement')}</p>
+                </div>
               </div>
             </div>
 
@@ -750,17 +791,18 @@ const AppLayout = ({ children }) => {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Mobile Overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden" 
-            onClick={() => setSidebarOpen(false)} 
+        {/* Mobile Overlay (solo dentro de un módulo) */}
+        {!isLauncherMode && sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Main Content */}
-        <div className="lg:pl-80">
+        <div className={isLauncherMode ? '' : 'lg:pl-80'}>
           <main className="p-6 lg:p-12">
             <div className="max-w-7xl mx-auto">
               {children}
