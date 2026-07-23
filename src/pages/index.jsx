@@ -39,9 +39,17 @@ import FinancialProjection from "./FinancialProjection";
 
 import FinancialCurrent from "./FinancialCurrent";
 
+import ModuleLauncher from "./ModuleLauncher";
+
+import ModuleInDevelopment from "./ModuleInDevelopment";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
+
+    ModuleLauncher: ModuleLauncher,
+
+    ModuleInDevelopment: ModuleInDevelopment,
 
     Dashboard: Dashboard,
 
@@ -119,7 +127,17 @@ function PagesContent() {
             {/* Protected routes - inside Layout */}
             <Route path="/" element={
                 <Layout currentPageName={currentPage}>
-                    <Dashboard />
+                    <ModuleLauncher />
+                </Layout>
+            } />
+            <Route path="/ModuleLauncher" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleLauncher />
+                </Layout>
+            } />
+            <Route path="/ModuleInDevelopment" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleInDevelopment />
                 </Layout>
             } />
             <Route path="/Dashboard" element={
