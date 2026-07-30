@@ -12,11 +12,12 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const SECTION = "customer";
+export const SECTION = "customer";
 
 // Preguntas del análisis del cliente (tomadas del Excel de planeación
 // estratégica), con una ayuda en lenguaje simple para quien no conoce el tema.
-const QUESTIONS = [
+// Se exporta para que el hub del módulo muestre el progreso real.
+export const QUESTIONS = [
   {
     key: "dolores",
     q: "¿Qué problemas o dolores de tus clientes resuelve tu producto o servicio?",
@@ -209,6 +210,15 @@ export default function CustomerAnalysis() {
           {error}
         </div>
       )}
+
+      {/* Siguiente paso del recorrido */}
+      <div className="flex justify-end">
+        <Link to={createPageUrl("BusinessAnalysis")}>
+          <Button variant="outline" className="glass hover:border-accent font-subtitle">
+            Paso 2: Entiende tu negocio →
+          </Button>
+        </Link>
+      </div>
 
       {/* Barra de guardado fija */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-80 z-30 glass-darker border-t border-[var(--card-border)]">

@@ -363,7 +363,7 @@ export default function BusinessAnalysis() {
       <div className="flex justify-end">
         <Link to={createPageUrl("SwotAnalysis")}>
           <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle">
-            Paso 2: Define tu estrategia <ChevronRight className="w-4 h-4 ml-2" />
+            Paso 3: Define tu estrategia <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </Link>
       </div>
