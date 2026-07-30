@@ -464,3 +464,57 @@ export const ModuleAccess = {
     return true;
   },
 };
+
+// 🔹 Plan Estratégico (Fase 0.3 en adelante)
+export const StrategicPlan = {
+  // Devuelve el plan de la organización; si no existe, lo crea.
+  async getOrCreate() {
+    const { data, error } = await supabase
+      .from("strategic_plans")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) handleQueryError(error);
+    if (data && data.length > 0) return data[0];
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: created, error: createError } = await supabase
+      .from("strategic_plans")
+      .insert([{ created_by_id: userData?.user?.id }])
+      .select();
+    if (createError) handleQueryError(createError);
+    return created?.[0] || null;
+  },
+
+  // Respuestas de una sección (cuestionario) como mapa { question_key: answer }.
+  async getAnswers(planId, section) {
+    const { data, error } = await supabase
+      .from("plan_answers")
+      .select("question_key, answer")
+      .eq("plan_id", planId)
+      .eq("section", section);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      map[r.question_key] = r.answer || "";
+    });
+    return map;
+  },
+
+  // Guarda (upsert) todas las respuestas de una sección.
+  async saveAnswers(planId, section, answers) {
+    const rows = Object.entries(answers).map(([question_key, answer]) => ({
+      plan_id: planId,
+      section,
+      question_key,
+      answer,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rows.length === 0) return true;
+    const { error } = await supabase
+      .from("plan_answers")
+      .upsert(rows, { onConflict: "plan_id,section,question_key" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
