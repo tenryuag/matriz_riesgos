@@ -13,7 +13,8 @@ import {
   Ticket,
   Users,
   BookOpen,
-  Settings
+  Settings,
+  LayoutGrid
 } from "lucide-react";
 
 // ============================================================
@@ -97,6 +98,7 @@ export const MODULES = [
     pages: [
       { pageKey: "InvitationCodes", nameKey: "invitationCodes", icon: Ticket },
       { pageKey: "UserManagement", nameKey: "userManagement", icon: Users },
+      { pageKey: "ModuleAccess", nameKey: "moduleAccessNav", icon: LayoutGrid },
       { pageKey: "Documentation", nameKey: "documentation", icon: BookOpen, external: "/documentacion.html" },
       { pageKey: "AddInvitationCode", hidden: true },
     ],
@@ -109,8 +111,26 @@ export function findModuleByPage(pageName) {
   return MODULES.find((m) => m.pages.some((p) => p.pageKey === pageName)) || null;
 }
 
-// Devuelve los módulos visibles según el rol. El control de acceso por usuario
-// (Fase 2) se sumará aquí: filtrar además por los módulos concedidos al usuario.
-export function getVisibleModules({ isAdmin }) {
-  return MODULES.filter((m) => (m.adminOnly ? isAdmin : true));
+// ¿El usuario tiene acceso a este módulo?
+// - Los administradores tienen acceso a todos los módulos.
+// - Los módulos adminOnly solo son para administradores.
+// - Para el resto, el acceso depende de los módulos concedidos al usuario
+//   (Fase 2). `grantedModules` es un arreglo de keys (ej. ['risk','strategic']).
+export function canAccessModule(module, { isAdmin, grantedModules = [] }) {
+  if (!module) return false;
+  if (isAdmin) return true;
+  if (module.adminOnly) return false;
+  return grantedModules.includes(module.key);
+}
+
+// Devuelve los módulos visibles para el usuario, según su rol y los módulos
+// que se le concedieron.
+export function getVisibleModules({ isAdmin, grantedModules = [] }) {
+  return MODULES.filter((m) => canAccessModule(m, { isAdmin, grantedModules }));
+}
+
+// Lista de módulos que un admin puede asignar a un usuario: todos menos los
+// adminOnly (esos van implícitos con el rol de administrador).
+export function getAssignableModules() {
+  return MODULES.filter((m) => !m.adminOnly);
 }

@@ -430,3 +430,37 @@ export const InvitationCode = {
     }
   },
 };
+
+// 🔹 Acceso por módulo (Fase 2)
+export const ModuleAccess = {
+  // Módulos concedidos al usuario actual (arreglo de keys). RLS: solo lee lo suyo.
+  async myModules() {
+    const { data, error } = await supabase
+      .from("user_module_access")
+      .select("module_key");
+    if (error) handleQueryError(error);
+    return (data || []).map((r) => r.module_key);
+  },
+
+  // Todos los accesos (para admin). RLS: la política de admin permite ver todo.
+  async listAll() {
+    const { data, error } = await supabase
+      .from("user_module_access")
+      .select("user_id, module_key");
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // Reemplaza el conjunto de módulos de un usuario (admin). Usa el RPC.
+  async setUserModules(userId, moduleKeys) {
+    const { data, error } = await supabase.rpc("set_user_modules", {
+      target_user_id: userId,
+      module_keys: moduleKeys,
+    });
+    if (error) handleQueryError(error);
+    if (data && data.success === false) {
+      throw new Error(data.message || "No se pudieron asignar los módulos");
+    }
+    return true;
+  },
+};

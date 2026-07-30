@@ -5,20 +5,30 @@ import { ArrowRight, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/components/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { getVisibleModules } from "@/config/modules";
 
 // Pantalla de bienvenida tras el inicio de sesión: el usuario elige el módulo
 // al que quiere entrar. Cada módulo lleva a su propia sección.
 export default function ModuleLauncher() {
   const { t } = useLanguage();
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { isAdmin, grantedModules, loading } = useModuleAccess();
 
-  const modules = getVisibleModules({ isAdmin });
+  const modules = getVisibleModules({ isAdmin, grantedModules });
 
   const firstName =
     (user?.user_metadata?.full_name || user?.full_name || "")
       .trim()
       .split(" ")[0] || "";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-10 py-6">
@@ -31,6 +41,16 @@ export default function ModuleLauncher() {
           ¿Con qué módulo quieres trabajar hoy?
         </p>
       </div>
+
+      {/* Sin módulos asignados */}
+      {modules.length === 0 && (
+        <Card className="glass">
+          <CardContent className="p-10 text-center text-muted">
+            <p className="text-lg font-subtitle mb-2">{t("moduleNoneTitle")}</p>
+            <p className="text-sm">{t("moduleNoneDesc")}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tarjetas de módulos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

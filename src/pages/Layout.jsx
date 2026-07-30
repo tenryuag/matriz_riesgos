@@ -8,7 +8,8 @@ import { User } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
 import { useIdleTimeout, resetIdleTimer } from "@/hooks/useIdleTimeout";
-import { findModuleByPage } from "@/config/modules";
+import { findModuleByPage, canAccessModule } from "@/config/modules";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 import {
   LayoutDashboard,
   Building2,
@@ -298,6 +299,8 @@ const AppLayout = ({ children, currentPageName }) => {
   const [theme, setTheme] = React.useState("dark");
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { language, changeLanguage, t } = useLanguage();
+  // Acceso por módulo del usuario (Fase 2): para proteger las páginas.
+  const { isAdmin: hasAdminAccess, grantedModules, loading: accessLoading } = useModuleAccess();
 
   // Cierra la sesión tras 8 horas de inactividad (solo con sesión activa).
   useIdleTimeout(!!user);
@@ -638,6 +641,39 @@ const AppLayout = ({ children, currentPageName }) => {
           external: !!p.external,
         }))
     : [];
+
+  // Protección de acceso: si el usuario entra (por URL) a una página de un
+  // módulo al que no tiene acceso, no se la mostramos.
+  const accessChecked = !accessLoading;
+  const deniedModuleAccess =
+    activeModule &&
+    accessChecked &&
+    !canAccessModule(activeModule, { isAdmin: hasAdminAccess, grantedModules });
+
+  if (deniedModuleAccess) {
+    return (
+      <div className={`min-h-screen font-body ${theme}`}>
+        <div
+          className="min-h-screen flex items-center justify-center p-6"
+          style={{ background: `linear-gradient(135deg, var(--background-start), var(--background-end))` }}
+        >
+          <style>{themeStyles}</style>
+          <div className="glass rounded-3xl p-10 max-w-md text-center">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-red-500/15 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-red-500" />
+            </div>
+            <h1 className="font-title text-2xl mb-2">{t('moduleAccessDeniedTitle')}</h1>
+            <p className="text-muted mb-6">{t('moduleAccessDeniedDesc')}</p>
+            <Link to={createPageUrl('ModuleLauncher')}>
+              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <LayoutGrid className="w-4 h-4 mr-2" /> {t('moduleBackToLauncher')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen font-body ${theme}`}>
