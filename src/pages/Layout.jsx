@@ -647,11 +647,15 @@ const AppLayout = ({ children, currentPageName }) => {
 
   // Protección de acceso: si el usuario entra (por URL) a una página de un
   // módulo al que no tiene acceso, no se la mostramos.
+  // Se considera admin si CUALQUIERA de las dos fuentes de rol lo confirma
+  // (el loadUser del Layout o el hook de acceso), para que un admin nunca
+  // quede bloqueado por un fallo puntual de carga.
+  const effectiveAdmin = isAdmin || hasAdminAccess;
   const accessChecked = !accessLoading;
   const deniedModuleAccess =
     activeModule &&
     accessChecked &&
-    !canAccessModule(activeModule, { isAdmin: hasAdminAccess, grantedModules });
+    !canAccessModule(activeModule, { isAdmin: effectiveAdmin, grantedModules });
 
   if (deniedModuleAccess) {
     return (
