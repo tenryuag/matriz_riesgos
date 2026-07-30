@@ -312,7 +312,7 @@ export default function SwotAnalysis() {
       <div className="flex justify-between">
         <Link to={createPageUrl("BusinessAnalysis")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Paso 1: Entiende tu negocio
+            <ArrowLeft className="w-4 h-4 mr-2" /> Paso 2: Entiende tu negocio
           </Button>
         </Link>
         <Link to={createPageUrl("StrategicPlanning")}>
