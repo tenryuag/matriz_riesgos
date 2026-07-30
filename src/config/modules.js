@@ -65,6 +65,7 @@ export const MODULES = [
     home: "StrategicPlanning",
     pages: [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
+      { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users },
       { pageKey: "BusinessAnalysis", nameKey: "navBusinessAnalysis", icon: Search },
       { pageKey: "SwotAnalysis", nameKey: "navSwot", icon: Map },
     ],
