@@ -43,6 +43,8 @@ import ModuleLauncher from "./ModuleLauncher";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
 
+import ModuleAccessAdmin from "./ModuleAccessAdmin";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -50,6 +52,8 @@ const PAGES = {
     ModuleLauncher: ModuleLauncher,
 
     ModuleInDevelopment: ModuleInDevelopment,
+
+    ModuleAccess: ModuleAccessAdmin,
 
     Dashboard: Dashboard,
 
@@ -138,6 +142,11 @@ function PagesContent() {
             <Route path="/ModuleInDevelopment" element={
                 <Layout currentPageName={currentPage}>
                     <ModuleInDevelopment />
+                </Layout>
+            } />
+            <Route path="/ModuleAccess" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleAccessAdmin />
                 </Layout>
             } />
             <Route path="/Dashboard" element={
