@@ -69,6 +69,9 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
       // Inicia la ventana de inactividad desde cero al autenticarse.
       resetIdleTimer();
       onLoginSuccess();
+      // Tras iniciar sesión, ir siempre al selector de módulos (sin importar
+      // en qué URL estuviera el usuario al momento de autenticarse).
+      navigate(createPageUrl('ModuleLauncher'));
     } catch (error) {
       console.error('Login error:', error);
       
