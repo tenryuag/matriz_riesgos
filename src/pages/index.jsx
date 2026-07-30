@@ -45,6 +45,8 @@ import ModuleInDevelopment from "./ModuleInDevelopment";
 
 import ModuleAccessAdmin from "./ModuleAccessAdmin";
 
+import { ModuleAccessProvider } from "@/components/ModuleAccessContext";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -236,7 +238,9 @@ function PagesContent() {
 export default function Pages() {
     return (
         <Router>
-            <PagesContent />
+            <ModuleAccessProvider>
+                <PagesContent />
+            </ModuleAccessProvider>
         </Router>
     );
 }
