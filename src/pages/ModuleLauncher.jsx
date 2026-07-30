@@ -4,7 +4,6 @@ import { createPageUrl } from "@/utils";
 import { ArrowRight, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/components/LanguageContext";
-import { useAuth } from "@/hooks/useAuth";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { getVisibleModules } from "@/config/modules";
 
@@ -21,8 +20,9 @@ const LOADING_PHRASES = [
 // al que quiere entrar. Cada módulo lleva a su propia sección.
 export default function ModuleLauncher() {
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const { isAdmin, grantedModules, loading } = useModuleAccess();
+  // El usuario y el acceso vienen del mismo contexto (leído de la sesión
+  // local), sin llamadas de red extra.
+  const { user, isAdmin, grantedModules, loading } = useModuleAccess();
 
   const modules = getVisibleModules({ isAdmin, grantedModules });
 

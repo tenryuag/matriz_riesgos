@@ -20,6 +20,7 @@ import { ModuleAccess } from "@/api/entities";
 // usa el RLS.
 
 const ModuleAccessContext = createContext({
+  user: null,
   isAdmin: false,
   grantedModules: [],
   loading: true,
@@ -28,6 +29,7 @@ const ModuleAccessContext = createContext({
 
 export function ModuleAccessProvider({ children }) {
   const [state, setState] = useState({
+    user: null,
     isAdmin: false,
     grantedModules: [],
     loading: true,
@@ -38,7 +40,8 @@ export function ModuleAccessProvider({ children }) {
     try {
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
-      const meta = session?.user?.user_metadata || {};
+      const user = session?.user || null;
+      const meta = user?.user_metadata || {};
       const admin = meta.role === "admin";
 
       let modules = [];
@@ -50,10 +53,10 @@ export function ModuleAccessProvider({ children }) {
           modules = [];
         }
       }
-      setState({ isAdmin: admin, grantedModules: modules, loading: false });
+      setState({ user, isAdmin: admin, grantedModules: modules, loading: false });
     } catch (error) {
       console.error("Error al cargar acceso por módulo:", error);
-      setState({ isAdmin: false, grantedModules: [], loading: false });
+      setState({ user: null, isAdmin: false, grantedModules: [], loading: false });
     }
   }, []);
 
