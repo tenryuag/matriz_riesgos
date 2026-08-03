@@ -434,6 +434,8 @@ const translations = {
     // Módulos (selector, menú acotado, placeholder "en desarrollo")
     moduleRisk: "Gestión del Riesgo",
     moduleRiskDesc: "Identifica, evalúa y da seguimiento a los riesgos de tu organización.",
+    moduleFinAnalysis: "Análisis Financiero",
+    moduleFinAnalysisDesc: "Conoce la salud financiera de tu empresa antes de planear.",
     moduleStrategic: "Planeación Estratégica",
     moduleStrategicDesc: "Entiende tu negocio y define hacia dónde llevarlo, paso a paso.",
     moduleFinancial: "Planeación Financiera",
@@ -1000,6 +1002,8 @@ const translations = {
     // Modules
     moduleRisk: "Risk Management",
     moduleRiskDesc: "Identify, assess and track your organization's risks.",
+    moduleFinAnalysis: "Financial Analysis",
+    moduleFinAnalysisDesc: "Understand your company's financial health before planning.",
     moduleStrategic: "Strategic Planning",
     moduleStrategicDesc: "Understand your business and decide where to take it, step by step.",
     moduleFinancial: "Financial Planning",
