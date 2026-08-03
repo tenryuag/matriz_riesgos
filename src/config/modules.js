@@ -14,7 +14,8 @@ import {
   Users,
   BookOpen,
   Settings,
-  LayoutGrid
+  LayoutGrid,
+  Calculator
 } from "lucide-react";
 
 // ============================================================
@@ -53,6 +54,19 @@ export const MODULES = [
       { pageKey: "DepartmentRisks", hidden: true },
       { pageKey: "AddDepartment", hidden: true },
     ],
+  },
+  {
+    // Análisis financiero: distinto de la planeación financiera. Va antes de
+    // la planeación estratégica en el flujo. Aún sin desarrollar.
+    key: "fin-analysis",
+    nameKey: "moduleFinAnalysis",
+    descKey: "moduleFinAnalysisDesc",
+    icon: Calculator,
+    accent: "text-cyan-500",
+    bg: "bg-cyan-500/15",
+    status: "in-development",
+    home: "ModuleInDevelopment",
+    pages: [],
   },
   {
     key: "strategic",
