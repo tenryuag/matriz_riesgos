@@ -15,7 +15,8 @@ import {
   BookOpen,
   Settings,
   LayoutGrid,
-  Calculator
+  Calculator,
+  Globe
 } from "lucide-react";
 
 // ============================================================
@@ -80,8 +81,10 @@ export const MODULES = [
     pages: [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
       { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users },
-      { pageKey: "BusinessAnalysis", nameKey: "navBusinessAnalysis", icon: Search },
+      { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe },
       { pageKey: "SwotAnalysis", nameKey: "navSwot", icon: Map },
+      // Mockup anterior; se conserva accesible por URL sin aparecer en el menú.
+      { pageKey: "BusinessAnalysis", hidden: true },
     ],
   },
   {

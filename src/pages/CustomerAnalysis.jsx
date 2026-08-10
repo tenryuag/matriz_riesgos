@@ -213,9 +213,9 @@ export default function CustomerAnalysis() {
 
       {/* Siguiente paso del recorrido */}
       <div className="flex justify-end">
-        <Link to={createPageUrl("BusinessAnalysis")}>
+        <Link to={createPageUrl("MarketAnalysis")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            Paso 2: Entiende tu negocio →
+            Paso 2: Analiza tu mercado →
           </Button>
         </Link>
       </div>
