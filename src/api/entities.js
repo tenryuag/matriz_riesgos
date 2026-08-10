@@ -517,4 +517,86 @@ export const StrategicPlan = {
     if (error) handleQueryError(error);
     return true;
   },
+
+  // Respuestas de varias secciones en una sola consulta.
+  // Devuelve { [section]: { question_key: answer } }.
+  async getAnswersForSections(planId, sections) {
+    if (!sections || sections.length === 0) return {};
+    const { data, error } = await supabase
+      .from("plan_answers")
+      .select("section, question_key, answer")
+      .eq("plan_id", planId)
+      .in("section", sections);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      if (!map[r.section]) map[r.section] = {};
+      map[r.section][r.question_key] = r.answer || "";
+    });
+    return map;
+  },
+
+  // Guarda (upsert) varias secciones de una sola vez.
+  // `sectionsMap` tiene la forma { [section]: { question_key: answer } }.
+  async saveSections(planId, sectionsMap) {
+    const now = new Date().toISOString();
+    const rows = [];
+    Object.entries(sectionsMap).forEach(([section, answers]) => {
+      Object.entries(answers).forEach(([question_key, answer]) => {
+        rows.push({ plan_id: planId, section, question_key, answer, updated_at: now });
+      });
+    });
+    if (rows.length === 0) return true;
+    const { error } = await supabase
+      .from("plan_answers")
+      .upsert(rows, { onConflict: "plan_id,section,question_key" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Competidores del análisis del mercado (Fase 1.2)
+export const Competitor = {
+  async list(planId) {
+    const { data, error } = await supabase
+      .from("competitors")
+      .select("*")
+      .eq("plan_id", planId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async create(planId, name, position = 0) {
+    const { data, error } = await supabase
+      .from("competitors")
+      .insert([{ plan_id: planId, name, position }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async rename(id, name) {
+    const { error } = await supabase
+      .from("competitors")
+      .update({ name })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina el competidor y sus respuestas asociadas en plan_answers.
+  async remove(planId, id) {
+    const { error: answersError } = await supabase
+      .from("plan_answers")
+      .delete()
+      .eq("plan_id", planId)
+      .eq("section", `market-comp:${id}`);
+    if (answersError) handleQueryError(answersError);
+
+    const { error } = await supabase.from("competitors").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
 };

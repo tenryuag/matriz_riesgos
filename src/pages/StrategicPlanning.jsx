@@ -7,7 +7,7 @@ import {
   Info,
   ArrowRight,
   Building,
-  Search,
+  Globe,
   Map,
   Users,
   CheckCircle2,
@@ -63,19 +63,20 @@ export default function StrategicPlanning() {
       bg: "bg-blue-500/15",
       border: "hover:border-blue-500/50",
       ready: true,
+      progress: customerProgress,
     },
     {
       n: 2,
-      icon: Search,
-      title: "Entiende tu negocio",
+      icon: Globe,
+      title: "Analiza tu mercado",
       description:
-        "Compara tu empresa con la competencia y revisa cómo estás por dentro.",
-      href: createPageUrl("BusinessAnalysis"),
-      cta: "Ver demostración",
+        "Compara tu negocio con tus principales competidores y detecta oportunidades que nadie aprovecha.",
+      href: createPageUrl("MarketAnalysis"),
+      cta: "Empezar aquí",
       accent: "text-purple-500",
       bg: "bg-purple-500/15",
       border: "hover:border-purple-500/50",
-      ready: false,
+      ready: true,
     },
     {
       n: 3,
@@ -138,10 +139,10 @@ export default function StrategicPlanning() {
       <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
         <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-foreground">
-          El <span className="font-subtitle">Paso 1 ya está listo</span>: lo que escribas ahí
-          se guarda de verdad. Las secciones con la etiqueta{" "}
+          Los pasos con la etiqueta <span className="font-subtitle">"Ya funciona"</span> guardan
+          de verdad lo que escribes. Los marcados como{" "}
           <span className="font-subtitle">"Demostración"</span> todavía muestran datos de
-          ejemplo mientras las construimos.
+          ejemplo mientras los construimos.
         </p>
       </div>
 
@@ -178,22 +179,22 @@ export default function StrategicPlanning() {
                   <h3 className="font-subtitle text-lg mb-2">{step.title}</h3>
                   <p className="text-sm text-muted mb-4 flex-grow">{step.description}</p>
 
-                  {/* Progreso real (solo en el paso funcional) */}
-                  {step.ready && customerProgress && (
+                  {/* Progreso real (solo en pasos funcionales con datos) */}
+                  {step.progress && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-xs text-muted mb-1.5">
                         <span>
-                          {customerProgress.answered} de {customerProgress.total} preguntas
+                          {step.progress.answered} de {step.progress.total} preguntas
                         </span>
                         <span>
-                          {Math.round((customerProgress.answered / customerProgress.total) * 100)}%
+                          {Math.round((step.progress.answered / step.progress.total) * 100)}%
                         </span>
                       </div>
                       <div className="h-2 glass rounded-full overflow-hidden">
                         <div
                           className="h-full bg-accent transition-all"
                           style={{
-                            width: `${(customerProgress.answered / customerProgress.total) * 100}%`,
+                            width: `${(step.progress.answered / step.progress.total) * 100}%`,
                           }}
                         />
                       </div>
@@ -201,7 +202,7 @@ export default function StrategicPlanning() {
                   )}
 
                   <div className="flex items-center text-accent text-sm font-subtitle">
-                    {step.ready && customerProgress?.answered > 0 ? "Continuar" : step.cta}
+                    {step.progress?.answered > 0 ? "Continuar" : step.cta}
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </div>
                 </CardContent>

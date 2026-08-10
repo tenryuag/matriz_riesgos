@@ -31,6 +31,8 @@ import StrategicPlanning from "./StrategicPlanning";
 
 import CustomerAnalysis from "./CustomerAnalysis";
 
+import MarketAnalysis from "./MarketAnalysis";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -82,6 +84,8 @@ const PAGES = {
     StrategicPlanning: StrategicPlanning,
 
     CustomerAnalysis: CustomerAnalysis,
+
+    MarketAnalysis: MarketAnalysis,
 
     BusinessAnalysis: BusinessAnalysis,
 
@@ -213,6 +217,11 @@ function PagesContent() {
             <Route path="/CustomerAnalysis" element={
                 <Layout currentPageName={currentPage}>
                     <CustomerAnalysis />
+                </Layout>
+            } />
+            <Route path="/MarketAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <MarketAnalysis />
                 </Layout>
             } />
             <Route path="/BusinessAnalysis" element={
