@@ -6,43 +6,94 @@ import {
   Compass,
   Info,
   ArrowRight,
+  ChevronRight,
   Building,
   Globe,
   Map,
   Users,
   CheckCircle2,
-  FlaskConical,
+  Hammer,
+  ClipboardCheck,
+  Sprout,
+  ListChecks,
+  Banknote,
+  ListOrdered,
+  Filter,
+  ClipboardList,
+  Trophy,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from '@/components/LanguageContext';
-import { StrategicPlan } from "@/api/entities";
+import { StrategicPlan, Competitor } from "@/api/entities";
 import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
 
-// Pantalla de inicio de la Planeación Estratégica.
-// Pensada para personas que NO conocen el tema: un recorrido guiado por pasos,
-// en lenguaje simple. Cada tarjeta indica claramente si esa sección ya guarda
-// información real ("Ya funciona") o si es una demostración con datos de
-// ejemplo mientras se construye.
+// Inicio de la Planeación Estratégica: el recorrido completo de la
+// metodología en 3 fases (las mismas del menú lateral), con el estado real
+// de cada pantalla — funcional o en construcción — y tu avance.
+const PHASES = [
+  {
+    n: 1,
+    title: "Análisis",
+    desc: "Primero conoce tu negocio: tu cliente, tu mercado, tus oportunidades y tus finanzas.",
+    screens: [
+      { key: "CustomerAnalysis", name: "Análisis del cliente", icon: Users, ready: true },
+      { key: "MarketAnalysis", name: "Análisis del mercado", icon: Globe, ready: true },
+      { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck },
+      { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout },
+      { key: "OpportunityConclusions", name: "Conclusión de oportunidades", icon: ListChecks },
+      { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote },
+    ],
+  },
+  {
+    n: 2,
+    title: "Estrategia",
+    desc: "Prioriza lo que vas a trabajar y organízalo en un mapa completo del negocio.",
+    screens: [
+      { key: "StrategicSummary", name: "Resumen y priorización", icon: ListOrdered },
+      { key: "StrategicMap", name: "Mapa estratégico", icon: Map },
+      { key: "StrategicMapCalibrated", name: "Mapa calibrado", icon: Filter },
+    ],
+  },
+  {
+    n: 3,
+    title: "Plan de acción",
+    desc: "Convierte la estrategia en acciones concretas: quién, cuándo y con qué presupuesto.",
+    screens: [
+      { key: "StrategicInitiatives", name: "Iniciativas estratégicas", icon: ClipboardList },
+      { key: "ScoreCard", name: "Score Card ejecutivo", icon: Trophy },
+    ],
+  },
+];
+
 export default function StrategicPlanning() {
   const { t } = useLanguage();
 
-  // Progreso real del análisis del cliente (la única sección funcional hoy).
+  // Avance real de las pantallas funcionales.
   const [customerProgress, setCustomerProgress] = useState(null);
+  const [competitorCount, setCompetitorCount] = useState(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const plan = await StrategicPlan.getOrCreate();
-        const answers = await StrategicPlan.getAnswers(plan.id, CUSTOMER_SECTION);
+        const [answers, comps] = await Promise.all([
+          StrategicPlan.getAnswers(plan.id, CUSTOMER_SECTION),
+          Competitor.list(plan.id),
+        ]);
         const answered = CUSTOMER_QUESTIONS.filter(
           (q) => (answers[q.key] || "").trim()
         ).length;
-        if (active) setCustomerProgress({ answered, total: CUSTOMER_QUESTIONS.length });
+        if (active) {
+          setCustomerProgress({ answered, total: CUSTOMER_QUESTIONS.length });
+          setCompetitorCount(comps.length);
+        }
       } catch (_) {
-        // Si las tablas aún no existen o falla la consulta, no mostramos el
-        // progreso; la tarjeta sigue siendo usable.
-        if (active) setCustomerProgress(null);
+        // Sin datos aún (o error de carga): las tarjetas siguen usables.
+        if (active) {
+          setCustomerProgress(null);
+          setCompetitorCount(null);
+        }
       }
     })();
     return () => {
@@ -50,51 +101,28 @@ export default function StrategicPlanning() {
     };
   }, []);
 
-  const steps = [
-    {
-      n: 1,
-      icon: Users,
-      title: "Conoce a tu cliente",
-      description:
-        "Responde preguntas sencillas sobre tus clientes: qué les duele, qué desean y qué esperan de ti.",
-      href: createPageUrl("CustomerAnalysis"),
-      cta: "Empezar aquí",
-      accent: "text-blue-500",
-      bg: "bg-blue-500/15",
-      border: "hover:border-blue-500/50",
-      ready: true,
-      progress: customerProgress,
-    },
-    {
-      n: 2,
-      icon: Globe,
-      title: "Analiza tu mercado",
-      description:
-        "Compara tu negocio con tus principales competidores y detecta oportunidades que nadie aprovecha.",
-      href: createPageUrl("MarketAnalysis"),
-      cta: "Empezar aquí",
-      accent: "text-purple-500",
-      bg: "bg-purple-500/15",
-      border: "hover:border-purple-500/50",
-      ready: true,
-    },
-    {
-      n: 3,
-      icon: Map,
-      title: "Define tu estrategia",
-      description:
-        "Descubre en qué eres bueno, qué puedes mejorar, y arma un plan de acción con responsables y fechas.",
-      href: createPageUrl("SwotAnalysis"),
-      cta: "Ver demostración",
-      accent: "text-orange-500",
-      bg: "bg-orange-500/15",
-      border: "hover:border-orange-500/50",
-      ready: false,
-    },
-  ];
+  // A dónde lleva el botón "Continuar": la primera pantalla funcional
+  // incompleta del recorrido.
+  const continueTarget =
+    customerProgress && customerProgress.answered < customerProgress.total
+      ? { key: "CustomerAnalysis", name: "Análisis del cliente" }
+      : { key: "MarketAnalysis", name: "Análisis del mercado" };
+
+  // Datos extra por pantalla (avance real).
+  const screenMeta = (key) => {
+    if (key === "CustomerAnalysis" && customerProgress) {
+      return `${customerProgress.answered} de ${customerProgress.total} preguntas`;
+    }
+    if (key === "MarketAnalysis" && competitorCount !== null) {
+      return competitorCount === 1
+        ? "1 competidor registrado"
+        : `${competitorCount} competidores registrados`;
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="glass rounded-3xl p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -109,9 +137,17 @@ export default function StrategicPlanning() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 glass rounded-xl">
-            <Building className="w-4 h-4 text-accent" />
-            <span className="font-subtitle text-sm">Tenryu Corp.</span>
+          <div className="flex flex-col items-stretch gap-3">
+            <div className="flex items-center gap-2 px-4 py-2 glass rounded-xl">
+              <Building className="w-4 h-4 text-accent" />
+              <span className="font-subtitle text-sm">Tenryu Corp.</span>
+            </div>
+            <Link to={createPageUrl(continueTarget.key)}>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-subtitle text-sm">
+                {customerProgress?.answered > 0 ? "Continuar" : "Empezar"}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -127,89 +163,73 @@ export default function StrategicPlanning() {
               <h2 className="font-subtitle text-lg mb-1">¿Qué es la planeación estratégica?</h2>
               <p className="text-sm text-muted leading-relaxed">
                 Es tomarte un momento para ver tu negocio con calma y decidir hacia dónde
-                quieres llevarlo. No necesitas ser experto: sigue los pasos de abajo en
-                orden y responde con tus propias palabras.
+                quieres llevarlo. No necesitas ser experto: recorre las 3 fases en orden
+                y responde con tus propias palabras. Cada fase alimenta a la siguiente.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Aviso: qué es real y qué es demostración */}
+      {/* Aviso: qué es real y qué está en construcción */}
       <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
         <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-foreground">
-          Los pasos con la etiqueta <span className="font-subtitle">"Ya funciona"</span> guardan
-          de verdad lo que escribes. Los marcados como{" "}
-          <span className="font-subtitle">"Demostración"</span> todavía muestran datos de
-          ejemplo mientras los construimos.
+          Las pantallas con <span className="font-subtitle">"Ya funciona"</span> guardan de
+          verdad lo que escribes. Las marcadas <span className="font-subtitle">"En construcción"</span>{" "}
+          te muestran una vista previa de lo que harán.
         </p>
       </div>
 
-      {/* Recorrido guiado por pasos */}
-      <div>
-        <h2 className="text-xl font-title mb-4">¿Por dónde empiezo?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {steps.map((step) => (
-            <Link key={step.n} to={step.href}>
-              <Card className={`glass glass-hover cursor-pointer h-full border-2 border-transparent transition-all ${step.border}`}>
-                <CardContent className="p-6 flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-4 gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-title text-lg flex-shrink-0">
-                        {step.n}
-                      </div>
-                      <span className="text-xs uppercase tracking-wider text-muted font-subtitle">
-                        Paso {step.n}
-                      </span>
-                    </div>
-                    {step.ready ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-subtitle border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-500 flex-shrink-0">
-                        <CheckCircle2 className="w-3 h-3" /> Ya funciona
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-subtitle border border-amber-400/40 bg-amber-400/10 text-amber-500 flex-shrink-0">
-                        <FlaskConical className="w-3 h-3" /> Demostración
-                      </span>
-                    )}
-                  </div>
-                  <div className={`w-12 h-12 ${step.bg} rounded-xl flex items-center justify-center mb-4`}>
-                    <step.icon className={`w-6 h-6 ${step.accent}`} />
-                  </div>
-                  <h3 className="font-subtitle text-lg mb-2">{step.title}</h3>
-                  <p className="text-sm text-muted mb-4 flex-grow">{step.description}</p>
+      {/* Recorrido por fases */}
+      <div className="space-y-6">
+        {PHASES.map((phase) => (
+          <Card key={phase.n} className="glass">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-title text-xl flex-shrink-0">
+                  {phase.n}
+                </div>
+                <div>
+                  <h2 className="font-title text-xl leading-tight">{phase.title}</h2>
+                  <p className="text-sm text-muted mt-0.5">{phase.desc}</p>
+                </div>
+              </div>
 
-                  {/* Progreso real (solo en pasos funcionales con datos) */}
-                  {step.progress && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between text-xs text-muted mb-1.5">
-                        <span>
-                          {step.progress.answered} de {step.progress.total} preguntas
-                        </span>
-                        <span>
-                          {Math.round((step.progress.answered / step.progress.total) * 100)}%
-                        </span>
+              <div className="space-y-2">
+                {phase.screens.map((screen) => {
+                  const meta = screenMeta(screen.key);
+                  const Icon = screen.icon;
+                  return (
+                    <Link
+                      key={screen.key}
+                      to={createPageUrl(screen.key)}
+                      className="flex items-center gap-3 p-3 glass rounded-xl hover:border-accent transition-all group"
+                    >
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${screen.ready ? "bg-green-500/15" : "bg-amber-400/10"}`}>
+                        <Icon className={`w-5 h-5 ${screen.ready ? "text-green-600 dark:text-green-500" : "text-amber-500"}`} />
                       </div>
-                      <div className="h-2 glass rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-accent transition-all"
-                          style={{
-                            width: `${(step.progress.answered / step.progress.total) * 100}%`,
-                          }}
-                        />
+                      <div className="flex-grow min-w-0">
+                        <span className="font-subtitle text-sm block truncate">{screen.name}</span>
+                        {meta && <span className="text-xs text-muted">{meta}</span>}
                       </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center text-accent text-sm font-subtitle">
-                    {step.progress?.answered > 0 ? "Continuar" : step.cta}
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                      {screen.ready ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-subtitle border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-500 flex-shrink-0">
+                          <CheckCircle2 className="w-3 h-3" /> Ya funciona
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-subtitle border border-amber-400/40 bg-amber-400/10 text-amber-500 flex-shrink-0">
+                          <Hammer className="w-3 h-3" /> En construcción
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-muted group-hover:text-accent flex-shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
