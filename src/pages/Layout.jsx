@@ -883,10 +883,20 @@ const AppLayout = ({ children, currentPageName }) => {
             
             {/* User & Controls Section */}
             <div className="space-y-2">
+              {/* Regreso al selector de módulos (complementa la miga de pan
+                  de arriba: visible aunque el usuario esté hasta abajo). */}
+              <Link
+                to={createPageUrl('ModuleLauncher')}
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl glass border border-accent/40 text-accent hover:bg-accent/10 hover:border-accent transition-all font-subtitle text-sm"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                {t('moduleBackToLauncherLong')}
+              </Link>
               <div className="flex gap-2">
-                <Button 
-                  onClick={toggleTheme} 
-                  variant="ghost" 
+                <Button
+                  onClick={toggleTheme}
+                  variant="ghost"
                   className="w-full justify-start nav-glass"
                 >
                   {theme === 'light' ? <Moon className="w-4 h-4 mr-3" /> : <Sun className="w-4 h-4 mr-3" />}
