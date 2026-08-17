@@ -31,7 +31,8 @@ import {
   BookOpen,
   TrendingUp,
   Target,
-  LayoutGrid
+  LayoutGrid,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -304,6 +305,28 @@ const AppLayout = ({ children, currentPageName }) => {
   const { language, changeLanguage, t } = useLanguage();
   // Acceso por módulo del usuario (Fase 2): para proteger las páginas.
   const { isAdmin: hasAdminAccess, grantedModules, loading: accessLoading } = useModuleAccess();
+
+  // Grupos del menú lateral abiertos. El grupo de la página activa se abre
+  // automáticamente; el usuario puede plegar/desplegar los demás.
+  const [openGroups, setOpenGroups] = React.useState(() => new Set());
+  React.useEffect(() => {
+    const mod = findModuleByPage(currentPageName);
+    const page = mod?.pages.find((p) => p.pageKey === currentPageName);
+    if (page?.group) {
+      setOpenGroups((prev) =>
+        prev.has(page.group) ? prev : new Set([...prev, page.group])
+      );
+    }
+  }, [currentPageName]);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   // Cierra la sesión tras 8 horas de inactividad (solo con sesión activa).
   useIdleTimeout(!!user);
@@ -634,16 +657,36 @@ const AppLayout = ({ children, currentPageName }) => {
   const activeModule = findModuleByPage(currentPageName);
   const isLauncherMode = !activeModule;
 
-  const navigationItems = activeModule
-    ? activeModule.pages
-        .filter((p) => !p.hidden)
-        .map((p) => ({
-          name: t(p.nameKey),
-          href: p.external || createPageUrl(p.pageKey),
-          icon: p.icon,
-          external: !!p.external,
-        }))
-    : [];
+  // Estructura del menú: items sueltos y secciones plegables (grupos).
+  const toNavItem = (p) => ({
+    name: t(p.nameKey),
+    href: p.external || createPageUrl(p.pageKey),
+    icon: p.icon,
+    external: !!p.external,
+  });
+  const navStructure = [];
+  if (activeModule) {
+    const groupIndex = {};
+    activeModule.pages
+      .filter((p) => !p.hidden)
+      .forEach((p) => {
+        if (!p.group) {
+          navStructure.push({ type: "link", ...toNavItem(p) });
+          return;
+        }
+        if (!groupIndex[p.group]) {
+          const def = (activeModule.groups || []).find((g) => g.key === p.group);
+          groupIndex[p.group] = {
+            type: "group",
+            key: p.group,
+            name: def ? t(def.nameKey) : p.group,
+            items: [],
+          };
+          navStructure.push(groupIndex[p.group]);
+        }
+        groupIndex[p.group].items.push(toNavItem(p));
+      });
+  }
 
   // Protección de acceso: si el usuario entra (por URL) a una página de un
   // módulo al que no tiene acceso, no se la mostramos.
@@ -751,43 +794,81 @@ const AppLayout = ({ children, currentPageName }) => {
               </div>
             </div>
 
-            <nav className="space-y-3 flex-grow">
-              {navigationItems.map((item) => {
+            <nav className="space-y-2 flex-grow overflow-y-auto pr-1">
+              {navStructure.map((entry) => {
                 const currentPath = location.pathname;
-                const itemPath = item.href;
-                const isActive = !item.external && currentPath === itemPath;
-                const className = `flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
-                  isActive ? 'nav-glass active' : 'nav-glass'
-                }`;
 
-                if (item.external) {
+                // Renderizador común para un item de navegación.
+                const renderItem = (item, compact = false) => {
+                  const isActive = !item.external && currentPath === item.href;
+                  const className = compact
+                    ? `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm ${
+                        isActive ? 'nav-glass active' : 'nav-glass'
+                      }`
+                    : `flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
+                        isActive ? 'nav-glass active' : 'nav-glass'
+                      }`;
+                  if (item.external) {
+                    return (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setSidebarOpen(false)}
+                        className={className}
+                      >
+                        <item.icon className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
+                        <span className="font-subtitle text-sm">{item.name}</span>
+                      </a>
+                    );
+                  }
                   return (
-                    <a
+                    <Link
                       key={item.href}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      to={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={className}
                     >
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
                       <span className="font-subtitle text-sm">{item.name}</span>
-                    </a>
+                    </Link>
                   );
-                }
+                };
 
+                if (entry.type === 'link') return renderItem(entry);
+
+                // Sección plegable
+                const open = openGroups.has(entry.key);
+                const hasActiveChild = entry.items.some(
+                  (it) => !it.external && currentPath === it.href
+                );
                 return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    onClick={(e) => {
-                      setSidebarOpen(false);
-                    }}
-                    className={className}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-subtitle text-sm">{item.name}</span>
-                  </Link>
+                  <div key={entry.key} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(entry.key)}
+                      className={`w-full flex items-center justify-between px-6 py-3 rounded-2xl nav-glass transition-all ${
+                        hasActiveChild && !open ? 'text-accent' : ''
+                      }`}
+                      aria-expanded={open}
+                    >
+                      <span className="text-xs font-subtitle uppercase tracking-wider">
+                        {entry.name}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted">{entry.items.length}</span>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                        />
+                      </span>
+                    </button>
+                    {open && (
+                      <div className="space-y-1 pl-3">
+                        {entry.items.map((item) => renderItem(item, true))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>

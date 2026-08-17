@@ -86,20 +86,26 @@ export const MODULES = [
     bg: "bg-purple-500/15",
     status: "ready",
     home: "StrategicPlanning",
+    // Secciones plegables del menú lateral (los items con `group` se agrupan
+    // bajo estos encabezados; el grupo de la página activa se abre solo).
+    groups: [
+      { key: "analysis", nameKey: "navGroupAnalysis" },
+      { key: "strategy", nameKey: "navGroupStrategy" },
+      { key: "action", nameKey: "navGroupAction" },
+    ],
     pages: [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
-      { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users },
-      { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe },
-      // Hojas de la metodología aún en construcción (vistas previas).
-      { pageKey: "MarketConclusions", nameKey: "navMarketConclusions", icon: ClipboardCheck },
-      { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout },
-      { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks },
-      { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote },
-      { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered },
-      { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map },
-      { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter },
-      { pageKey: "StrategicInitiatives", nameKey: "navStrategicInitiatives", icon: ClipboardList },
-      { pageKey: "ScoreCard", nameKey: "navScoreCard", icon: Trophy },
+      { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users, group: "analysis" },
+      { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe, group: "analysis" },
+      { pageKey: "MarketConclusions", nameKey: "navMarketConclusions", icon: ClipboardCheck, group: "analysis" },
+      { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout, group: "analysis" },
+      { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks, group: "analysis" },
+      { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote, group: "analysis" },
+      { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered, group: "strategy" },
+      { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map, group: "strategy" },
+      { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter, group: "strategy" },
+      { pageKey: "StrategicInitiatives", nameKey: "navStrategicInitiatives", icon: ClipboardList, group: "action" },
+      { pageKey: "ScoreCard", nameKey: "navScoreCard", icon: Trophy, group: "action" },
       // Mockups anteriores; accesibles por URL sin aparecer en el menú.
       { pageKey: "SwotAnalysis", hidden: true },
       { pageKey: "BusinessAnalysis", hidden: true },
