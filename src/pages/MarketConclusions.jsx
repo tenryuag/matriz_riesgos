@@ -6,14 +6,14 @@ import {
   ArrowLeft,
   ClipboardCheck,
   Info,
-  Save,
-  CheckCircle2,
   Sparkles,
   Award,
   Wrench,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAutosave } from "@/hooks/useAutosave";
+import SaveStatusBar from "@/components/SaveStatusBar";
 
 export const SECTION = "market-conclusions";
 const MARKET_SECTION = "market";
@@ -137,8 +137,6 @@ export default function MarketConclusions() {
   const [answers, setAnswers] = useState({});
   const [hints, setHints] = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -165,22 +163,16 @@ export default function MarketConclusions() {
 
   const setChoice = (key, value) => {
     setAnswers((prev) => ({ ...prev, [key]: prev[key] === value ? "" : value }));
-    setSavedAt(false);
   };
 
-  const handleSave = async () => {
-    if (!planId) return;
-    setSaving(true);
-    setError("");
-    try {
+  // Autoguardado: persiste ~1.5 s después del último cambio.
+  const { status: saveStatus, flush } = useAutosave({
+    data: answers,
+    enabled: !loading && !!planId,
+    onSave: async () => {
       await StrategicPlan.saveAnswers(planId, SECTION, answers);
-      setSavedAt(true);
-    } catch (err) {
-      console.error("Error al guardar:", err);
-      setError("No se pudieron guardar los cambios. Intenta de nuevo.");
-    }
-    setSaving(false);
-  };
+    },
+  });
 
   const fCount = ALL_KEYS.filter((k) => answers[k] === "F").length;
   const dCount = ALL_KEYS.filter((k) => answers[k] === "D").length;
@@ -333,34 +325,8 @@ export default function MarketConclusions() {
         </Link>
       </div>
 
-      {/* Barra de guardado fija */}
-      <div className="fixed bottom-0 left-0 right-0 lg:left-80 z-30 glass-darker border-t border-[var(--card-border)]">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <span className="text-sm text-muted flex items-center gap-2">
-            {savedAt && (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-green-500" /> Guardado
-              </>
-            )}
-          </span>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                Guardando…
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" /> Guardar
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      {/* Barra de estado del autoguardado */}
+      <SaveStatusBar status={saveStatus} onSaveNow={flush} />
     </div>
   );
 }

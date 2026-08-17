@@ -6,8 +6,6 @@ import {
   ArrowLeft,
   Globe,
   Info,
-  Save,
-  CheckCircle2,
   Plus,
   Trash2,
   ChevronDown,
@@ -16,6 +14,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAutosave } from "@/hooks/useAutosave";
+import SaveStatusBar from "@/components/SaveStatusBar";
 
 const GLOBAL_SECTION = "market";
 const compSection = (id) => `market-comp:${id}`;
@@ -118,8 +118,6 @@ export default function MarketAnalysis() {
   const [expandedId, setExpandedId] = useState(null);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -150,8 +148,22 @@ export default function MarketAnalysis() {
       ...prev,
       [section]: { ...(prev[section] || {}), [key]: value },
     }));
-    setSavedAt(false);
   };
+
+  // Autoguardado: persiste ~1.5 s después del último cambio, guardando solo
+  // las secciones vigentes (global + competidores existentes).
+  const { status: saveStatus, flush } = useAutosave({
+    data: answers,
+    enabled: !loading && !!planId,
+    onSave: async () => {
+      const valid = new Set([GLOBAL_SECTION, ...competitors.map((c) => compSection(c.id))]);
+      const toSave = {};
+      Object.entries(answers).forEach(([section, values]) => {
+        if (valid.has(section)) toSave[section] = values;
+      });
+      await StrategicPlan.saveSections(planId, toSave);
+    },
+  });
 
   const handleAdd = async () => {
     const name = newName.trim();
@@ -194,26 +206,6 @@ export default function MarketAnalysis() {
       console.error("Error al eliminar competidor:", err);
       setError("No se pudo quitar el competidor. Intenta de nuevo.");
     }
-  };
-
-  const handleSave = async () => {
-    if (!planId) return;
-    setSaving(true);
-    setError("");
-    try {
-      // Solo secciones vigentes: global + competidores existentes.
-      const valid = new Set([GLOBAL_SECTION, ...competitors.map((c) => compSection(c.id))]);
-      const toSave = {};
-      Object.entries(answers).forEach(([section, values]) => {
-        if (valid.has(section)) toSave[section] = values;
-      });
-      await StrategicPlan.saveSections(planId, toSave);
-      setSavedAt(true);
-    } catch (err) {
-      console.error("Error al guardar:", err);
-      setError("No se pudieron guardar los cambios. Intenta de nuevo.");
-    }
-    setSaving(false);
   };
 
   const answeredForComp = (id) => {
@@ -464,34 +456,8 @@ export default function MarketAnalysis() {
         </Link>
       </div>
 
-      {/* Barra de guardado fija */}
-      <div className="fixed bottom-0 left-0 right-0 lg:left-80 z-30 glass-darker border-t border-[var(--card-border)]">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <span className="text-sm text-muted flex items-center gap-2">
-            {savedAt && (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-green-500" /> Guardado
-              </>
-            )}
-          </span>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                Guardando…
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" /> Guardar
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      {/* Barra de estado del autoguardado */}
+      <SaveStatusBar status={saveStatus} onSaveNow={flush} />
     </div>
   );
 }
