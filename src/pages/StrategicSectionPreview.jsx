@@ -25,18 +25,6 @@ import { Button } from "@/components/ui/button";
 // Cada entrada explica, en lenguaje simple, qué hará esa pantalla y de dónde
 // vendrá su información, siguiendo el Excel de planeación estratégica.
 const SECTIONS = {
-  OpportunityConclusions: {
-    title: "Conclusión de oportunidades",
-    icon: ListChecks,
-    accent: "text-emerald-600 dark:text-emerald-500",
-    bg: "bg-emerald-500/15",
-    desc: "El sistema convertirá tus respuestas del análisis de oportunidades en fortalezas y debilidades, y aquí decidirás cuáles trabajar.",
-    bullets: [
-      "Fortalezas ('voy a mantener') y debilidades ('voy a cambiar') calculadas solas.",
-      "Podrás ajustar la selección antes de pasar al resumen.",
-    ],
-    source: "Se llena automáticamente con la regla: Sí → fortaleza · No → debilidad.",
-  },
   FinancialStrategies: {
     title: "Estrategias financieras",
     icon: Banknote,
@@ -139,7 +127,7 @@ export default function StrategicSectionPreview() {
   const pageKey =
     Object.keys(SECTIONS).find(
       (k) => k.toLowerCase() === location.pathname.replace(/\//g, "").toLowerCase()
-    ) || "OpportunityConclusions";
+    ) || "FinancialStrategies";
   const section = SECTIONS[pageKey];
   const Icon = section.icon;
 
