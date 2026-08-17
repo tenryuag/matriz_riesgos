@@ -457,9 +457,9 @@ export default function MarketAnalysis() {
 
       {/* Siguiente paso del recorrido */}
       <div className="flex justify-end">
-        <Link to={createPageUrl("SwotAnalysis")}>
+        <Link to={createPageUrl("MarketConclusions")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            Paso 3: Define tu estrategia →
+            Siguiente: Conclusiones del mercado →
           </Button>
         </Link>
       </div>
