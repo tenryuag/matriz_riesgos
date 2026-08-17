@@ -16,7 +16,15 @@ import {
   Settings,
   LayoutGrid,
   Calculator,
-  Globe
+  Globe,
+  ClipboardCheck,
+  Sprout,
+  ListChecks,
+  Banknote,
+  ListOrdered,
+  Filter,
+  ClipboardList,
+  Trophy
 } from "lucide-react";
 
 // ============================================================
@@ -82,8 +90,18 @@ export const MODULES = [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
       { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users },
       { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe },
-      { pageKey: "SwotAnalysis", nameKey: "navSwot", icon: Map },
-      // Mockup anterior; se conserva accesible por URL sin aparecer en el menú.
+      // Hojas de la metodología aún en construcción (vistas previas).
+      { pageKey: "MarketConclusions", nameKey: "navMarketConclusions", icon: ClipboardCheck },
+      { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout },
+      { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks },
+      { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote },
+      { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered },
+      { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map },
+      { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter },
+      { pageKey: "StrategicInitiatives", nameKey: "navStrategicInitiatives", icon: ClipboardList },
+      { pageKey: "ScoreCard", nameKey: "navScoreCard", icon: Trophy },
+      // Mockups anteriores; accesibles por URL sin aparecer en el menú.
+      { pageKey: "SwotAnalysis", hidden: true },
       { pageKey: "BusinessAnalysis", hidden: true },
     ],
   },
