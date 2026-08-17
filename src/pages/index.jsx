@@ -37,6 +37,8 @@ import StrategicSectionPreview from "./StrategicSectionPreview";
 
 import MarketConclusions from "./MarketConclusions";
 
+import OpportunityAnalysis from "./OpportunityAnalysis";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -93,7 +95,7 @@ const PAGES = {
 
     MarketConclusions: MarketConclusions,
 
-    OpportunityAnalysis: StrategicSectionPreview,
+    OpportunityAnalysis: OpportunityAnalysis,
 
     OpportunityConclusions: StrategicSectionPreview,
 
@@ -251,7 +253,12 @@ function PagesContent() {
                     <MarketConclusions />
                 </Layout>
             } />
-            {["OpportunityAnalysis", "OpportunityConclusions",
+            <Route path="/OpportunityAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <OpportunityAnalysis />
+                </Layout>
+            } />
+            {["OpportunityConclusions",
               "FinancialStrategies", "StrategicSummary", "StrategicMap",
               "StrategicMapCalibrated", "StrategicInitiatives", "ScoreCard"].map((key) => (
                 <Route key={key} path={`/${key}`} element={
