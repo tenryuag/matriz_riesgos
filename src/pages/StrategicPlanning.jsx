@@ -38,7 +38,7 @@ const PHASES = [
     screens: [
       { key: "CustomerAnalysis", name: "Análisis del cliente", icon: Users, ready: true },
       { key: "MarketAnalysis", name: "Análisis del mercado", icon: Globe, ready: true },
-      { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck },
+      { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck, ready: true },
       { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout },
       { key: "OpportunityConclusions", name: "Conclusión de oportunidades", icon: ListChecks },
       { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote },
@@ -71,28 +71,40 @@ export default function StrategicPlanning() {
   // Avance real de las pantallas funcionales.
   const [customerProgress, setCustomerProgress] = useState(null);
   const [competitorCount, setCompetitorCount] = useState(null);
+  const [conclusionCounts, setConclusionCounts] = useState(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const plan = await StrategicPlan.getOrCreate();
-        const [answers, comps] = await Promise.all([
-          StrategicPlan.getAnswers(plan.id, CUSTOMER_SECTION),
+        const [sections, comps] = await Promise.all([
+          StrategicPlan.getAnswersForSections(plan.id, [
+            CUSTOMER_SECTION,
+            "market-conclusions",
+          ]),
           Competitor.list(plan.id),
         ]);
+        const answers = sections[CUSTOMER_SECTION] || {};
         const answered = CUSTOMER_QUESTIONS.filter(
           (q) => (answers[q.key] || "").trim()
         ).length;
+        const conclusions = sections["market-conclusions"] || {};
+        const values = Object.values(conclusions);
         if (active) {
           setCustomerProgress({ answered, total: CUSTOMER_QUESTIONS.length });
           setCompetitorCount(comps.length);
+          setConclusionCounts({
+            f: values.filter((v) => v === "F").length,
+            d: values.filter((v) => v === "D").length,
+          });
         }
       } catch (_) {
         // Sin datos aún (o error de carga): las tarjetas siguen usables.
         if (active) {
           setCustomerProgress(null);
           setCompetitorCount(null);
+          setConclusionCounts(null);
         }
       }
     })();
@@ -117,6 +129,9 @@ export default function StrategicPlanning() {
       return competitorCount === 1
         ? "1 competidor registrado"
         : `${competitorCount} competidores registrados`;
+    }
+    if (key === "MarketConclusions" && conclusionCounts && (conclusionCounts.f > 0 || conclusionCounts.d > 0)) {
+      return `${conclusionCounts.f} a mantener · ${conclusionCounts.d} a cambiar`;
     }
     return null;
   };

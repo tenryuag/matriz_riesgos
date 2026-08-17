@@ -25,19 +25,6 @@ import { Button } from "@/components/ui/button";
 // Cada entrada explica, en lenguaje simple, qué hará esa pantalla y de dónde
 // vendrá su información, siguiendo el Excel de planeación estratégica.
 const SECTIONS = {
-  MarketConclusions: {
-    title: "Conclusiones del mercado",
-    icon: ClipboardCheck,
-    accent: "text-blue-500",
-    bg: "bg-blue-500/15",
-    desc: "Con lo que respondiste en el análisis del mercado, aquí elegirás qué fortalezas vas a mantener y qué debilidades vas a trabajar.",
-    bullets: [
-      "Lista de aspectos del mercado (precio, servicio, post-venta, entrega, imagen, audiencia).",
-      "Para cada aspecto marcarás: 'Voy a mantener' (fortaleza) o 'Voy a cambiar' (debilidad).",
-      "Lo que marques aquí alimentará automáticamente el resumen y el mapa estratégico.",
-    ],
-    source: "Se alimenta de tus respuestas del Análisis del mercado.",
-  },
   OpportunityAnalysis: {
     title: "Análisis de oportunidades",
     icon: Sprout,
@@ -166,7 +153,7 @@ export default function StrategicSectionPreview() {
   const pageKey =
     Object.keys(SECTIONS).find(
       (k) => k.toLowerCase() === location.pathname.replace(/\//g, "").toLowerCase()
-    ) || "MarketConclusions";
+    ) || "OpportunityAnalysis";
   const section = SECTIONS[pageKey];
   const Icon = section.icon;
 
