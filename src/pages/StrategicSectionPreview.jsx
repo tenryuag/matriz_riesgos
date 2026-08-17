@@ -25,20 +25,6 @@ import { Button } from "@/components/ui/button";
 // Cada entrada explica, en lenguaje simple, qué hará esa pantalla y de dónde
 // vendrá su información, siguiendo el Excel de planeación estratégica.
 const SECTIONS = {
-  FinancialStrategies: {
-    title: "Estrategias financieras",
-    icon: Banknote,
-    accent: "text-cyan-600 dark:text-cyan-500",
-    bg: "bg-cyan-500/15",
-    desc: "Recorrerás tu estado de resultados línea por línea para elegir qué debilidades financieras vas a gestionar.",
-    bullets: [
-      "Ventas e ingresos: volumen, nuevas aperturas, área comercial.",
-      "Costo de ventas: proveedores, mermas, rotación de inventarios.",
-      "Gastos operativos, financiamiento e impuestos.",
-      "Fondos de reserva para reinversión y crecimiento.",
-    ],
-    source: "Lo que marques aquí también entra al resumen y a la priorización.",
-  },
   StrategicSummary: {
     title: "Resumen y priorización",
     icon: ListOrdered,
@@ -127,7 +113,7 @@ export default function StrategicSectionPreview() {
   const pageKey =
     Object.keys(SECTIONS).find(
       (k) => k.toLowerCase() === location.pathname.replace(/\//g, "").toLowerCase()
-    ) || "FinancialStrategies";
+    ) || "StrategicSummary";
   const section = SECTIONS[pageKey];
   const Icon = section.icon;
 

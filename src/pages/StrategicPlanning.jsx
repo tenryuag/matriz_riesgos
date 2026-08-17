@@ -31,6 +31,7 @@ import {
   SECTION as OPP_CONCL_SECTION,
   effectiveConclusions,
 } from "./OpportunityConclusions";
+import { ALL_FIN_KEYS, SECTION as FIN_SECTION } from "./FinancialStrategies";
 
 // Inicio de la Planeación Estratégica: el recorrido completo de la
 // metodología en 3 fases (las mismas del menú lateral), con el estado real
@@ -46,7 +47,7 @@ const PHASES = [
       { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck, ready: true },
       { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout, ready: true },
       { key: "OpportunityConclusions", name: "Conclusión de oportunidades", icon: ListChecks, ready: true },
-      { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote },
+      { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote, ready: true },
     ],
   },
   {
@@ -79,6 +80,7 @@ export default function StrategicPlanning() {
   const [conclusionCounts, setConclusionCounts] = useState(null);
   const [oppProgress, setOppProgress] = useState(null);
   const [oppConclCounts, setOppConclCounts] = useState(null);
+  const [finCount, setFinCount] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -91,6 +93,7 @@ export default function StrategicPlanning() {
             "market-conclusions",
             OPP_SECTION,
             OPP_CONCL_SECTION,
+            FIN_SECTION,
           ]),
           Competitor.list(plan.id),
         ]);
@@ -116,6 +119,8 @@ export default function StrategicPlanning() {
             f: oppEffValues.filter((v) => v === "F").length,
             d: oppEffValues.filter((v) => v === "D").length,
           });
+          const fin = sections[FIN_SECTION] || {};
+          setFinCount(ALL_FIN_KEYS.filter((k) => fin[k] === "D").length);
         }
       } catch (_) {
         // Sin datos aún (o error de carga): las tarjetas siguen usables.
@@ -125,6 +130,7 @@ export default function StrategicPlanning() {
           setConclusionCounts(null);
           setOppProgress(null);
           setOppConclCounts(null);
+          setFinCount(null);
         }
       }
     })();
@@ -158,6 +164,9 @@ export default function StrategicPlanning() {
     }
     if (key === "OpportunityConclusions" && oppConclCounts && (oppConclCounts.f > 0 || oppConclCounts.d > 0)) {
       return `${oppConclCounts.f} fortalezas · ${oppConclCounts.d} debilidades`;
+    }
+    if (key === "FinancialStrategies" && finCount !== null && finCount > 0) {
+      return `${finCount} debilidades a gestionar`;
     }
     return null;
   };
