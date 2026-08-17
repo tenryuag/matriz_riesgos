@@ -32,7 +32,8 @@ import {
   TrendingUp,
   Target,
   LayoutGrid,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -772,12 +773,19 @@ const AppLayout = ({ children, currentPageName }) => {
         <div className={`fixed inset-y-0 left-0 z-40 w-80 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
           <div className="h-full glass-darker p-8 flex flex-col">
             <div className="mb-8">
+              {/* Miga de pan: Módulos › [módulo actual]. El enlace "Módulos"
+                  regresa al selector; va en dorado para que sea evidente. */}
               <Link
                 to={createPageUrl('ModuleLauncher')}
                 onClick={() => setSidebarOpen(false)}
-                className="inline-flex items-center gap-2 text-sm text-muted hover:text-accent transition-colors mb-4"
+                className="group inline-flex items-center gap-2 font-subtitle text-sm text-accent hover:underline underline-offset-4 transition-colors mb-3"
+                title={t('moduleBackToLauncher')}
               >
-                <LayoutGrid className="w-4 h-4" /> {t('moduleBackToLauncher')}
+                <span className="w-7 h-7 rounded-lg glass flex items-center justify-center group-hover:border-accent transition-colors">
+                  <LayoutGrid className="w-4 h-4" />
+                </span>
+                {t('moduleBackToLauncher')}
+                <ChevronRight className="w-4 h-4 text-muted" />
               </Link>
               <div className="flex items-center gap-3">
                 {activeModule?.icon && (
