@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from '@/components/LanguageContext';
 import { StrategicPlan, Competitor } from "@/api/entities";
 import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
+import { ALL_OPP_KEYS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
 
 // Inicio de la Planeación Estratégica: el recorrido completo de la
 // metodología en 3 fases (las mismas del menú lateral), con el estado real
@@ -39,7 +40,7 @@ const PHASES = [
       { key: "CustomerAnalysis", name: "Análisis del cliente", icon: Users, ready: true },
       { key: "MarketAnalysis", name: "Análisis del mercado", icon: Globe, ready: true },
       { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck, ready: true },
-      { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout },
+      { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout, ready: true },
       { key: "OpportunityConclusions", name: "Conclusión de oportunidades", icon: ListChecks },
       { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote },
     ],
@@ -72,6 +73,7 @@ export default function StrategicPlanning() {
   const [customerProgress, setCustomerProgress] = useState(null);
   const [competitorCount, setCompetitorCount] = useState(null);
   const [conclusionCounts, setConclusionCounts] = useState(null);
+  const [oppProgress, setOppProgress] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -82,6 +84,7 @@ export default function StrategicPlanning() {
           StrategicPlan.getAnswersForSections(plan.id, [
             CUSTOMER_SECTION,
             "market-conclusions",
+            OPP_SECTION,
           ]),
           Competitor.list(plan.id),
         ]);
@@ -91,6 +94,8 @@ export default function StrategicPlanning() {
         ).length;
         const conclusions = sections["market-conclusions"] || {};
         const values = Object.values(conclusions);
+        const opp = sections[OPP_SECTION] || {};
+        const oppAnswered = ALL_OPP_KEYS.filter((k) => (opp[k] || "").trim()).length;
         if (active) {
           setCustomerProgress({ answered, total: CUSTOMER_QUESTIONS.length });
           setCompetitorCount(comps.length);
@@ -98,6 +103,7 @@ export default function StrategicPlanning() {
             f: values.filter((v) => v === "F").length,
             d: values.filter((v) => v === "D").length,
           });
+          setOppProgress({ answered: oppAnswered, total: ALL_OPP_KEYS.length });
         }
       } catch (_) {
         // Sin datos aún (o error de carga): las tarjetas siguen usables.
@@ -105,6 +111,7 @@ export default function StrategicPlanning() {
           setCustomerProgress(null);
           setCompetitorCount(null);
           setConclusionCounts(null);
+          setOppProgress(null);
         }
       }
     })();
@@ -132,6 +139,9 @@ export default function StrategicPlanning() {
     }
     if (key === "MarketConclusions" && conclusionCounts && (conclusionCounts.f > 0 || conclusionCounts.d > 0)) {
       return `${conclusionCounts.f} a mantener · ${conclusionCounts.d} a cambiar`;
+    }
+    if (key === "OpportunityAnalysis" && oppProgress) {
+      return `${oppProgress.answered} de ${oppProgress.total} preguntas`;
     }
     return null;
   };
