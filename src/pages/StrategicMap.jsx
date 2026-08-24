@@ -12,6 +12,7 @@ import {
   Rocket,
   HeartHandshake,
   Sparkles,
+  ChevronUp,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,9 @@ import {
 import { OPP_GROUPS } from "./OpportunityAnalysis";
 
 // ============================================================
-// Mapa estratégico (y su versión calibrada).
-// Organiza las debilidades a trabajar en las 4 perspectivas del Excel:
-// Cliente · Financiera · Competitiva · Desarrollo del Equipo.
+// Mapa estratégico (y su versión calibrada), estilo Balanced Scorecard:
+// carriles horizontales por perspectiva con las estrategias como burbujas,
+// leídos de abajo hacia arriba (cada nivel impulsa al de arriba).
 // El mapa calibrado muestra solo las de prioridad ALTA (el foco real).
 // Se llena solo: no se captura nada aquí.
 // ============================================================
@@ -60,29 +61,70 @@ export function perspectiveFor(item) {
   return "cliente";
 }
 
-const PERSPECTIVES = [
-  { key: "cliente", title: "Perspectiva Cliente", desc: "Lo que tu cliente ve, recibe y siente.", icon: Users, accent: "text-blue-500", bg: "bg-blue-500/15", border: "border-blue-500/30" },
-  { key: "financiera", title: "Perspectiva Financiera", desc: "La salud y el crecimiento de tus números.", icon: Banknote, accent: "text-cyan-600 dark:text-cyan-500", bg: "bg-cyan-500/15", border: "border-cyan-500/30" },
-  { key: "competitiva", title: "Perspectiva Competitiva", desc: "Tus ventajas frente al mercado: alianzas, información y producto.", icon: Rocket, accent: "text-purple-500", bg: "bg-purple-500/15", border: "border-purple-500/30" },
-  { key: "equipo", title: "Desarrollo del Equipo", desc: "Tu gente: talento, compromiso y formación.", icon: HeartHandshake, accent: "text-green-600 dark:text-green-500", bg: "bg-green-500/15", border: "border-green-500/30" },
+// Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
+// (el resultado) y el equipo abajo (la base que lo impulsa todo).
+// Colores tomados de la lámina del Excel, adaptados a nuestro tema:
+// financiera dorado · cliente morado · competitiva azul · equipo verde.
+const LANES = [
+  {
+    key: "financiera",
+    title: "Financiera",
+    desc: "El resultado: la salud y el crecimiento de tus números.",
+    icon: Banknote,
+    label: "bg-accent/20 text-accent border-accent/40",
+    bubble: "bg-accent/15 border-accent/45 hover:border-accent",
+  },
+  {
+    key: "cliente",
+    title: "Cliente",
+    desc: "Lo que tu cliente ve, recibe y siente.",
+    icon: Users,
+    label: "bg-purple-500/20 text-purple-500 border-purple-500/40",
+    bubble: "bg-purple-500/15 border-purple-500/45 hover:border-purple-500",
+  },
+  {
+    key: "competitiva",
+    title: "Competitiva",
+    desc: "Tus ventajas frente al mercado: alianzas, información y producto.",
+    icon: Rocket,
+    label: "bg-blue-500/20 text-blue-500 border-blue-500/40",
+    bubble: "bg-blue-500/15 border-blue-500/45 hover:border-blue-500",
+  },
+  {
+    key: "equipo",
+    title: "Desarrollo del Equipo",
+    desc: "La base: tu gente, su talento y su compromiso.",
+    icon: HeartHandshake,
+    label: "bg-green-500/20 text-green-600 dark:text-green-500 border-green-500/40",
+    bubble: "bg-green-500/15 border-green-500/45 hover:border-green-500",
+  },
 ];
 
-function PriorityDot({ priority, score }) {
-  if (!priority) {
-    return <span className="text-[10px] text-muted flex-shrink-0">sin calificar</span>;
-  }
-  const styles = {
-    Alta: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40",
-    Media: "bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/40",
-    Baja: "bg-gray-500/10 text-gray-500 dark:text-gray-400 border-gray-400/30",
-  };
+const PRIORITY_DOT = {
+  Alta: "bg-green-500",
+  Media: "bg-amber-400",
+  Baja: "bg-gray-400",
+};
+
+function Bubble({ item }) {
   return (
-    <span
-      className={`px-2 py-0.5 rounded-full text-[10px] font-subtitle border flex-shrink-0 ${styles[priority]}`}
-      title={`Puntaje: ${score}`}
+    <div
+      className={`relative glass border-2 rounded-[26px] px-4 py-3 max-w-[220px] text-center transition-all ${
+        LANES.find((l) => l.key === item.perspective)?.bubble || ""
+      } ${item.priority == null ? "border-dashed" : ""}`}
+      title={
+        item.priority
+          ? `Prioridad ${item.priority.toLowerCase()} · puntaje ${item.score}`
+          : "Sin calificar en el resumen"
+      }
     >
-      {priority}
-    </span>
+      {item.priority && (
+        <span
+          className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--background-start)] ${PRIORITY_DOT[item.priority]}`}
+        />
+      )}
+      <span className="text-xs leading-snug">{item.label}</span>
+    </div>
   );
 }
 
@@ -134,7 +176,7 @@ export function StrategicMapBase({ calibrated = false }) {
   const Icon = calibrated ? Filter : Map;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link to={createPageUrl("StrategicPlanning")}>
@@ -153,25 +195,36 @@ export function StrategicMapBase({ calibrated = false }) {
             <p className="text-muted">
               {calibrated
                 ? "Solo lo más importante: tus estrategias de prioridad alta."
-                : "Todas tus estrategias, organizadas en 4 perspectivas."}
+                : "Tu estrategia como un mapa: cada nivel impulsa al de arriba."}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Aviso: se llena solo */}
+      {/* Aviso: se llena solo + cómo leerlo */}
       <Card className="glass">
         <CardContent className="p-5 flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-muted">
-            {calibrated
-              ? "Este mapa se llena solo con las debilidades que calificaste como prioridad alta en el resumen. Es tu foco de trabajo real."
-              : "Este mapa se llena solo con las debilidades que marcaste para trabajar. Las etiquetas de prioridad vienen de tus calificaciones del resumen."}
-          </p>
+          <div className="text-sm text-muted space-y-1">
+            <p>
+              {calibrated
+                ? "Este mapa se llena solo con tus estrategias de prioridad alta. Es tu foco de trabajo real."
+                : "Este mapa se llena solo con las debilidades que marcaste para trabajar."}
+            </p>
+            <p>
+              Se lee <span className="text-foreground font-subtitle">de abajo hacia arriba</span>:
+              trabajar en tu equipo impulsa tu competitividad, eso mejora la experiencia de tu
+              cliente, y el cliente impulsa tus resultados financieros. El punto de cada burbuja
+              es su prioridad:{" "}
+              <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> alta</span>{" · "}
+              <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> media</span>{" · "}
+              <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block" /> baja</span>.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Avisos de datos incompletos */}
+      {/* Aviso de datos incompletos (solo calibrado) */}
       {calibrated && unrated > 0 && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
           <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -202,44 +255,49 @@ export function StrategicMapBase({ calibrated = false }) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {PERSPECTIVES.map((p) => {
-            const list = items.filter((w) => w.perspective === p.key);
-            const PIcon = p.icon;
+        /* Carriles estilo Balanced Scorecard */
+        <div className="space-y-1">
+          {LANES.map((lane, idx) => {
+            const list = items.filter((w) => w.perspective === lane.key);
+            const LIcon = lane.icon;
             return (
-              <Card key={p.key} className={`glass border-2 ${p.border} h-full`}>
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className={`w-10 h-10 ${p.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                      <PIcon className={`w-5 h-5 ${p.accent}`} />
-                    </div>
-                    <div>
-                      <h2 className="font-subtitle leading-tight">{p.title}</h2>
-                      <p className="text-xs text-muted mt-0.5">{p.desc}</p>
-                    </div>
-                    <span className="ml-auto text-xs text-muted font-subtitle flex-shrink-0">
-                      {list.length}
+              <React.Fragment key={lane.key}>
+                <div className="glass rounded-2xl flex flex-col sm:flex-row overflow-hidden">
+                  {/* Banda lateral con la perspectiva */}
+                  <div
+                    className={`sm:w-40 flex sm:flex-col items-center justify-center gap-2 px-4 py-3 sm:py-6 border-b sm:border-b-0 sm:border-r ${lane.label}`}
+                  >
+                    <LIcon className="w-5 h-5" />
+                    <span className="font-subtitle text-xs uppercase tracking-wider text-center leading-tight">
+                      {lane.title}
                     </span>
+                    <span className="text-[10px] opacity-70">{list.length}</span>
                   </div>
-                  {list.length === 0 ? (
-                    <p className="text-xs text-muted italic">
-                      {calibrated ? "Sin estrategias de prioridad alta aquí." : "Sin estrategias en esta perspectiva."}
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {list.map((w) => (
-                        <li
-                          key={w.id}
-                          className="flex items-center justify-between gap-2 p-2.5 glass rounded-lg text-sm"
-                        >
-                          <span className="flex-grow">{w.label}</span>
-                          <PriorityDot priority={w.priority} score={w.score} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
+                  {/* Burbujas */}
+                  <div className="flex-grow p-4 sm:p-5">
+                    {list.length === 0 ? (
+                      <p className="text-xs text-muted italic py-2">
+                        {calibrated
+                          ? "Sin estrategias de prioridad alta en este nivel."
+                          : "Sin estrategias en este nivel."}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-3 items-center">
+                        {list.map((w) => (
+                          <Bubble key={w.id} item={w} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Conector causa-efecto entre carriles */}
+                {idx < LANES.length - 1 && (
+                  <div className="flex items-center justify-center gap-1.5 py-0.5 text-muted">
+                    <ChevronUp className="w-4 h-4 text-accent" />
+                    <span className="text-[10px] uppercase tracking-wider">impulsa</span>
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
