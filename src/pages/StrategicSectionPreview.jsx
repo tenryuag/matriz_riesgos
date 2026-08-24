@@ -25,30 +25,6 @@ import { Button } from "@/components/ui/button";
 // Cada entrada explica, en lenguaje simple, qué hará esa pantalla y de dónde
 // vendrá su información, siguiendo el Excel de planeación estratégica.
 const SECTIONS = {
-  StrategicMap: {
-    title: "Mapa estratégico",
-    icon: Map,
-    accent: "text-purple-500",
-    bg: "bg-purple-500/15",
-    desc: "Tus estrategias organizadas en 4 perspectivas para verlas como un mapa completo del negocio.",
-    bullets: [
-      "Perspectiva Cliente · Perspectiva Financiera · Perspectiva Competitiva · Desarrollo del Equipo.",
-      "Se llena automáticamente con las debilidades que decidiste trabajar.",
-    ],
-    source: "Se alimenta del resumen consolidado.",
-  },
-  StrategicMapCalibrated: {
-    title: "Mapa estratégico calibrado",
-    icon: Filter,
-    accent: "text-orange-500",
-    bg: "bg-orange-500/15",
-    desc: "El mismo mapa, pero mostrando solo lo más importante: las estrategias con prioridad alta.",
-    bullets: [
-      "Filtra automáticamente por la prioridad calculada en el resumen.",
-      "Es tu foco real de trabajo para el año.",
-    ],
-    source: "Se alimenta del mapa estratégico + la priorización.",
-  },
   StrategicInitiatives: {
     title: "Iniciativas estratégicas",
     icon: ClipboardList,
@@ -99,7 +75,7 @@ export default function StrategicSectionPreview() {
   const pageKey =
     Object.keys(SECTIONS).find(
       (k) => k.toLowerCase() === location.pathname.replace(/\//g, "").toLowerCase()
-    ) || "StrategicMap";
+    ) || "StrategicInitiatives";
   const section = SECTIONS[pageKey];
   const Icon = section.icon;
 
