@@ -45,6 +45,10 @@ import FinancialStrategies from "./FinancialStrategies";
 
 import StrategicSummary from "./StrategicSummary";
 
+import StrategicMap from "./StrategicMap";
+
+import StrategicMapCalibrated from "./StrategicMapCalibrated";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -109,9 +113,9 @@ const PAGES = {
 
     StrategicSummary: StrategicSummary,
 
-    StrategicMap: StrategicSectionPreview,
+    StrategicMap: StrategicMap,
 
-    StrategicMapCalibrated: StrategicSectionPreview,
+    StrategicMapCalibrated: StrategicMapCalibrated,
 
     StrategicInitiatives: StrategicSectionPreview,
 
@@ -279,8 +283,17 @@ function PagesContent() {
                     <StrategicSummary />
                 </Layout>
             } />
-            {["StrategicMap",
-              "StrategicMapCalibrated", "StrategicInitiatives", "ScoreCard"].map((key) => (
+            <Route path="/StrategicMap" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicMap />
+                </Layout>
+            } />
+            <Route path="/StrategicMapCalibrated" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicMapCalibrated />
+                </Layout>
+            } />
+            {["StrategicInitiatives", "ScoreCard"].map((key) => (
                 <Route key={key} path={`/${key}`} element={
                     <Layout currentPageName={currentPage}>
                         <StrategicSectionPreview />

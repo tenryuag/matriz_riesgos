@@ -62,8 +62,8 @@ const PHASES = [
     desc: "Prioriza lo que vas a trabajar y organízalo en un mapa completo del negocio.",
     screens: [
       { key: "StrategicSummary", name: "Resumen y priorización", icon: ListOrdered, ready: true },
-      { key: "StrategicMap", name: "Mapa estratégico", icon: Map },
-      { key: "StrategicMapCalibrated", name: "Mapa calibrado", icon: Filter },
+      { key: "StrategicMap", name: "Mapa estratégico", icon: Map, ready: true },
+      { key: "StrategicMapCalibrated", name: "Mapa calibrado", icon: Filter, ready: true },
     ],
   },
   {
@@ -189,6 +189,12 @@ export default function StrategicPlanning() {
       return summaryMeta.alta > 0
         ? `${summaryMeta.rated} de ${summaryMeta.total} calificadas · ${summaryMeta.alta} de prioridad alta`
         : `${summaryMeta.rated} de ${summaryMeta.total} calificadas`;
+    }
+    if (key === "StrategicMap" && summaryMeta && summaryMeta.total > 0) {
+      return `${summaryMeta.total} estrategias en 4 perspectivas`;
+    }
+    if (key === "StrategicMapCalibrated" && summaryMeta && summaryMeta.alta > 0) {
+      return `${summaryMeta.alta} de prioridad alta`;
     }
     return null;
   };
