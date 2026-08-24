@@ -25,20 +25,6 @@ import { Button } from "@/components/ui/button";
 // Cada entrada explica, en lenguaje simple, qué hará esa pantalla y de dónde
 // vendrá su información, siguiendo el Excel de planeación estratégica.
 const SECTIONS = {
-  StrategicSummary: {
-    title: "Resumen y priorización",
-    icon: ListOrdered,
-    accent: "text-accent",
-    bg: "bg-accent/15",
-    desc: "Todas tus estrategias juntas, calificadas para saber por dónde empezar. El sistema calculará la prioridad por ti.",
-    bullets: [
-      "Consolida las debilidades del mercado, oportunidades y finanzas.",
-      "Calificarás costo, riesgo, complejidad y beneficio de cada estrategia.",
-      "Fórmula de priorización: (Costo×0.2 + Riesgo×0.5 + Complejidad×0.15 + Beneficio×0.15).",
-      "Resultado: prioridad Alta, Media o Baja para cada estrategia.",
-    ],
-    source: "Se alimenta de las tres pantallas de conclusiones.",
-  },
   StrategicMap: {
     title: "Mapa estratégico",
     icon: Map,
@@ -113,7 +99,7 @@ export default function StrategicSectionPreview() {
   const pageKey =
     Object.keys(SECTIONS).find(
       (k) => k.toLowerCase() === location.pathname.replace(/\//g, "").toLowerCase()
-    ) || "StrategicSummary";
+    ) || "StrategicMap";
   const section = SECTIONS[pageKey];
   const Icon = section.icon;
 
