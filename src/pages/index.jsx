@@ -43,6 +43,8 @@ import OpportunityConclusions from "./OpportunityConclusions";
 
 import FinancialStrategies from "./FinancialStrategies";
 
+import StrategicSummary from "./StrategicSummary";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -105,7 +107,7 @@ const PAGES = {
 
     FinancialStrategies: FinancialStrategies,
 
-    StrategicSummary: StrategicSectionPreview,
+    StrategicSummary: StrategicSummary,
 
     StrategicMap: StrategicSectionPreview,
 
@@ -272,7 +274,12 @@ function PagesContent() {
                     <FinancialStrategies />
                 </Layout>
             } />
-            {["StrategicSummary", "StrategicMap",
+            <Route path="/StrategicSummary" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicSummary />
+                </Layout>
+            } />
+            {["StrategicMap",
               "StrategicMapCalibrated", "StrategicInitiatives", "ScoreCard"].map((key) => (
                 <Route key={key} path={`/${key}`} element={
                     <Layout currentPageName={currentPage}>

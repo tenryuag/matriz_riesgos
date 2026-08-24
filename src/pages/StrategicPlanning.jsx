@@ -32,6 +32,12 @@ import {
   effectiveConclusions,
 } from "./OpportunityConclusions";
 import { ALL_FIN_KEYS, SECTION as FIN_SECTION } from "./FinancialStrategies";
+import {
+  RATING_SECTION,
+  collectStrategies,
+  scoreFor,
+  priorityFor,
+} from "./StrategicSummary";
 
 // Inicio de la Planeación Estratégica: el recorrido completo de la
 // metodología en 3 fases (las mismas del menú lateral), con el estado real
@@ -55,7 +61,7 @@ const PHASES = [
     title: "Estrategia",
     desc: "Prioriza lo que vas a trabajar y organízalo en un mapa completo del negocio.",
     screens: [
-      { key: "StrategicSummary", name: "Resumen y priorización", icon: ListOrdered },
+      { key: "StrategicSummary", name: "Resumen y priorización", icon: ListOrdered, ready: true },
       { key: "StrategicMap", name: "Mapa estratégico", icon: Map },
       { key: "StrategicMapCalibrated", name: "Mapa calibrado", icon: Filter },
     ],
@@ -81,6 +87,7 @@ export default function StrategicPlanning() {
   const [oppProgress, setOppProgress] = useState(null);
   const [oppConclCounts, setOppConclCounts] = useState(null);
   const [finCount, setFinCount] = useState(null);
+  const [summaryMeta, setSummaryMeta] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -94,6 +101,7 @@ export default function StrategicPlanning() {
             OPP_SECTION,
             OPP_CONCL_SECTION,
             FIN_SECTION,
+            RATING_SECTION,
           ]),
           Competitor.list(plan.id),
         ]);
@@ -121,6 +129,14 @@ export default function StrategicPlanning() {
           });
           const fin = sections[FIN_SECTION] || {};
           setFinCount(ALL_FIN_KEYS.filter((k) => fin[k] === "D").length);
+          const { weaknesses } = collectStrategies(sections);
+          const summaryRatings = sections[RATING_SECTION] || {};
+          const scoredList = weaknesses.map((w) => scoreFor(summaryRatings, w.id));
+          setSummaryMeta({
+            total: weaknesses.length,
+            rated: scoredList.filter((s) => s != null).length,
+            alta: scoredList.filter((s) => priorityFor(s) === "Alta").length,
+          });
         }
       } catch (_) {
         // Sin datos aún (o error de carga): las tarjetas siguen usables.
@@ -131,6 +147,7 @@ export default function StrategicPlanning() {
           setOppProgress(null);
           setOppConclCounts(null);
           setFinCount(null);
+          setSummaryMeta(null);
         }
       }
     })();
@@ -167,6 +184,11 @@ export default function StrategicPlanning() {
     }
     if (key === "FinancialStrategies" && finCount !== null && finCount > 0) {
       return `${finCount} debilidades a gestionar`;
+    }
+    if (key === "StrategicSummary" && summaryMeta && summaryMeta.total > 0) {
+      return summaryMeta.alta > 0
+        ? `${summaryMeta.rated} de ${summaryMeta.total} calificadas · ${summaryMeta.alta} de prioridad alta`
+        : `${summaryMeta.rated} de ${summaryMeta.total} calificadas`;
     }
     return null;
   };
