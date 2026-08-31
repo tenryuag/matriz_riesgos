@@ -24,7 +24,8 @@ import {
   ListOrdered,
   Filter,
   ClipboardList,
-  Trophy
+  Trophy,
+  Grid2x2
 } from "lucide-react";
 
 // ============================================================
@@ -101,6 +102,7 @@ export const MODULES = [
       { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout, group: "analysis" },
       { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks, group: "analysis" },
       { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote, group: "analysis" },
+      { pageKey: "Foda", nameKey: "navFoda", icon: Grid2x2, group: "strategy" },
       { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered, group: "strategy" },
       { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map, group: "strategy" },
       { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter, group: "strategy" },
