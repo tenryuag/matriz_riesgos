@@ -245,9 +245,9 @@ export default function FinancialStrategies() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Conclusión de oportunidades
           </Button>
         </Link>
-        <Link to={createPageUrl("StrategicSummary")}>
+        <Link to={createPageUrl("Foda")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            Siguiente: Resumen y priorización →
+            Siguiente: FODA →
           </Button>
         </Link>
       </div>

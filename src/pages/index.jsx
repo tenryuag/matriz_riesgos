@@ -51,6 +51,8 @@ import StrategicMap from "./StrategicMap";
 
 import StrategicMapCalibrated from "./StrategicMapCalibrated";
 
+import FodaAnalysis from "./FodaAnalysis";
+
 import BusinessAnalysis from "./BusinessAnalysis";
 
 import SwotAnalysis from "./SwotAnalysis";
@@ -112,6 +114,8 @@ const PAGES = {
     OpportunityConclusions: OpportunityConclusions,
 
     FinancialStrategies: FinancialStrategies,
+
+    Foda: FodaAnalysis,
 
     StrategicSummary: StrategicSummary,
 
@@ -278,6 +282,11 @@ function PagesContent() {
             <Route path="/FinancialStrategies" element={
                 <Layout currentPageName={currentPage}>
                     <FinancialStrategies />
+                </Layout>
+            } />
+            <Route path="/Foda" element={
+                <Layout currentPageName={currentPage}>
+                    <FodaAnalysis />
                 </Layout>
             } />
             <Route path="/StrategicSummary" element={

@@ -381,9 +381,9 @@ export default function StrategicSummary() {
 
       {/* Navegación del recorrido */}
       <div className="flex justify-between gap-3 flex-wrap">
-        <Link to={createPageUrl("FinancialStrategies")}>
+        <Link to={createPageUrl("Foda")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Estrategias financieras
+            <ArrowLeft className="w-4 h-4 mr-2" /> FODA
           </Button>
         </Link>
         <Link to={createPageUrl("StrategicMap")}>
