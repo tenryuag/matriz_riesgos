@@ -11,7 +11,11 @@ import {
   Compass,
   Target,
   Gem,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { perspectiveFor, LANES } from "./StrategicMap";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -143,6 +147,74 @@ export default function StrategicInitiatives() {
     },
   });
 
+  // Exporta la identidad + todas las iniciativas a un archivo de Excel,
+  // agrupadas por perspectiva (como la hoja original del Excel).
+  const handleExport = () => {
+    const daysBetween = (start, end) => {
+      if (!start || !end) return "";
+      const d = Math.round((new Date(end) - new Date(start)) / 86400000);
+      return d >= 0 ? d : "";
+    };
+
+    const laneTitle = (strategyId) => {
+      const key = perspectiveFor({ id: strategyId });
+      return LANES.find((l) => l.key === key)?.title || "";
+    };
+
+    const rows = [...initiatives].sort((a, b) => {
+      const laneIdx = (sid) =>
+        LANES.findIndex((l) => l.key === perspectiveFor({ id: sid }));
+      const diff = laneIdx(a.strategy_id) - laneIdx(b.strategy_id);
+      if (diff !== 0) return diff;
+      return (allLabels[a.strategy_id] || "").localeCompare(allLabels[b.strategy_id] || "");
+    });
+
+    const header = [
+      "Perspectiva", "Objetivo estratégico", "Iniciativa", "Resultado esperado",
+      "Área responsable", "Responsable", "Fecha inicio", "Fecha término",
+      "Días", "Presupuesto (MXN)", "KPI", "Plan de trabajo",
+    ];
+
+    const aoa = [
+      ["PLAN ESTRATÉGICO · INICIATIVAS"],
+      [],
+      ["Visión", vmv.vision || ""],
+      ["Misión", vmv.mission || ""],
+      ["Valores", vmv.core_values || ""],
+      [],
+      header,
+      ...rows.map((it) => [
+        laneTitle(it.strategy_id),
+        allLabels[it.strategy_id] || it.strategy_id,
+        it.title || "",
+        it.expected_result || "",
+        it.area || "",
+        it.owner || "",
+        it.start_date || "",
+        it.end_date || "",
+        daysBetween(it.start_date, it.end_date),
+        it.budget === "" || it.budget == null ? "" : Number(it.budget),
+        it.kpi || "",
+        it.steps || "",
+      ]),
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    worksheet["!cols"] = [
+      { wch: 16 }, { wch: 42 }, { wch: 32 }, { wch: 32 }, { wch: 18 },
+      { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 7 }, { wch: 16 },
+      { wch: 28 }, { wch: 48 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Iniciativas");
+
+    const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
+    const d = new Date();
+    const filename = `iniciativas_estrategicas_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}.xlsx`;
+    saveAs(blob, filename);
+  };
+
   // Iniciativas cuyo objetivo ya no es prioridad alta (no se ocultan).
   const altaIds = new Set(objectives.map((o) => o.id));
   const orphanGroups = {};
@@ -243,13 +315,13 @@ export default function StrategicInitiatives() {
   return (
     <div className="space-y-8 max-w-3xl mx-auto pb-24">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Link to={createPageUrl("StrategicPlanning")}>
           <Button variant="ghost" size="icon" className="glass">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-grow">
           <div className="w-12 h-12 bg-blue-500/15 rounded-2xl flex items-center justify-center flex-shrink-0">
             <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
@@ -258,6 +330,15 @@ export default function StrategicInitiatives() {
             <p className="text-muted">Convierte tu estrategia en un plan de acción concreto.</p>
           </div>
         </div>
+        <Button
+          onClick={handleExport}
+          disabled={initiatives.length === 0}
+          variant="outline"
+          className="glass hover:border-accent font-subtitle flex-shrink-0 disabled:opacity-40"
+          title={initiatives.length === 0 ? "Agrega iniciativas para exportar" : "Descargar como Excel"}
+        >
+          <Download className="w-4 h-4 mr-2" /> Exportar a Excel
+        </Button>
       </div>
 
       {/* Intro */}
