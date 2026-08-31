@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from '@/components/LanguageContext';
-import { StrategicPlan, Competitor } from "@/api/entities";
+import { StrategicPlan, Competitor, Initiative } from "@/api/entities";
 import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
 import { ALL_OPP_KEYS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
 import {
@@ -71,8 +71,8 @@ const PHASES = [
     title: "Plan de acción",
     desc: "Convierte la estrategia en acciones concretas: quién, cuándo y con qué presupuesto.",
     screens: [
-      { key: "StrategicInitiatives", name: "Iniciativas estratégicas", icon: ClipboardList },
-      { key: "ScoreCard", name: "Score Card ejecutivo", icon: Trophy },
+      { key: "StrategicInitiatives", name: "Iniciativas estratégicas", icon: ClipboardList, ready: true },
+      { key: "ScoreCard", name: "Score Card ejecutivo", icon: Trophy, ready: true },
     ],
   },
 ];
@@ -88,13 +88,14 @@ export default function StrategicPlanning() {
   const [oppConclCounts, setOppConclCounts] = useState(null);
   const [finCount, setFinCount] = useState(null);
   const [summaryMeta, setSummaryMeta] = useState(null);
+  const [initiativeCount, setInitiativeCount] = useState(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const plan = await StrategicPlan.getOrCreate();
-        const [sections, comps] = await Promise.all([
+        const [sections, comps, initiativeRows] = await Promise.all([
           StrategicPlan.getAnswersForSections(plan.id, [
             CUSTOMER_SECTION,
             "market-conclusions",
@@ -104,6 +105,7 @@ export default function StrategicPlanning() {
             RATING_SECTION,
           ]),
           Competitor.list(plan.id),
+          Initiative.list(plan.id),
         ]);
         const answers = sections[CUSTOMER_SECTION] || {};
         const answered = CUSTOMER_QUESTIONS.filter(
@@ -137,6 +139,7 @@ export default function StrategicPlanning() {
             rated: scoredList.filter((s) => s != null).length,
             alta: scoredList.filter((s) => priorityFor(s) === "Alta").length,
           });
+          setInitiativeCount(initiativeRows.length);
         }
       } catch (_) {
         // Sin datos aún (o error de carga): las tarjetas siguen usables.
@@ -148,6 +151,7 @@ export default function StrategicPlanning() {
           setOppConclCounts(null);
           setFinCount(null);
           setSummaryMeta(null);
+          setInitiativeCount(null);
         }
       }
     })();
@@ -195,6 +199,12 @@ export default function StrategicPlanning() {
     }
     if (key === "StrategicMapCalibrated" && summaryMeta && summaryMeta.alta > 0) {
       return `${summaryMeta.alta} de prioridad alta`;
+    }
+    if (key === "StrategicInitiatives" && initiativeCount !== null && initiativeCount > 0) {
+      return initiativeCount === 1 ? "1 iniciativa" : `${initiativeCount} iniciativas`;
+    }
+    if (key === "ScoreCard" && initiativeCount !== null && initiativeCount > 0) {
+      return "Listo para presentar";
     }
     return null;
   };
@@ -249,13 +259,13 @@ export default function StrategicPlanning() {
         </CardContent>
       </Card>
 
-      {/* Aviso: qué es real y qué está en construcción */}
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
-        <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+      {/* Todas las pantallas del módulo son funcionales */}
+      <div className="flex items-start gap-3 rounded-2xl border border-green-500/40 bg-green-500/10 px-5 py-4">
+        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-foreground">
-          Las pantallas con <span className="font-subtitle">"Ya funciona"</span> guardan de
-          verdad lo que escribes. Las marcadas <span className="font-subtitle">"En construcción"</span>{" "}
-          te muestran una vista previa de lo que harán.
+          <span className="font-subtitle">Todo el módulo ya es funcional:</span> las 11
+          pantallas guardan tu información automáticamente. Recorre las 3 fases en orden y
+          termina con tu Score Card listo para presentar.
         </p>
       </div>
 

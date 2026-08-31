@@ -65,7 +65,7 @@ export function perspectiveFor(item) {
 // (el resultado) y el equipo abajo (la base que lo impulsa todo).
 // Colores tomados de la lámina del Excel, adaptados a nuestro tema:
 // financiera dorado · cliente morado · competitiva azul · equipo verde.
-const LANES = [
+export const LANES = [
   {
     key: "financiera",
     title: "Financiera",
