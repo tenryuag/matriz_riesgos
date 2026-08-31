@@ -486,6 +486,16 @@ export const StrategicPlan = {
     return created?.[0] || null;
   },
 
+  // Actualiza campos del plan (visión, misión, valores, año, nombre).
+  async update(planId, fields) {
+    const { error } = await supabase
+      .from("strategic_plans")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", planId);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
   // Respuestas de una sección (cuestionario) como mapa { question_key: answer }.
   async getAnswers(planId, section) {
     const { data, error } = await supabase
@@ -596,6 +606,55 @@ export const Competitor = {
     if (answersError) handleQueryError(answersError);
 
     const { error } = await supabase.from("competitors").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Iniciativas estratégicas (Fase 3.4)
+export const Initiative = {
+  async list(planId) {
+    const { data, error } = await supabase
+      .from("strategic_initiatives")
+      .select("*")
+      .eq("plan_id", planId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // Inserta/actualiza varias iniciativas de una vez (autoguardado).
+  async upsertMany(planId, rows) {
+    if (!rows || rows.length === 0) return true;
+    const clean = rows.map((r, i) => ({
+      id: r.id,
+      plan_id: planId,
+      strategy_id: r.strategy_id,
+      title: r.title || "",
+      expected_result: r.expected_result || null,
+      area: r.area || null,
+      owner: r.owner || null,
+      start_date: r.start_date || null,
+      end_date: r.end_date || null,
+      budget: r.budget === "" || r.budget == null ? null : Number(r.budget),
+      kpi: r.kpi || null,
+      steps: r.steps || null,
+      position: i,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from("strategic_initiatives")
+      .upsert(clean, { onConflict: "id" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  async remove(id) {
+    const { error } = await supabase
+      .from("strategic_initiatives")
+      .delete()
+      .eq("id", id);
     if (error) handleQueryError(error);
     return true;
   },
