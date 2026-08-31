@@ -63,8 +63,9 @@ export function perspectiveFor(item) {
 
 // Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
 // (el resultado) y el equipo abajo (la base que lo impulsa todo).
-// Colores tomados de la lámina del Excel, adaptados a nuestro tema:
-// financiera dorado · cliente morado · competitiva azul · equipo verde.
+// Colores adaptados de la lámina del Excel a nuestro tema (el morado original
+// se sustituyó por rosa para no confundir con el branding de otro programa):
+// financiera dorado · cliente rosa · competitiva azul · equipo verde.
 export const LANES = [
   {
     key: "financiera",
@@ -79,8 +80,8 @@ export const LANES = [
     title: "Cliente",
     desc: "Lo que tu cliente ve, recibe y siente.",
     icon: Users,
-    label: "bg-purple-500/20 text-purple-500 border-purple-500/40",
-    bubble: "bg-purple-500/15 border-purple-500/45 hover:border-purple-500",
+    label: "bg-rose-500/20 text-rose-500 border-rose-500/40",
+    bubble: "bg-rose-500/15 border-rose-500/45 hover:border-rose-500",
   },
   {
     key: "competitiva",
@@ -185,8 +186,8 @@ export function StrategicMapBase({ calibrated = false }) {
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 ${calibrated ? "bg-orange-500/15" : "bg-purple-500/15"} rounded-2xl flex items-center justify-center flex-shrink-0`}>
-            <Icon className={`w-6 h-6 ${calibrated ? "text-orange-500" : "text-purple-500"}`} />
+          <div className={`w-12 h-12 ${calibrated ? "bg-orange-500/15" : "bg-blue-500/15"} rounded-2xl flex items-center justify-center flex-shrink-0`}>
+            <Icon className={`w-6 h-6 ${calibrated ? "text-orange-500" : "text-blue-500"}`} />
           </div>
           <div>
             <h1 className="text-3xl font-title">

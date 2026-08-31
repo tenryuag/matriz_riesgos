@@ -83,8 +83,8 @@ export const MODULES = [
     nameKey: "moduleStrategic",
     descKey: "moduleStrategicDesc",
     icon: Compass,
-    accent: "text-purple-500",
-    bg: "bg-purple-500/15",
+    accent: "text-blue-500",
+    bg: "bg-blue-500/15",
     status: "ready",
     home: "StrategicPlanning",
     // Secciones plegables del menú lateral (los items con `group` se agrupan
