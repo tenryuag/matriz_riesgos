@@ -161,7 +161,7 @@ export default function DepartmentRisks() {
                     <TableRow key={risk.id} className="border-card-border hover:bg-gray-500/5">
                       <TableCell className="max-w-xs truncate text-muted">{risk.description}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs border ${risk.threat_type === 'Interna' ? 'bg-blue-500 text-[#121212] dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30' : 'bg-purple-500 text-[#121212] dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-400/30'}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs border ${risk.threat_type === 'Interna' ? 'bg-blue-500 text-[#121212] dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-400/30' : 'bg-teal-500 text-[#121212] dark:bg-teal-500/20 dark:text-teal-300 dark:border-teal-400/30'}`}>
                           {t(risk.threat_type === 'Interna' ? 'threatInternal' : 'threatExternal')}
                         </span>
                       </TableCell>

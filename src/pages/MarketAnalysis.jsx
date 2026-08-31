@@ -234,8 +234,8 @@ export default function MarketAnalysis() {
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-purple-500/15 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <Globe className="w-6 h-6 text-purple-500" />
+          <div className="w-12 h-12 bg-blue-500/15 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Globe className="w-6 h-6 text-blue-500" />
           </div>
           <div>
             <h1 className="text-3xl font-title">Análisis del mercado</h1>
@@ -293,8 +293,8 @@ export default function MarketAnalysis() {
                 onClick={() => setExpandedId(open ? null : comp.id)}
                 className="w-full flex items-center gap-3 p-5 text-left hover:bg-[var(--table-row-hover)] transition-colors"
               >
-                <div className="w-10 h-10 bg-purple-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-5 h-5 text-purple-500" />
+                <div className="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-5 h-5 text-blue-500" />
                 </div>
                 <div className="flex-grow min-w-0">
                   <span className="font-subtitle block truncate">{comp.name}</span>
