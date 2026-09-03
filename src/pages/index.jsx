@@ -63,6 +63,16 @@ import FinancialProjection from "./FinancialProjection";
 
 import FinancialCurrent from "./FinancialCurrent";
 
+import FinAnalysisHome from "./FinAnalysisHome";
+
+import FinAnalysisData from "./FinAnalysisData";
+
+import FinAnalysisSales from "./FinAnalysisSales";
+
+import FinAnalysisCosts from "./FinAnalysisCosts";
+
+import FinAnalysisExpenses from "./FinAnalysisExpenses";
+
 import ModuleLauncher from "./ModuleLauncher";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
@@ -130,6 +140,16 @@ const PAGES = {
     BusinessAnalysis: BusinessAnalysis,
 
     SwotAnalysis: SwotAnalysis,
+
+    FinAnalysisHome: FinAnalysisHome,
+
+    FinAnalysisData: FinAnalysisData,
+
+    FinAnalysisSales: FinAnalysisSales,
+
+    FinAnalysisCosts: FinAnalysisCosts,
+
+    FinAnalysisExpenses: FinAnalysisExpenses,
 
     FinancialHistory: FinancialHistory,
 
@@ -322,6 +342,31 @@ function PagesContent() {
             <Route path="/SwotAnalysis" element={
                 <Layout currentPageName={currentPage}>
                     <SwotAnalysis />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisHome" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisHome />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisData" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisData />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSales" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSales />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCosts" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCosts />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisExpenses" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisExpenses />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={

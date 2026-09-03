@@ -25,7 +25,9 @@ import {
   Filter,
   ClipboardList,
   Trophy,
-  Grid2x2
+  Grid2x2,
+  Layers,
+  Receipt
 } from "lucide-react";
 
 // ============================================================
@@ -66,17 +68,24 @@ export const MODULES = [
     ],
   },
   {
-    // Análisis financiero: distinto de la planeación financiera. Va antes de
-    // la planeación estratégica en el flujo. Aún sin desarrollar.
+    // Análisis financiero: la sección histórica del modelo financiero.
+    // Distinto de la planeación financiera (proyección); va antes de la
+    // planeación estratégica en el flujo.
     key: "fin-analysis",
     nameKey: "moduleFinAnalysis",
     descKey: "moduleFinAnalysisDesc",
     icon: Calculator,
     accent: "text-cyan-500",
     bg: "bg-cyan-500/15",
-    status: "in-development",
-    home: "ModuleInDevelopment",
-    pages: [],
+    status: "ready",
+    home: "FinAnalysisHome",
+    pages: [
+      { pageKey: "FinAnalysisHome", nameKey: "navFinAnalysisHome", icon: Calculator },
+      { pageKey: "FinAnalysisData", nameKey: "navFinAnalysisData", icon: Building2 },
+      { pageKey: "FinAnalysisSales", nameKey: "navFinAnalysisSales", icon: TrendingUp },
+      { pageKey: "FinAnalysisCosts", nameKey: "navFinAnalysisCosts", icon: Layers },
+      { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt },
+    ],
   },
   {
     key: "strategic",
