@@ -659,3 +659,167 @@ export const Initiative = {
     return true;
   },
 };
+
+// 🔹 Análisis Financiero (sección histórica del modelo financiero)
+export const FinAnalysis = {
+  // Devuelve el análisis de la organización; si no existe, lo crea.
+  async getOrCreate() {
+    const { data, error } = await supabase
+      .from("fin_analyses")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) handleQueryError(error);
+    if (data && data.length > 0) return data[0];
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: created, error: createError } = await supabase
+      .from("fin_analyses")
+      .insert([{ created_by_id: userData?.user?.id }])
+      .select();
+    if (createError) handleQueryError(createError);
+    return created?.[0] || null;
+  },
+
+  // Actualiza los datos generales (empresa, país, actividad, moneda).
+  async update(analysisId, fields) {
+    const { error } = await supabase
+      .from("fin_analyses")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", analysisId);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Ejercicios (años) del análisis financiero
+export const FinYear = {
+  async list(analysisId) {
+    const { data, error } = await supabase
+      .from("fin_years")
+      .select("*")
+      .eq("analysis_id", analysisId)
+      .order("year", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async add(analysisId, year, months = 12) {
+    const { data, error } = await supabase
+      .from("fin_years")
+      .insert([{ analysis_id: analysisId, year, months }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async update(id, fields) {
+    const { error } = await supabase
+      .from("fin_years")
+      .update(fields)
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina el año; sus cifras caen en cascada (FK en fin_values).
+  async remove(id) {
+    const { error } = await supabase.from("fin_years").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Líneas de negocio del análisis financiero
+export const FinLine = {
+  async list(analysisId) {
+    const { data, error } = await supabase
+      .from("fin_lines")
+      .select("*")
+      .eq("analysis_id", analysisId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async create(analysisId, name, position = 0) {
+    const { data, error } = await supabase
+      .from("fin_lines")
+      .insert([{ analysis_id: analysisId, name, position }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async rename(id, name) {
+    const { error } = await supabase
+      .from("fin_lines")
+      .update({ name })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina la línea y sus cifras (ventas y costos asociados).
+  async remove(analysisId, id) {
+    const { error: salesError } = await supabase
+      .from("fin_values")
+      .delete()
+      .eq("analysis_id", analysisId)
+      .eq("section", "sales")
+      .eq("concept_key", id);
+    if (salesError) handleQueryError(salesError);
+
+    const { error: costError } = await supabase
+      .from("fin_values")
+      .delete()
+      .eq("analysis_id", analysisId)
+      .eq("section", `cost:${id}`);
+    if (costError) handleQueryError(costError);
+
+    const { error } = await supabase.from("fin_lines").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Cifras del análisis financiero
+export const FinValue = {
+  // Cifras de varias secciones: { [section]: { [concept_key]: { [year_id]: amount } } }.
+  async getSections(analysisId, sections) {
+    if (!sections || sections.length === 0) return {};
+    const { data, error } = await supabase
+      .from("fin_values")
+      .select("year_id, section, concept_key, amount")
+      .eq("analysis_id", analysisId)
+      .in("section", sections);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      if (!map[r.section]) map[r.section] = {};
+      if (!map[r.section][r.concept_key]) map[r.section][r.concept_key] = {};
+      map[r.section][r.concept_key][r.year_id] = r.amount;
+    });
+    return map;
+  },
+
+  // Guarda (upsert) cifras. `rows`: [{ year_id, section, concept_key, amount }].
+  async saveRows(analysisId, rows) {
+    if (!rows || rows.length === 0) return true;
+    const now = new Date().toISOString();
+    const clean = rows.map((r) => ({
+      analysis_id: analysisId,
+      year_id: r.year_id,
+      section: r.section,
+      concept_key: r.concept_key,
+      amount: r.amount === "" || r.amount == null ? null : Number(r.amount),
+      updated_at: now,
+    }));
+    const { error } = await supabase
+      .from("fin_values")
+      .upsert(clean, { onConflict: "analysis_id,year_id,section,concept_key" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
