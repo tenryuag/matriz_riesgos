@@ -1187,6 +1187,12 @@ const LanguageContext = createContext();
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState('es');
 
+  // Refleja el idioma en <html lang> para que el navegador no ofrezca
+  // traducir la página (el traductor automático rompe el DOM de React).
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   useEffect(() => {
     const savedLang = localStorage.getItem('app-language') || 'es';
     setLanguage(savedLang);
