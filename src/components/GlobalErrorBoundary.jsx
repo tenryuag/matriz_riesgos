@@ -3,6 +3,18 @@ import { AlertTriangle, RefreshCw, Home, LogOut, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+// El traductor automático del navegador (Google Translate y similares)
+// reemplaza los textos por nodos propios; cuando React vuelve a pintar,
+// falla con NotFoundError en removeChild/insertBefore. Lo detectamos para
+// dar una instrucción concreta en lugar de un error genérico.
+const isTranslatorError = (error) => {
+  const msg = String(error?.message || error || '');
+  return (
+    (error?.name === 'NotFoundError' || /NotFoundError/.test(msg)) &&
+    /removeChild|insertBefore/.test(msg)
+  );
+};
+
 class GlobalErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -65,6 +77,7 @@ class GlobalErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const translatorError = isTranslatorError(this.state.error);
       return (
         <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background text-foreground">
           <Card className="w-full max-w-md border-red-200 dark:border-red-900 shadow-lg">
@@ -72,12 +85,29 @@ class GlobalErrorBoundary extends React.Component {
               <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
-              <CardTitle className="text-xl font-bold">Algo salió mal</CardTitle>
+              <CardTitle className="text-xl font-bold">
+                {translatorError ? 'El traductor del navegador interfirió' : 'Algo salió mal'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
-              <p className="text-muted-foreground">
-                La aplicación ha encontrado un error inesperado. Hemos registrado el problema para investigarlo.
-              </p>
+              {translatorError ? (
+                <div className="text-left text-sm space-y-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/30">
+                  <p className="text-muted-foreground">
+                    Parece que la traducción automática del navegador modificó la
+                    página. La aplicación ya está en español, así que no necesita
+                    traducirse. Para corregirlo:
+                  </p>
+                  <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                    <li>Toca el ícono de traducir en la barra de direcciones (o el menú ⋮ → Traducir).</li>
+                    <li>Elige <strong>"No traducir nunca este sitio"</strong> o desactiva "Traducir siempre".</li>
+                    <li>Recarga la página.</li>
+                  </ol>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  La aplicación ha encontrado un error inesperado. Hemos registrado el problema para investigarlo.
+                </p>
+              )}
               
               {this.state.error && (
                 <details className="mt-2 text-left">
