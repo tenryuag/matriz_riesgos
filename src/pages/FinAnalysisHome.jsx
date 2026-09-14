@@ -55,18 +55,18 @@ const STEPS = [
     ready: true,
   },
   {
-    key: null,
+    key: "FinAnalysisIncome",
     name: "Estado de Resultados",
-    desc: "Utilidades, EBITDA y márgenes — se calculará solo.",
+    desc: "Utilidades, EBITDA y márgenes — se calcula solo.",
     icon: FileText,
-    ready: false,
+    ready: true,
   },
   {
-    key: null,
+    key: "FinAnalysisBalance",
     name: "Balance General",
     desc: "Activo, pasivo y capital con validación automática.",
     icon: Scale,
-    ready: false,
+    ready: true,
   },
   {
     key: null,

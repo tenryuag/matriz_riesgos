@@ -27,7 +27,8 @@ import {
   Trophy,
   Grid2x2,
   Layers,
-  Receipt
+  Receipt,
+  Scale
 } from "lucide-react";
 
 // ============================================================
@@ -85,6 +86,8 @@ export const MODULES = [
       { pageKey: "FinAnalysisSales", nameKey: "navFinAnalysisSales", icon: TrendingUp },
       { pageKey: "FinAnalysisCosts", nameKey: "navFinAnalysisCosts", icon: Layers },
       { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt },
+      { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText },
+      { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale },
     ],
   },
   {

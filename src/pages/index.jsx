@@ -73,6 +73,10 @@ import FinAnalysisCosts from "./FinAnalysisCosts";
 
 import FinAnalysisExpenses from "./FinAnalysisExpenses";
 
+import FinAnalysisIncome from "./FinAnalysisIncome";
+
+import FinAnalysisBalance from "./FinAnalysisBalance";
+
 import ModuleLauncher from "./ModuleLauncher";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
@@ -150,6 +154,10 @@ const PAGES = {
     FinAnalysisCosts: FinAnalysisCosts,
 
     FinAnalysisExpenses: FinAnalysisExpenses,
+
+    FinAnalysisIncome: FinAnalysisIncome,
+
+    FinAnalysisBalance: FinAnalysisBalance,
 
     FinancialHistory: FinancialHistory,
 
@@ -367,6 +375,16 @@ function PagesContent() {
             <Route path="/FinAnalysisExpenses" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisExpenses />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisIncome" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisIncome />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisBalance" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisBalance />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={
