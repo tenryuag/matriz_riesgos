@@ -77,6 +77,10 @@ import FinAnalysisIncome from "./FinAnalysisIncome";
 
 import FinAnalysisBalance from "./FinAnalysisBalance";
 
+import FinAnalysisCashflow from "./FinAnalysisCashflow";
+
+import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
+
 import ModuleLauncher from "./ModuleLauncher";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
@@ -158,6 +162,10 @@ const PAGES = {
     FinAnalysisIncome: FinAnalysisIncome,
 
     FinAnalysisBalance: FinAnalysisBalance,
+
+    FinAnalysisCashflow: FinAnalysisCashflow,
+
+    FinAnalysisCashflowDirect: FinAnalysisCashflowDirect,
 
     FinancialHistory: FinancialHistory,
 
@@ -385,6 +393,16 @@ function PagesContent() {
             <Route path="/FinAnalysisBalance" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisBalance />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCashflow" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCashflow />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCashflowDirect" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCashflowDirect />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={

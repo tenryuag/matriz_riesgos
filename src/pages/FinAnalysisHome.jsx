@@ -12,6 +12,7 @@ import {
   FileText,
   Scale,
   Waves,
+  ArrowLeftRight,
   Gauge,
   Clock,
 } from "lucide-react";
@@ -69,11 +70,18 @@ const STEPS = [
     ready: true,
   },
   {
-    key: null,
-    name: "Flujo de efectivo",
-    desc: "Estado de cambios (automático) y flujo directo.",
+    key: "FinAnalysisCashflow",
+    name: "Estado de cambios",
+    desc: "De dónde salió y a dónde se fue el efectivo — se calcula solo.",
     icon: Waves,
-    ready: false,
+    ready: true,
+  },
+  {
+    key: "FinAnalysisCashflowDirect",
+    name: "Flujo de efectivo directo",
+    desc: "Entradas y salidas reales de caja.",
+    icon: ArrowLeftRight,
+    ready: true,
   },
   {
     key: null,
