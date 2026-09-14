@@ -297,6 +297,11 @@ export default function FinAnalysisBalance() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Estado de Resultados
           </Button>
         </Link>
+        <Link to={createPageUrl("FinAnalysisCashflow")}>
+          <Button variant="outline" className="glass hover:border-accent font-subtitle">
+            Siguiente: Estado de cambios →
+          </Button>
+        </Link>
       </div>
 
       <SaveStatusBar status={saveStatus} onSaveNow={flush} />

@@ -28,7 +28,9 @@ import {
   Grid2x2,
   Layers,
   Receipt,
-  Scale
+  Scale,
+  Waves,
+  ArrowLeftRight
 } from "lucide-react";
 
 // ============================================================
@@ -88,6 +90,8 @@ export const MODULES = [
       { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt },
       { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText },
       { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale },
+      { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves },
+      { pageKey: "FinAnalysisCashflowDirect", nameKey: "navFinAnalysisCashflowDirect", icon: ArrowLeftRight },
     ],
   },
   {

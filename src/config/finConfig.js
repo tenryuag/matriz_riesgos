@@ -171,3 +171,95 @@ export const BALANCE_GROUPS = [
 ];
 
 export const ALL_BALANCE_KEYS = BALANCE_GROUPS.flatMap((g) => g.items.map((i) => i.key));
+
+// ---------- Estado de cambios: anexo de movimientos reales ----------
+export const CASHFLOW_ANNEX_SECTION = "cashflow-annex";
+
+// Se capturan en positivo; `sign` indica si es entrada (+1) o salida (−1)
+// de efectivo. Así el usuario no tiene que pensar en signos.
+export const ANNEX_GROUPS = [
+  {
+    key: "inversion",
+    title: "Inversión — movimientos reales de efectivo",
+    items: [
+      { key: "capex_adquisicion", label: "Adquisición de activo fijo (CAPEX pagado)", sign: -1 },
+      { key: "capex_venta", label: "Venta de activo fijo (efectivo cobrado)", sign: 1 },
+      { key: "otros_activos_compra", label: "Compra de otros activos / inversiones en valores", sign: -1 },
+      { key: "otros_activos_venta", label: "Venta / recuperación de otros activos / inversiones", sign: 1 },
+    ],
+  },
+  {
+    key: "financiamiento",
+    title: "Financiamiento — movimientos reales de efectivo",
+    items: [
+      { key: "deuda_cp_disposicion", label: "Disposición de deuda bancaria a corto plazo", sign: 1 },
+      { key: "deuda_cp_pago", label: "Pago de deuda bancaria a corto plazo", sign: -1 },
+      { key: "deuda_lp_disposicion", label: "Disposición de deuda bancaria a largo plazo", sign: 1 },
+      { key: "deuda_lp_pago", label: "Pago de deuda bancaria a largo plazo", sign: -1 },
+      { key: "aportaciones_capital", label: "Aportaciones de capital en efectivo", sign: 1 },
+      { key: "dividendos", label: "Dividendos pagados en efectivo", sign: -1 },
+    ],
+  },
+];
+export const ALL_ANNEX_KEYS = ANNEX_GROUPS.flatMap((g) => g.items.map((i) => i.key));
+
+// ---------- Flujo de efectivo directo ----------
+export const CASHFLOW_DIRECT_SECTION = "cashflow-direct";
+
+export const DIRECT_GROUPS = [
+  {
+    key: "entradas",
+    title: "Entradas de efectivo — operación",
+    total: "Total entradas de operación",
+    items: [
+      { key: "ent_ventas", label: "Cobros de ventas / ingresos operativos" },
+      { key: "ent_cxc", label: "Cobros de cuentas por cobrar / anticipos de clientes" },
+      { key: "ent_otros", label: "Otros ingresos cobrados" },
+    ],
+  },
+  {
+    key: "salidas",
+    title: "Salidas de efectivo — operación",
+    total: "Total salidas de operación",
+    items: [
+      { key: "sal_proveedores", label: "Pagos a proveedores (mercancías / materiales)" },
+      { key: "sal_sueldos_operativos", label: "Sueldos y salarios operativos (producción / servicio)" },
+      { key: "sal_sueldos_admin", label: "Sueldos y salarios administrativos" },
+      { key: "sal_sueldos_ventas", label: "Sueldos y salarios de ventas y comercialización" },
+      { key: "sal_impuestos", label: "Pagos de impuestos" },
+      { key: "sal_otros", label: "Otros pagos (renta, publicidad, fletes, comisiones, etc.)" },
+    ],
+  },
+  {
+    key: "inversion",
+    title: "Actividades de inversión",
+    total: "Flujo de inversión",
+    signed: true,
+    hint: "Pagos en negativo, cobros en positivo",
+    items: [
+      { key: "inv_oficina", label: "Equipo de oficina" },
+      { key: "inv_computo", label: "Equipo de cómputo" },
+      { key: "inv_transporte", label: "Equipo de transporte" },
+      { key: "inv_otros", label: "Otros" },
+    ],
+  },
+  {
+    key: "financiamiento",
+    title: "Actividades de financiamiento",
+    total: "Flujo de financiamiento",
+    signed: true,
+    hint: "Obtenido / cobrado en positivo, pagado en negativo",
+    items: [
+      { key: "fin_creditos", label: "Créditos de instituciones financieras" },
+      { key: "fin_prestamos_terceros", label: "Préstamos de terceros" },
+      { key: "fin_intereses_creditos", label: "Intereses de créditos bancarios" },
+      { key: "fin_intereses_otros", label: "Intereses de otros conceptos" },
+      { key: "fin_aportaciones", label: "Aportaciones de socios" },
+      { key: "fin_dividendos", label: "Dividendos (pagados)" },
+      { key: "fin_cambiario", label: "Resultado cambiario" },
+      { key: "fin_otros", label: "Otros" },
+    ],
+  },
+];
+export const DIRECT_INITIAL_KEY = "saldo_inicial";
+export const ALL_DIRECT_KEYS = [DIRECT_INITIAL_KEY, ...DIRECT_GROUPS.flatMap((g) => g.items.map((i) => i.key))];
