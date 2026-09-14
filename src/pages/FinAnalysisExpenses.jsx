@@ -225,6 +225,11 @@ export default function FinAnalysisExpenses() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Costo de ventas
           </Button>
         </Link>
+        <Link to={createPageUrl("FinAnalysisIncome")}>
+          <Button variant="outline" className="glass hover:border-accent font-subtitle">
+            Siguiente: Estado de Resultados →
+          </Button>
+        </Link>
       </div>
 
       <SaveStatusBar status={saveStatus} onSaveNow={flush} />
