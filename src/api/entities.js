@@ -465,22 +465,34 @@ export const ModuleAccess = {
   },
 };
 
-// 🔹 Plan Estratégico (Fase 0.3 en adelante)
+// Id del usuario actual leído del JWT local (sin llamada de red).
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user?.id || null;
+}
+
+// 🔹 Plan Estratégico (Fase 0.3 en adelante). Cada usuario tiene el suyo.
 export const StrategicPlan = {
-  // Devuelve el plan de la organización; si no existe, lo crea.
+  // Devuelve el plan del usuario actual; si no existe, lo crea.
+  // (RLS ya limita la consulta al dueño; el filtro explícito lo documenta.)
   async getOrCreate() {
+    const uid = await currentUserId();
+    if (!uid) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
     const { data, error } = await supabase
       .from("strategic_plans")
       .select("*")
+      .eq("owner_id", uid)
       .order("created_at", { ascending: true })
       .limit(1);
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
-    const { data: userData } = await supabase.auth.getUser();
     const { data: created, error: createError } = await supabase
       .from("strategic_plans")
-      .insert([{ created_by_id: userData?.user?.id }])
+      .insert([{ owner_id: uid, created_by_id: uid }])
       .select();
     if (createError) handleQueryError(createError);
     return created?.[0] || null;
@@ -660,22 +672,27 @@ export const Initiative = {
   },
 };
 
-// 🔹 Análisis Financiero (sección histórica del modelo financiero)
+// 🔹 Análisis Financiero (sección histórica del modelo financiero). Cada usuario tiene el suyo.
 export const FinAnalysis = {
-  // Devuelve el análisis de la organización; si no existe, lo crea.
+  // Devuelve el análisis del usuario actual; si no existe, lo crea.
   async getOrCreate() {
+    const uid = await currentUserId();
+    if (!uid) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
     const { data, error } = await supabase
       .from("fin_analyses")
       .select("*")
+      .eq("owner_id", uid)
       .order("created_at", { ascending: true })
       .limit(1);
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
-    const { data: userData } = await supabase.auth.getUser();
     const { data: created, error: createError } = await supabase
       .from("fin_analyses")
-      .insert([{ created_by_id: userData?.user?.id }])
+      .insert([{ owner_id: uid, created_by_id: uid }])
       .select();
     if (createError) handleQueryError(createError);
     return created?.[0] || null;

@@ -6,6 +6,8 @@
 -- las líneas de negocio y todas las cifras capturadas (ventas, costos,
 -- gastos, estado de resultados, balance y flujos).
 --
+-- ⚠️ ACTUALIZACIÓN: desde supabase-per-user-plans.sql los datos son POR USUARIO
+--    (cada cuenta ve solo lo suyo). El texto de abajo describe el diseño original.
 -- Alcance: a nivel organización, igual que el plan estratégico (cualquier
 -- usuario autenticado puede verlo/editarlo). El acceso a las pantallas ya
 -- está limitado por el control de acceso por módulo.
