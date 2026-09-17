@@ -1,6 +1,12 @@
 import { supabase } from "./supabaseClient";
 import { handleQueryError, forceLogout } from "./authHelpers";
 
+// Id del usuario actual leído del JWT local (sin llamada de red).
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user?.id || null;
+}
+
 export const Department = {
   // 🔹 Obtener lista de departamentos
   async list(order = "created_at") {
@@ -13,11 +19,16 @@ export const Department = {
     return data;
   },
 
-  // 🔹 Crear nuevo departamento
+  // 🔹 Crear nuevo departamento (queda a nombre del usuario actual)
   async create(departmentData) {
+    const uid = await currentUserId();
+    if (!uid) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
     const { data, error } = await supabase
       .from("departments")
-      .insert([departmentData])
+      .insert([{ ...departmentData, owner_id: uid }])
       .select(); // opcional: para obtener el resultado insertado
     if (error) handleQueryError(error);
     return data;
@@ -107,7 +118,7 @@ export const Risk = {
 
     const { data, error } = await supabase
       .from("risks")
-      .insert([{ ...riskData, created_by_id: userId }])
+      .insert([{ ...riskData, created_by_id: userId, owner_id: userId }])
       .select();
 
     if (error) handleQueryError(error);
@@ -464,12 +475,6 @@ export const ModuleAccess = {
     return true;
   },
 };
-
-// Id del usuario actual leído del JWT local (sin llamada de red).
-async function currentUserId() {
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.user?.id || null;
-}
 
 // 🔹 Plan Estratégico (Fase 0.3 en adelante). Cada usuario tiene el suyo.
 export const StrategicPlan = {
