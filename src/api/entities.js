@@ -222,9 +222,11 @@ export const User = {
         email,
         password,
         options: {
+          // El rol NO se manda aquí: vive en app_metadata y solo un admin
+          // puede asignarlo (set_user_role). user_metadata es editable por
+          // el propio usuario.
           data: {
             full_name: fullName,
-            role: "user",
           },
         },
       });
@@ -280,6 +282,21 @@ export const User = {
       return data;
     } catch (err) {
       console.error("Error al suspender usuario:", err.message);
+      throw err;
+    }
+  },
+
+  // 🔹 Dar o quitar rol de administrador (solo admin)
+  async setRole(userId, role) {
+    try {
+      const { data, error } = await supabase.rpc("set_user_role", {
+        target_user_id: userId,
+        new_role: role,
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Error al cambiar el rol:", err.message);
       throw err;
     }
   },

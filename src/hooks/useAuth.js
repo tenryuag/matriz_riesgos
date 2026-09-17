@@ -16,10 +16,9 @@ export function useAuth() {
       setUser(currentUser);
 
       // Verificar si el usuario es admin
-      // Verificamos user_metadata.role o raw_user_meta_data.role
-      const role = currentUser?.user_metadata?.role ||
-                   currentUser?.raw_user_meta_data?.role ||
-                   'user';
+      // El rol vive en app_metadata (solo el servidor lo escribe); user_metadata
+      // lo puede editar el propio usuario y NO debe usarse para esto.
+      const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
     } catch (error) {

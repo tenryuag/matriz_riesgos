@@ -383,9 +383,7 @@ const AppLayout = ({ children, currentPageName }) => {
       setUser(currentUser);
 
       // Verificar si el usuario es admin
-      const role = currentUser?.user_metadata?.role ||
-                   currentUser?.raw_user_meta_data?.role ||
-                   'user';
+      const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
     } catch (error) {
@@ -918,7 +916,7 @@ const AppLayout = ({ children, currentPageName }) => {
                 <h3 className="font-subtitle text-sm text-foreground mb-1">{user.user_metadata?.full_name || user.full_name || user.email}</h3>
                 <p className="text-xs text-accent truncate mb-3">{user.email}</p>
                 <span className="inline-block px-3 py-1 text-xs rounded-full glass border border-accent/30 text-accent">
-                  {user.user_metadata?.role || user.raw_user_meta_data?.role || 'user'}
+                  {user.app_metadata?.role || 'user'}
                 </span>
               </div>
               
