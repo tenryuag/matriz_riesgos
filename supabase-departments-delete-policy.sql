@@ -1,3 +1,6 @@
+-- ⚠️ NOTA (sep-2026): resultó innecesario. La BD ya tenía una política de
+-- borrado por dueño ("delete": auth.uid() = created_by_id). Este script dejó
+-- una política redundante `true`; ver supabase-risk-rls-policies.sql.
 -- ============================================================
 -- Política RLS: permitir eliminar departamentos
 -- ============================================================
