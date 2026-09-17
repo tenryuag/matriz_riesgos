@@ -19,7 +19,7 @@
 --     detrás; nadie más lo ve de todos modos). Al correr
 --     supabase-seed-cleanup.sql vuelves a ver tu plan propio.
 --   - En Matriz de Riesgos verás los departamentos/riesgos demo MEZCLADOS
---     con los reales (los demás usuarios no ven los demo).
+--     con los tuyos (la matriz ya es por usuario vía created_by_id).
 --   - Lo que captures NUEVO desde la app (ej. un riesgo nuevo) NO es
 --     sandbox: lo verán todos, como siempre.
 --
@@ -82,14 +82,14 @@ BEGIN
   END IF;
 
   -- ===== Matriz de Riesgos =====
-  INSERT INTO departments (name, description, sandbox_owner_id)
-    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
+  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
+    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
     RETURNING id INTO v_dep_ventas;
-  INSERT INTO departments (name, description, sandbox_owner_id)
-    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
+  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
+    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
     RETURNING id INTO v_dep_ops;
-  INSERT INTO departments (name, description, sandbox_owner_id)
-    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
+  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
+    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
     RETURNING id INTO v_dep_ti;
 
   INSERT INTO risks (
