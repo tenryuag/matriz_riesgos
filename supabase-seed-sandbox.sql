@@ -18,9 +18,8 @@
 --     de prueba en Planeación Estratégica (tu plan propio queda oculto
 --     detrás; nadie más lo ve de todos modos). Al correr
 --     supabase-seed-cleanup.sql vuelves a ver tu plan propio.
---   - Requiere haber corrido antes supabase-per-user-risks.sql (matriz por
---     usuario). En Matriz de Riesgos verás los departamentos/riesgos demo
---     MEZCLADOS con los tuyos (nadie más los ve).
+--   - En Matriz de Riesgos verás los departamentos/riesgos demo MEZCLADOS
+--     con los reales (los demás usuarios no ven los demo).
 --   - Lo que captures NUEVO desde la app (ej. un riesgo nuevo) NO es
 --     sandbox: lo verán todos, como siempre.
 --
@@ -83,14 +82,14 @@ BEGIN
   END IF;
 
   -- ===== Matriz de Riesgos =====
-  INSERT INTO departments (name, description, owner_id, sandbox_owner_id)
-    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  INSERT INTO departments (name, description, sandbox_owner_id)
+    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
     RETURNING id INTO v_dep_ventas;
-  INSERT INTO departments (name, description, owner_id, sandbox_owner_id)
-    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  INSERT INTO departments (name, description, sandbox_owner_id)
+    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
     RETURNING id INTO v_dep_ops;
-  INSERT INTO departments (name, description, owner_id, sandbox_owner_id)
-    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  INSERT INTO departments (name, description, sandbox_owner_id)
+    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid)
     RETURNING id INTO v_dep_ti;
 
   INSERT INTO risks (
@@ -100,7 +99,7 @@ BEGIN
     control_type_1, control_documented_1, process_type_1,
     control_evidence_1, control_responsible_1, control_frequency_1, control_grade_1,
     residual_probability, residual_impact, residual_level,
-    created_by_id, owner_id, sandbox_owner_id
+    created_by_id, sandbox_owner_id
   ) VALUES
   -- Ventas: intolerable → medio (mitigado)
   (v_dep_ventas, 'Externa', 'Pérdida del cliente principal, que concentra el 40% de los ingresos',
@@ -108,42 +107,42 @@ BEGIN
    'Reducir', 'Plan de diversificación de cartera y contratos anuales con clientes clave', 'Mitiga la probabilidad',
    'Control Preventivo', 'Sí', 'Combinado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Ocasional (41-60%)', 'Mayor', 'Medio',
-   v_uid, v_uid, v_uid),
+   v_uid, v_uid),
   -- Ventas: alto → bajo (mitigado)
   (v_dep_ventas, 'Interna', 'Errores en cotizaciones por captura manual de precios',
    'Probable (61-80%)', 'Mayor', 'Alto',
    'Reducir', 'Catálogo de precios centralizado con aprobación automática', 'Mitiga la probabilidad e impacto',
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Crítico', 'Bajo',
-   v_uid, v_uid, v_uid),
+   v_uid, v_uid),
   -- Operaciones: alto → alto (NO mitigado, dispara alertas del dashboard)
   (v_dep_ops, 'Externa', 'Interrupción de la cadena de suministro por dependencia de un solo proveedor',
    'Probable (61-80%)', 'Mayor', 'Alto',
    'Reducir', 'Búsqueda de proveedores alternos (en proceso)', 'Mitiga la probabilidad',
    'Control Correctivo', 'No', 'Manual', 'No', 'Sí', 'No', 'Débil',
    'Probable (61-80%)', 'Mayor', 'Alto',
-   v_uid, v_uid, v_uid),
+   v_uid, v_uid),
   -- Operaciones: medio → tolerable
   (v_dep_ops, 'Interna', 'Retrasos en entregas por falta de planeación de rutas',
    'Ocasional (41-60%)', 'Crítico', 'Medio',
    'Reducir', 'Software de optimización de rutas y monitoreo diario', 'Mitiga la probabilidad',
    'Control Detectivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
-   v_uid, v_uid, v_uid),
+   v_uid, v_uid),
   -- TI: intolerable → medio
   (v_dep_ti, 'Externa', 'Ataque de ransomware que detenga la operación',
    'Probable (61-80%)', 'Catastrófico', 'Intolerable',
    'Transferir', 'Respaldo diario cifrado, antivirus corporativo y póliza de ciberseguridad', 'Mitiga el impacto',
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Mayor', 'Bajo',
-   v_uid, v_uid, v_uid),
+   v_uid, v_uid),
   -- TI: tolerable (aceptado, sin mitigante)
   (v_dep_ti, 'Interna', 'Indisponibilidad breve del sitio web por mantenimientos',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
    'Aceptar', NULL, NULL,
    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
    'Improbable (21-40%)', 'Menor', 'Tolerable',
-   v_uid, v_uid, v_uid);
+   v_uid, v_uid);
 
   -- ===== Planeación Estratégica =====
   -- created_at antiguo para que getOrCreate (ordena por created_at) le dé
