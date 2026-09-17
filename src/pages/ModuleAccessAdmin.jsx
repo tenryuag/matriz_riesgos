@@ -91,7 +91,7 @@ export default function ModuleAccessAdmin() {
   };
 
   const isUserAdmin = (u) =>
-    (u.role || u.user_metadata?.role || u.raw_user_meta_data?.role) === "admin";
+    (u.role || u.app_metadata?.role) === "admin";
 
   const q = search.trim().toLowerCase();
   const filtered = users.filter(

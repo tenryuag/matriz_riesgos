@@ -1,3 +1,4 @@
+-- ⚠️ ACTUALIZADO (sep-2026): requiere public.is_admin() de supabase-fix-role-security.sql.
 -- ============================================================
 -- Control de acceso por MÓDULO (Fase 2)
 -- ============================================================
@@ -26,8 +27,8 @@ CREATE INDEX IF NOT EXISTS idx_user_module_access_user ON user_module_access(use
 -- 2. Seguridad por fila (RLS)
 ALTER TABLE user_module_access ENABLE ROW LEVEL SECURITY;
 
--- Helper: rol del que llama (admin o no) desde el JWT.
--- (Se evalúa inline en cada política para no depender de una función extra.)
+-- El rol se verifica con public.is_admin() (app_metadata; ver
+-- supabase-fix-role-security.sql). Nunca leer user_metadata: lo edita el usuario.
 
 DROP POLICY IF EXISTS "read own module access" ON user_module_access;
 CREATE POLICY "read own module access"
@@ -42,10 +43,7 @@ CREATE POLICY "admin read all module access"
   FOR SELECT
   TO authenticated
   USING (
-    COALESCE(
-      auth.jwt() -> 'user_metadata' ->> 'role',
-      auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-    ) = 'admin'
+    (SELECT public.is_admin())
   );
 
 DROP POLICY IF EXISTS "admin manage module access" ON user_module_access;
@@ -54,16 +52,10 @@ CREATE POLICY "admin manage module access"
   FOR ALL
   TO authenticated
   USING (
-    COALESCE(
-      auth.jwt() -> 'user_metadata' ->> 'role',
-      auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-    ) = 'admin'
+    (SELECT public.is_admin())
   )
   WITH CHECK (
-    COALESCE(
-      auth.jwt() -> 'user_metadata' ->> 'role',
-      auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-    ) = 'admin'
+    (SELECT public.is_admin())
   );
 
 -- 3. RPC: reemplazar de una vez el conjunto de módulos de un usuario.
@@ -77,10 +69,7 @@ AS $$
 DECLARE
   caller_role TEXT;
 BEGIN
-  caller_role := COALESCE(
-    auth.jwt() -> 'user_metadata' ->> 'role',
-    auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-  );
+  caller_role := CASE WHEN public.is_admin() THEN 'admin' ELSE NULL END;
 
   IF caller_role IS NULL OR caller_role <> 'admin' THEN
     RETURN jsonb_build_object('success', false, 'error', 'UNAUTHORIZED',

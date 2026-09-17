@@ -41,8 +41,9 @@ export function ModuleAccessProvider({ children }) {
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
       const user = session?.user || null;
-      const meta = user?.user_metadata || {};
-      const admin = meta.role === "admin";
+      // El rol vive en app_metadata (solo el servidor lo escribe); user_metadata
+      // lo edita el propio usuario y no sirve para seguridad.
+      const admin = user?.app_metadata?.role === "admin";
 
       let modules = [];
       if (session && !admin) {
