@@ -13,10 +13,11 @@
 --
 -- ⚠️ IMPORTANTE:
 --   - Cambia v_email abajo si tu cuenta de la app usa otro correo.
---   - Mientras exista el plan estratégico sandbox, TU cuenta verá SOLO
---     los datos de prueba en Planeación Estratégica (el plan real de la
---     organización queda oculto para ti, intacto para los demás).
---     Al correr supabase-seed-cleanup.sql vuelves a ver el plan real.
+--   - Requiere haber corrido antes supabase-per-user-plans.sql (planes por
+--     usuario). Mientras exista el plan demo, TU cuenta verá SOLO los datos
+--     de prueba en Planeación Estratégica (tu plan propio queda oculto
+--     detrás; nadie más lo ve de todos modos). Al correr
+--     supabase-seed-cleanup.sql vuelves a ver tu plan propio.
 --   - En Matriz de Riesgos verás los departamentos/riesgos demo MEZCLADOS
 --     con los reales (los demás usuarios no ven los demo).
 --   - Lo que captures NUEVO desde la app (ej. un riesgo nuevo) NO es
@@ -146,13 +147,13 @@ BEGIN
   -- ===== Planeación Estratégica =====
   -- created_at antiguo para que getOrCreate (ordena por created_at) le dé
   -- a TU cuenta este plan sandbox; los demás no lo ven por RLS.
-  INSERT INTO strategic_plans (id, name, vision, mission, core_values, year, created_by_id, sandbox_owner_id, created_at)
+  INSERT INTO strategic_plans (id, name, vision, mission, core_values, year, created_by_id, owner_id, sandbox_owner_id, created_at)
   VALUES (
     gen_random_uuid(), 'Plan estratégico (demo)',
     'Ser la empresa de referencia en soluciones industriales del Bajío para 2029.',
     'Ayudamos a plantas manufactureras a producir más con menos, con tecnología accesible y servicio cercano.',
     'Compromiso · Honestidad · Mejora continua',
-    2026, v_uid, v_uid, '2000-01-01'
+    2026, v_uid, v_uid, v_uid, '2000-01-01'
   )
   RETURNING id INTO v_plan;
 

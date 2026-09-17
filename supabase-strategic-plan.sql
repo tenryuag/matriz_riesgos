@@ -4,6 +4,8 @@
 -- Guarda el plan estratégico de la organización y las respuestas de los
 -- cuestionarios guiados (análisis del cliente, oportunidades, etc.).
 --
+-- ⚠️ ACTUALIZACIÓN: desde supabase-per-user-plans.sql los datos son POR USUARIO
+--    (cada cuenta ve solo lo suyo). El texto de abajo describe el diseño original.
 -- Alcance: al igual que el módulo de riesgos, el plan es a nivel organización
 -- (cualquier usuario autenticado puede verlo/editarlo). El acceso a las
 -- pantallas ya está limitado por el control de acceso por módulo.
