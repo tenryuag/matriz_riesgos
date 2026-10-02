@@ -49,6 +49,12 @@ export default function OAuthConsent() {
         setState("error");
         return;
       }
+      // Si el usuario ya había autorizado a este cliente, Supabase devuelve
+      // directamente la URL de regreso: no hace falta volver a preguntar.
+      if (data && !("authorization_id" in data) && data.redirect_url) {
+        window.location.assign(data.redirect_url);
+        return;
+      }
       setDetails(data);
       setState("ready");
     })();
