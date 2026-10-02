@@ -64,6 +64,13 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
       // Inicia la ventana de inactividad desde cero al autenticarse.
       resetIdleTimer();
       onLoginSuccess();
+      // Si el login vino de una autorización OAuth (conector MCP), regresa a
+      // la pantalla de consentimiento.
+      const pendingAuth = sessionStorage.getItem('oauth_authorization_id');
+      if (pendingAuth) {
+        sessionStorage.removeItem('oauth_authorization_id');
+        navigate(`/oauth/consent?authorization_id=${encodeURIComponent(pendingAuth)}`);
+      }
     } catch (error) {
       console.error('Login error:', error);
       

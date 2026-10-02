@@ -25,6 +25,8 @@ import ForgotPassword from "./ForgotPassword";
 
 import UpdatePassword from "./UpdatePassword";
 
+import OAuthConsent from "./OAuthConsent";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -87,6 +89,7 @@ function PagesContent() {
             <Route path="/register" element={<Register theme={theme} toggleTheme={toggleTheme} />} />
             <Route path="/forgot-password" element={<ForgotPassword theme={theme} toggleTheme={toggleTheme} />} />
             <Route path="/update-password" element={<UpdatePassword theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/oauth/consent" element={<OAuthConsent />} />
 
             {/* Protected routes - inside Layout */}
             <Route path="/" element={
