@@ -81,6 +81,8 @@ import FinAnalysisCashflow from "./FinAnalysisCashflow";
 
 import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
 
+import OAuthConsent from "./OAuthConsent";
+
 import ModuleLauncher from "./ModuleLauncher";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
@@ -213,6 +215,7 @@ function PagesContent() {
             <Route path="/register" element={<Register theme={theme} toggleTheme={toggleTheme} />} />
             <Route path="/forgot-password" element={<ForgotPassword theme={theme} toggleTheme={toggleTheme} />} />
             <Route path="/update-password" element={<UpdatePassword theme={theme} toggleTheme={toggleTheme} />} />
+            <Route path="/oauth/consent" element={<OAuthConsent />} />
 
             {/* Protected routes - inside Layout */}
             <Route path="/" element={

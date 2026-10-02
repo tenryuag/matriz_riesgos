@@ -20,20 +20,9 @@ import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
 export const SECTION = "opportunity-conclusions";
 
 // Regla del Excel: Sí → fortaleza (F) · No → debilidad (D).
-export const deriveFromAnswer = (answer) =>
-  answer === "Sí" ? "F" : answer === "No" ? "D" : "";
-
-// Valor efectivo por estrategia: el ajuste manual (override) manda; si no
-// hay, se usa el derivado automáticamente de la respuesta del cuestionario.
-export function effectiveConclusions(oppAnswers, overrides) {
-  const out = {};
-  OPP_GROUPS.forEach((g) =>
-    g.questions.forEach((q) => {
-      out[q.key] = (overrides?.[q.key] || "") || deriveFromAnswer(oppAnswers?.[q.key]);
-    })
-  );
-  return out;
-}
+// Lógica compartida con el servidor MCP (misma regla Sí→F / No→D).
+export { deriveFromAnswer, effectiveConclusions } from "@/config/strategicCalc";
+import { effectiveConclusions } from "@/config/strategicCalc";
 
 export default function OpportunityConclusions() {
   const [planId, setPlanId] = useState(null);

@@ -23,7 +23,6 @@ import {
   scoreFor,
   priorityFor,
 } from "./StrategicSummary";
-import { OPP_GROUPS } from "./OpportunityAnalysis";
 
 // ============================================================
 // Mapa estratégico (y su versión calibrada), estilo Balanced Scorecard:
@@ -33,33 +32,9 @@ import { OPP_GROUPS } from "./OpportunityAnalysis";
 // Se llena solo: no se captura nada aquí.
 // ============================================================
 
-// Grupo de origen de cada pregunta de oportunidades (para asignar perspectiva).
-const OPP_GROUP_BY_KEY = {};
-OPP_GROUPS.forEach((g) =>
-  g.questions.forEach((q) => {
-    OPP_GROUP_BY_KEY[q.key] = g.title;
-  })
-);
-
-// Asigna la perspectiva de una estrategia según su fuente y grupo, siguiendo
-// la hoja "Mapa estratégico" del Excel.
-export function perspectiveFor(item) {
-  const [src, key] = item.id.split(":");
-  if (src === "mkt") return "cliente";
-  if (src === "fin") {
-    // El Excel ubica el área comercial en la perspectiva competitiva.
-    return key === "ventas_area_comercial" ? "competitiva" : "financiera";
-  }
-  // Oportunidades: por grupo de palanca.
-  const group = OPP_GROUP_BY_KEY[key] || "";
-  if (key === "costos_entrega") return "financiera";
-  if (group.includes("financiero")) return "financiera";
-  if (group.includes("humano")) return "equipo";
-  if (group.includes("social") || group.includes("conocimiento") || group.includes("producto"))
-    return "competitiva";
-  // Captación de valor, confianza/redes y audiencia → cliente.
-  return "cliente";
-}
+// Perspectiva de cada estrategia: lógica compartida con el servidor MCP.
+export { perspectiveFor } from "@/config/strategicCalc";
+import { perspectiveFor } from "@/config/strategicCalc";
 
 // Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
 // (el resultado) y el equipo abajo (la base que lo impulsa todo).

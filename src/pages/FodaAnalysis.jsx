@@ -33,64 +33,11 @@ import {
 // - Amenazas: señales calculadas de tus competidores.
 // ============================================================
 
-export const MARKET_SECTION = "market";
-const compSection = (id) => `market-comp:${id}`;
-
-// Divide una respuesta de texto libre en puntos (por línea o punto y coma).
-const splitPoints = (text) =>
-  (text || "")
-    .split(/\n|;/)
-    .map((s) => s.replace(/^[-•\d.\s]+/, "").trim())
-    .filter(Boolean);
-
-// Construye los 4 cuadrantes a partir de las secciones ya cargadas.
-export function buildFoda({ sections, competitors, ratings }) {
-  // Fortalezas y debilidades (con prioridad) desde las conclusiones.
-  const strengths = [];
-  const mkt = sections[MKT_CONCL_SECTION] || {};
-  MKT_CATALOG.forEach((g) =>
-    g.items.forEach((i) => {
-      if (mkt[i.key] === "F") strengths.push({ label: i.label });
-    })
-  );
-  const oppEff = effectiveConclusions(sections[OPP_SECTION] || {}, sections[OPP_CONCL_SECTION] || {});
-  OPP_GROUPS.forEach((g) =>
-    g.questions.forEach((q) => {
-      if (oppEff[q.key] === "F") strengths.push({ label: q.strategy });
-    })
-  );
-
-  const { weaknesses } = collectStrategies(sections);
-  const debilidades = weaknesses.map((w) => {
-    const score = scoreFor(ratings || {}, w.id);
-    return { ...w, score, priority: priorityFor(score) };
-  });
-
-  // Oportunidades externas: Blue Ocean (crear e incrementar).
-  const market = sections[MARKET_SECTION] || {};
-  const oportunidades = [
-    ...splitPoints(market.bo_crear).map((label) => ({ label, kind: "Crear" })),
-    ...splitPoints(market.bo_incrementar).map((label) => ({ label, kind: "Incrementar" })),
-  ];
-
-  // Amenazas: señales de la comparación con competidores.
-  const amenazas = [];
-  (competitors || []).forEach((c) => {
-    const a = sections[compSection(c.id)] || {};
-    const add = (label) => amenazas.push({ label });
-    if (a.precio === "Menor") add(`${c.name} tiene precios menores que los tuyos`);
-    if (a.servicio === "Mejor") add(`${c.name} ofrece mejor servicio que el tuyo`);
-    if (a.postventa_mejor === "Sí") add(`${c.name} tiene mejor servicio post-venta`);
-    if (a.entrega_simple === "Sí") add(`${c.name} entrega de forma más simple`);
-    if (a.entrega_comoda === "Sí") add(`${c.name} ofrece una entrega más cómoda`);
-    if (a.imagen === "Sí") add(`${c.name} tiene mejor imagen de marca`);
-    if (a.mercado === "Más") add(`${c.name} tiene más mercado que tú`);
-    if (a.redes === "Sí" || a.publicidad === "Sí")
-      add(`${c.name} está activo en redes sociales o publicidad`);
-  });
-
-  return { fortalezas: strengths, debilidades, oportunidades, amenazas };
-}
+// Motor compartido con el servidor MCP.
+export { MARKET_SECTION } from "@/config/strategicCatalog";
+export { buildFoda } from "@/config/strategicCalc";
+import { MARKET_SECTION } from "@/config/strategicCatalog";
+import { buildFoda } from "@/config/strategicCalc";
 
 const PRIORITY_CHIP = {
   Alta: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40",
