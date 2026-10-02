@@ -16,77 +16,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { COMP_GROUPS, ALL_COMP_KEYS, OCEAN_QUESTIONS } from "@/config/strategicCatalog";
 
 const GLOBAL_SECTION = "market";
 const compSection = (id) => `market-comp:${id}`;
 const MAX_COMPETITORS = 5;
 
-// Preguntas por competidor (del Excel), agrupadas por tema y en lenguaje
-// simple. type: 'choice' (botones) o 'text' (respuesta corta).
-const COMP_GROUPS = [
-  {
-    title: "Precio",
-    questions: [
-      { key: "precio", type: "choice", options: ["Mayor", "Menor", "Igual"], q: "¿Su precio es mayor o menor que el tuyo?" },
-    ],
-  },
-  {
-    title: "Servicio",
-    questions: [
-      { key: "servicio", type: "choice", options: ["Mejor", "Peor", "Igual"], q: "¿Su servicio es mejor o peor que el tuyo?" },
-      { key: "servicio_detalle", type: "text", q: "¿En qué es mejor o peor?" },
-      { key: "encuestas", type: "choice", options: ["Sí", "No"], q: "¿Hace encuestas de satisfacción a sus clientes?" },
-      { key: "resenas", type: "choice", options: ["Sí", "No"], q: "¿Recaba reseñas o testimonios de clientes?" },
-    ],
-  },
-  {
-    title: "Servicio post-venta",
-    questions: [
-      { key: "postventa", type: "choice", options: ["Sí", "No"], q: "¿Ofrece algún servicio después de la venta?" },
-      { key: "postventa_mejor", type: "choice", options: ["Sí", "No"], q: "¿Su post-venta es mejor que el tuyo?" },
-      { key: "postventa_detalle", type: "text", q: "¿En qué es mejor o más deficiente?" },
-    ],
-  },
-  {
-    title: "Entrega e imagen",
-    questions: [
-      { key: "entrega_simple", type: "choice", options: ["Sí", "No"], q: "¿Su proceso de entrega es más simple que el tuyo?" },
-      { key: "entrega_comoda", type: "choice", options: ["Sí", "No"], q: "¿Su entrega es más cómoda para el cliente?" },
-      { key: "entrega_riesgo", type: "choice", options: ["Sí", "No"], q: "¿El cliente corre algún riesgo con su entrega?" },
-      { key: "entrega_riesgo_detalle", type: "text", q: "Si respondiste que sí, ¿cuál es ese riesgo?" },
-      { key: "imagen", type: "choice", options: ["Sí", "No"], q: "¿Su imagen de marca es mejor que la tuya?" },
-      { key: "rs_comunica", type: "choice", options: ["Sí", "No"], q: "¿Comunica alguna estrategia de respeto al medio ambiente?" },
-    ],
-  },
-  {
-    title: "Mercado",
-    questions: [
-      { key: "mercado", type: "choice", options: ["Más", "Menos", "Igual"], q: "¿Tiene más o menos mercado que tú?" },
-      { key: "ventajas", type: "text", q: "¿Cuáles son sus principales ventajas?" },
-      { key: "desventajas", type: "text", q: "¿Cuáles son sus principales desventajas?" },
-    ],
-  },
-  {
-    title: "Audiencia y publicidad",
-    questions: [
-      { key: "redes", type: "choice", options: ["Sí", "No"], q: "¿Promueve sus productos en redes sociales?" },
-      { key: "redes_cuales", type: "text", q: "¿Qué redes utiliza?" },
-      { key: "email_mkt", type: "choice", options: ["Sí", "No"], q: "¿Envía correos de marketing?" },
-      { key: "publicidad", type: "choice", options: ["Sí", "No"], q: "¿Paga publicidad?" },
-      { key: "testimonios", type: "choice", options: ["Sí", "No"], q: "¿Obtiene reseñas públicas en sus redes?" },
-    ],
-  },
-];
 
-const ALL_COMP_KEYS = COMP_GROUPS.flatMap((g) => g.questions.map((q) => q.key));
 
-// Preguntas globales (no dependen de un competidor).
-const OCEAN_QUESTIONS = [
-  { key: "bo_eliminar", label: "Eliminar", q: "¿Qué cosas que ofrece la competencia se pueden eliminar porque el mercado ya no las valora?" },
-  { key: "bo_reducir", label: "Reducir", q: "¿Qué cosas se pueden reducir porque el mercado no las valora tanto?" },
-  { key: "bo_crear", label: "Crear", q: "¿Qué se podría crear — algo que nadie ofrece — que haría una gran diferencia en el mercado?" },
-  { key: "bo_incrementar", label: "Incrementar", q: "¿Qué cosas se pueden incrementar porque el mercado las valora mucho (aunque nadie las ofrezca)?" },
-];
 
 // Botonera de opciones (Sí/No, Mayor/Menor, etc.) — más amigable que un select.
 function Choice({ value, options, onChange }) {

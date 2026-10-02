@@ -73,6 +73,14 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
       onLoginSuccess();
       // Tras iniciar sesión, ir siempre al selector de módulos (sin importar
       // en qué URL estuviera el usuario al momento de autenticarse).
+      // Si el login vino de una autorización OAuth (conector MCP), regresa a
+      // la pantalla de consentimiento en lugar de al selector de módulos.
+      const pendingAuth = sessionStorage.getItem('oauth_authorization_id');
+      if (pendingAuth) {
+        sessionStorage.removeItem('oauth_authorization_id');
+        navigate(`/oauth/consent?authorization_id=${encodeURIComponent(pendingAuth)}`);
+        return;
+      }
       navigate(createPageUrl('ModuleLauncher'));
     } catch (error) {
       console.error('Login error:', error);

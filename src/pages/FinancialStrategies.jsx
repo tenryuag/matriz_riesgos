@@ -13,75 +13,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { FIN_GROUPS as FIN_GROUPS_CATALOG } from "@/config/strategicCatalog";
 
 export const SECTION = "financial-strategies";
+// Catálogo compartido con el servidor MCP.
+export const FIN_GROUPS = FIN_GROUPS_CATALOG;
 
 // Catálogo de la hoja "Estrategias Financieras" del Excel: estrategias por
 // línea del estado de resultados. El usuario marca las debilidades que quiere
 // gestionar; las marcadas fluyen al resumen y al mapa estratégico.
-export const FIN_GROUPS = [
-  {
-    title: "Ventas e ingresos",
-    guide: "¿Qué tienes que hacer para crecer más tus ventas?",
-    items: [
-      { key: "ventas_volumen", label: "Lograr mayor volumen de ventas" },
-      { key: "ventas_modelos", label: "Diversificar en nuevos modelos de negocio" },
-      { key: "ventas_utilidad_linea", label: "Conocer la utilidad por línea de producto para enfocarte en lo que deja más" },
-      { key: "ventas_clientes_rentables", label: "Conocer a tus clientes más rentables para protegerlos y venderles más" },
-      { key: "ventas_aperturas", label: "Abrir nuevas sucursales o puntos de venta" },
-      { key: "ventas_dependencia", label: "Dejar de depender de uno o pocos clientes" },
-      { key: "ventas_area_comercial", label: "Lanzar o crecer el área comercial" },
-      { key: "ventas_metricas", label: "Definir métricas de productividad para el área comercial" },
-    ],
-  },
-  {
-    title: "Costo de ventas",
-    guide: "¿Qué puedes hacer para comprar mejor (más barato y con mejor calidad)?",
-    items: [
-      { key: "costo_proveedores", label: "Ampliar la base de proveedores para comparar precios" },
-      { key: "costo_volumen", label: "Negociar mejores precios por compras de volumen" },
-      { key: "costo_mermas", label: "Medir y controlar las mermas" },
-      { key: "costo_inventarios", label: "Medir y controlar la rotación de inventarios" },
-      { key: "costo_productividad", label: "Definir indicadores de efectividad (menos tiempo, más calidad, menos mermas)" },
-    ],
-  },
-  {
-    title: "Gastos operativos",
-    guide: "¿Qué gastos puedes reducir o eliminar?",
-    items: [
-      { key: "gastos_eficientar", label: "Gestionar los gastos que se pueden eliminar o reducir" },
-      { key: "gastos_facturas", label: "Supervisar que los gastos estén comprobados con facturas" },
-      { key: "gastos_personal_productivo", label: "Que el personal productivo sea más del 70% de tu equipo" },
-      { key: "gastos_sueldo_variable", label: "Crecer el sueldo del personal sobre la base variable" },
-      { key: "gastos_ahorro_4meses", label: "Generar ahorros para soportar 4 meses de gastos operativos" },
-    ],
-  },
-  {
-    title: "Gastos de financiamiento",
-    guide: "¿Cómo puedes cuidar el costo de tu dinero?",
-    items: [
-      { key: "fin_excedentes", label: "Invertir los excedentes de efectivo" },
-      { key: "fin_cambiarias", label: "Cuidar las pérdidas cambiarias" },
-      { key: "fin_comisiones", label: "Ahorrar en comisiones bancarias" },
-    ],
-  },
-  {
-    title: "Impuestos",
-    guide: "¿Estás preparado para tus obligaciones fiscales?",
-    items: [
-      { key: "imp_estrategias", label: "Definir estrategias adecuadas de pago de impuestos" },
-      { key: "imp_ahorro_mensual", label: "Generar ahorros mensuales para el pago de impuestos" },
-    ],
-  },
-  {
-    title: "Fondo de reserva",
-    guide: "¿Tienes un colchón para crecer y reinvertir?",
-    items: [
-      { key: "reserva_reinversion", label: "Crear un fondo de reserva para reinversión" },
-      { key: "reserva_crecimiento", label: "Crear un fondo de reserva para crecimiento" },
-    ],
-  },
-];
 
 export const ALL_FIN_KEYS = FIN_GROUPS.flatMap((g) => g.items.map((i) => i.key));
 

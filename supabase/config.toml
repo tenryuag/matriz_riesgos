@@ -1,0 +1,12 @@
+# Configuración mínima del proyecto para la CLI de Supabase.
+# Solo se usa para desplegar Edge Functions (`npx supabase functions deploy`).
+# Las opciones de Auth (OAuth 2.1, ruta de consentimiento, Site URL) se
+# configuran desde el panel de Supabase; NO corras `supabase config push`
+# con este archivo, porque sobreescribiría la configuración de Auth.
+
+project_id = "hcmeoducjqudokfhhvyc"
+
+[functions.mcp]
+# El servidor MCP verifica el token OAuth por sí mismo (withSupabase) y debe
+# poder responder 401 con el descubrimiento OAuth a peticiones sin token.
+verify_jwt = false

@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 .env
+# Supabase CLI (artefactos locales)
+supabase/.temp/
+supabase/.env.local
+supabase/.branches/

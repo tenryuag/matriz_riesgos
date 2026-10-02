@@ -14,57 +14,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { MKT_CATALOG } from "@/config/strategicCatalog";
 
 export const SECTION = "market-conclusions";
+// Catálogo compartido con el servidor MCP.
+export const CATALOG = MKT_CATALOG;
 const MARKET_SECTION = "market";
 const compSection = (id) => `market-comp:${id}`;
 
 // Catálogo de estrategias del mercado (de la hoja "Conclusiones del mercado"
 // del Excel), agrupado por tema. Para cada una el usuario decide:
 // F = "Voy a mantener" (fortaleza) · D = "Voy a cambiar" (debilidad).
-export const CATALOG = [
-  {
-    category: "Precio",
-    items: [{ key: "precio_valor", label: "Incrementar el valor vs el precio" }],
-  },
-  {
-    category: "Servicio",
-    items: [
-      { key: "servicio_calidad", label: "Mejorar la calidad de servicio" },
-      { key: "servicio_encuestas", label: "Implementar encuestas de satisfacción a clientes" },
-      { key: "servicio_resenas", label: "Solicitar reseñas y testimonios de clientes" },
-    ],
-  },
-  {
-    category: "Servicio post-venta",
-    items: [
-      { key: "postventa_retencion", label: "Mejorar el servicio post-venta para retener clientes" },
-    ],
-  },
-  {
-    category: "Entrega e imagen",
-    items: [
-      { key: "entrega_simple", label: "Hacer la entrega más simple para el cliente" },
-      { key: "entrega_comodo", label: "Hacer la entrega más cómoda para el cliente" },
-      { key: "entrega_riesgo", label: "Disminuir el riesgo para el cliente" },
-      { key: "entrega_tiempo", label: "Optimizar el tiempo y la forma de entrega" },
-      { key: "entrega_imagen", label: "Fortalecer la imagen de la marca" },
-    ],
-  },
-  {
-    category: "Responsabilidad social",
-    items: [
-      { key: "rs_comunicacion", label: "Mejorar la comunicación de responsabilidad social" },
-    ],
-  },
-  {
-    category: "Audiencia",
-    items: [
-      { key: "audiencia_incrementar", label: "Incrementar la audiencia" },
-      { key: "audiencia_leads", label: "Incrementar los prospectos (leads)" },
-    ],
-  },
-];
 
 const ALL_KEYS = CATALOG.flatMap((c) => c.items.map((i) => i.key));
 

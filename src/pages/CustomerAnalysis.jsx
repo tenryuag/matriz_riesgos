@@ -7,59 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { CUSTOMER_QUESTIONS } from "@/config/strategicCatalog";
 
 export const SECTION = "customer";
 
-// Preguntas del análisis del cliente (tomadas del Excel de planeación
-// estratégica), con una ayuda en lenguaje simple para quien no conoce el tema.
-// Se exporta para que el hub del módulo muestre el progreso real.
-export const QUESTIONS = [
-  {
-    key: "dolores",
-    q: "¿Qué problemas o dolores de tus clientes resuelve tu producto o servicio?",
-    help: "Piensa en lo que le molesta o le complica la vida a tu cliente y que tú le solucionas.",
-  },
-  {
-    key: "deseos",
-    q: "¿Qué deseos o sueños de tus clientes atiende tu producto o servicio?",
-    help: "Lo que tu cliente quiere lograr o cómo quiere sentirse.",
-  },
-  {
-    key: "metas_funcionales",
-    q: "¿Cuáles son las metas funcionales que resuelve tu producto o servicio?",
-    help: "Meta funcional = ¿a dónde quiere llegar tu cliente? ¿qué quiere hacer con tu producto?",
-  },
-  {
-    key: "metas_emocionales",
-    q: "¿Cuáles son las metas emocionales que quiere resolver tu cliente?",
-    help: "Meta emocional = ¿cómo se sentirá cuando cumpla sus metas funcionales?",
-  },
-  {
-    key: "deseos_basicos",
-    q: "¿Cuáles son los deseos básicos de tu cliente?",
-    help: "Por ejemplo: tranquilidad, seguridad, familia, estatus, ahorrar, crecer, poder.",
-  },
-  {
-    key: "objeciones_exterior",
-    q: "¿Qué objeciones tienen tus clientes por cosas de afuera?",
-    help: "Aspectos externos: la economía, el gobierno, el mercado, la incertidumbre, etc.",
-  },
-  {
-    key: "objeciones_producto",
-    q: "¿Qué objeciones tienen tus clientes con tu producto o servicio?",
-    help: "Por ejemplo: el precio, la entrega, el uso, el servicio post-venta.",
-  },
-  {
-    key: "promesa",
-    q: "¿Cuál es la promesa de transformación de tu producto o servicio para el cliente?",
-    help: "Una buena promesa toca sus dolores, deseos y metas — y le facilita la vida.",
-  },
-  {
-    key: "comunicacion",
-    q: "¿Tu forma de comunicarte con tus clientes toma en cuenta todo lo anterior?",
-    help: "Revisa si tus mensajes y publicidad reflejan lo que respondiste arriba.",
-  },
-];
+// Preguntas (catálogo compartido con el servidor MCP).
+export const QUESTIONS = CUSTOMER_QUESTIONS;
+
 
 export default function CustomerAnalysis() {
   const [planId, setPlanId] = useState(null);

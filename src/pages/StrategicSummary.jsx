@@ -30,61 +30,9 @@ export const SUMMARY_SOURCE_SECTIONS = [
   FIN_SECTION,
 ];
 
-// Junta las estrategias de las tres fuentes: conclusiones del mercado,
-// conclusión de oportunidades (efectiva) y estrategias financieras.
-export function collectStrategies(sections) {
-  const weaknesses = [];
-  const strengths = [];
-
-  const mkt = sections[MKT_CONCL_SECTION] || {};
-  MKT_CATALOG.forEach((g) =>
-    g.items.forEach((i) => {
-      if (mkt[i.key] === "D") weaknesses.push({ id: `mkt:${i.key}`, label: i.label, source: "market" });
-      else if (mkt[i.key] === "F") strengths.push({ label: i.label, source: "market" });
-    })
-  );
-
-  const oppEff = effectiveConclusions(sections[OPP_SECTION] || {}, sections[OPP_CONCL_SECTION] || {});
-  OPP_GROUPS.forEach((g) =>
-    g.questions.forEach((q) => {
-      if (oppEff[q.key] === "D") weaknesses.push({ id: `opp:${q.key}`, label: q.strategy, source: "opportunities" });
-      else if (oppEff[q.key] === "F") strengths.push({ label: q.strategy, source: "opportunities" });
-    })
-  );
-
-  const fin = sections[FIN_SECTION] || {};
-  FIN_GROUPS.forEach((g) =>
-    g.items.forEach((i) => {
-      if (fin[i.key] === "D") weaknesses.push({ id: `fin:${i.key}`, label: i.label, source: "financial" });
-    })
-  );
-
-  return { weaknesses, strengths };
-}
-
-// Motor de priorización del Excel:
-// Prioridad = Costo×0.2 + Riesgo×0.5 + Complejidad×0.15 + Beneficio×0.15
-// (Alto/Alta=3 · Medio/Media=2 · Bajo/Baja=1 · Ingresos=1 · Ahorros=2)
-// Puntaje bajo = atacar primero: 1–1.39 Alta · 1.4–2.34 Media · 2.35–3 Baja.
-const level3 = (v) =>
-  v?.startsWith("Alt") ? 3 : v?.startsWith("Med") ? 2 : v?.startsWith("Baj") ? 1 : null;
-const benefit2 = (v) => (v === "Ingresos" ? 1 : v === "Ahorros" ? 2 : null);
-
-export function scoreFor(ratings, id) {
-  const c = level3(ratings[`${id}:costo`]);
-  const r = level3(ratings[`${id}:riesgo`]);
-  const x = level3(ratings[`${id}:complejidad`]);
-  const b = benefit2(ratings[`${id}:beneficio`]);
-  if ([c, r, x, b].some((v) => v == null)) return null;
-  return Math.round((c * 0.2 + r * 0.5 + x * 0.15 + b * 0.15) * 100) / 100;
-}
-
-export function priorityFor(score) {
-  if (score == null) return null;
-  if (score <= 1.39) return "Alta";
-  if (score <= 2.34) return "Media";
-  return "Baja";
-}
+// Motor compartido con el servidor MCP (fuentes, puntaje y prioridad).
+export { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
+import { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
 
 const SOURCES = [
   { key: "market", title: "Del análisis del mercado" },

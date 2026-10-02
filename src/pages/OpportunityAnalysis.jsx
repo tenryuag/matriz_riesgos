@@ -7,95 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { OPP_GROUPS as OPP_GROUPS_CATALOG } from "@/config/strategicCatalog";
 
 export const SECTION = "opportunities";
+// Catálogo compartido con el servidor MCP.
+export const OPP_GROUPS = OPP_GROUPS_CATALOG;
 
 // Cuestionario de palancas de crecimiento (hoja "Análisis Oportunidades" del
 // Excel). Todas las preguntas se responden Sí/No. Cada una está ligada a una
 // estrategia: en la siguiente pantalla, "Sí" se vuelve fortaleza y "No"
 // debilidad, automáticamente.
-export const OPP_GROUPS = [
-  {
-    title: "Captación de valor",
-    questions: [
-      { key: "precios", q: "¿Has incrementado precios en el último año?", strategy: "Incrementar precios" },
-      { key: "percepcion", q: "¿Has hecho acciones este año para mejorar cómo perciben tu producto o servicio?", strategy: "Incrementar la percepción de valor" },
-      { key: "costos_entrega", q: "¿Has reducido los costos de entrega de tu producto o servicio?", strategy: "Disminuir costos de entrega" },
-      { key: "complementarios", q: "¿Ofreces productos o servicios complementarios y tus clientes compran más de uno?", strategy: "Ofrecer productos/servicios complementarios" },
-      { key: "plan_b", q: "¿Ofreces una opción de menor costo para no perder al cliente (plan B)?", strategy: "Ofrecer producto/servicio de menor costo (Plan B)" },
-      { key: "recompra", q: "¿Más de la mitad de tus clientes te vuelven a comprar?", strategy: "Ofrecer alternativas de recompra a clientes recurrentes" },
-    ],
-  },
-  {
-    title: "Confianza y redes",
-    questions: [
-      { key: "contenido", q: "¿Creas contenido en redes sociales? (publicaciones, newsletters, blogs, podcast)", strategy: "Creación de contenido" },
-      { key: "publicidad_masiva", q: "¿Pagas publicidad en prensa o medios masivos?", strategy: "Hacer publicidad en medios masivos" },
-      { key: "influencers", q: "¿Pagas publicidad con influencers?", strategy: "Hacer publicidad con influencers" },
-    ],
-  },
-  {
-    title: "Audiencia",
-    questions: [
-      { key: "atraccion", q: "¿Tienes estrategias permanentes para atraer audiencia a tu empresa?", strategy: "Estrategias de atracción de clientes" },
-      { key: "conversion", q: "¿Tienes estrategias para convertir tu audiencia en clientes potenciales?", strategy: "Estrategias de conversión" },
-    ],
-  },
-  {
-    title: "Palanca: capital financiero",
-    questions: [
-      { key: "liquidez", q: "¿Tienes liquidez holgada para crecer más de un 20% al año?", strategy: "Mejorar la liquidez" },
-      { key: "credito", q: "¿Tienes líneas de crédito disponibles para activos o capital de trabajo?", strategy: "Solicitar o incrementar líneas de crédito" },
-      { key: "socios", q: "¿Tienes acceso a socios, accionistas o inversionistas?", strategy: "Atraer socios inversionistas" },
-      { key: "family_friends", q: "¿Tienes acceso a préstamos de familiares o amigos?", strategy: "Obtener préstamos 'family and friends'" },
-      { key: "ahorros", q: "¿Tienes ahorros para soportar tu crecimiento del próximo año?", strategy: "Generar ahorros para crecimiento e imprevistos" },
-      { key: "cartera", q: "¿Tienes una cartera de clientes diversificada?", strategy: "Diversificar la cartera de clientes" },
-      { key: "proveeduria", q: "¿Tienes diversificada tu proveeduría?", strategy: "Diversificar el portafolio de proveedores" },
-      { key: "reinversion", q: "¿Reinviertes en activos de forma permanente?", strategy: "Realizar inversiones en activos" },
-    ],
-  },
-  {
-    title: "Palanca: capital social",
-    questions: [
-      { key: "alianzas", q: "¿Tienes alianzas con empresas que complementan tus productos o servicios?", strategy: "Generar alianzas con competidores complementarios" },
-      { key: "clientes_clave", q: "¿Tienes relaciones sólidas con clientes estratégicos?", strategy: "Generar alianzas con clientes estratégicos" },
-      { key: "comunidad", q: "¿Tienes comunidad en redes sociales?", strategy: "Construir comunidad en redes sociales" },
-      { key: "socios_estrategicos", q: "¿Tienes relaciones con posibles socios o inversionistas estratégicos?", strategy: "Generar alianzas con socios estratégicos" },
-      { key: "proveedores_clave", q: "¿Tienes relaciones sólidas con proveedores estratégicos?", strategy: "Generar alianzas con proveedores estratégicos" },
-    ],
-  },
-  {
-    title: "Palanca: capital de conocimiento",
-    questions: [
-      { key: "info_interna", q: "¿Tienes información interna suficiente para tomar decisiones estratégicas?", strategy: "Generar información interna para decisiones" },
-      { key: "info_mercado", q: "¿Tienes información suficiente de tu mercado?", strategy: "Obtener información del mercado" },
-      { key: "info_competencia", q: "¿Tienes información suficiente de tu competencia?", strategy: "Obtener información de competidores" },
-      { key: "patentes", q: "¿Tienes alguna patente?", strategy: "Tramitar patentes" },
-      { key: "software", q: "¿Tienes algún software o aplicación propia?", strategy: "Desarrollar software / tecnología" },
-      { key: "ia", q: "¿Usas inteligencia artificial en tu operación?", strategy: "Automatizar procesos con inteligencia artificial" },
-    ],
-  },
-  {
-    title: "Palanca: capital humano",
-    questions: [
-      { key: "talento", q: "¿Tienes un equipo talentoso?", strategy: "Construir un equipo talentoso" },
-      { key: "madurez", q: "¿Tienes un equipo maduro?", strategy: "Construir un equipo maduro" },
-      { key: "resultados", q: "¿Tu equipo está enfocado a resultados?", strategy: "Trabajar el enfoque a resultados del equipo" },
-      { key: "compromiso", q: "¿Tu equipo está comprometido?", strategy: "Trabajar el compromiso del equipo" },
-      { key: "formacion", q: "¿Inviertes en la capacitación de tu personal?", strategy: "Invertir en formación" },
-      { key: "bienestar", q: "¿Incluyes medidas de bienestar en los indicadores de tus directivos?", strategy: "Adoptar medidas de bienestar para el equipo" },
-      { key: "gerencia", q: "¿Tu línea gerencial está enfocada a la estrategia del negocio?", strategy: "Desarrollar un equipo directivo enfocado a la estrategia" },
-      { key: "metas", q: "¿Tus metas financieras están alineadas a los indicadores de tu equipo?", strategy: "Sistema de gestión con indicadores de productividad" },
-    ],
-  },
-  {
-    title: "Tu producto o servicio",
-    questions: [
-      { key: "mejora_continua", q: "¿Tienes procesos de mejora continua para la calidad?", strategy: "Desarrollar procesos de mejora continua" },
-      { key: "ciclo_comercial", q: "¿Tienes identificado tu ciclo comercial (preventa, venta y posventa)?", strategy: "Desarrollar el ciclo comercial completo" },
-    ],
-  },
-];
 
 export const ALL_OPP_KEYS = OPP_GROUPS.flatMap((g) => g.questions.map((q) => q.key));
 
