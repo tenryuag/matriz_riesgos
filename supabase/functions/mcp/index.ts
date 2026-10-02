@@ -6,8 +6,11 @@
 // Claude, con el patrón oficial de Supabase:
 //   - withOAuthProtectedResource(): descubrimiento OAuth 2.1 (Supabase Auth
 //     es el servidor de autorización; la app aloja /oauth/consent).
-//   - withSupabase({ auth: 'user' }): verifica el bearer token y entrega un
-//     cliente Supabase limitado a ese usuario → las políticas RLS "solo el
+//   - Verificación del bearer token contra el servidor de Auth del proyecto
+//     (auth.getUser). No se usa withSupabase({ auth: 'user' }) porque esa
+//     verificación es local contra el JWKS y rechaza los tokens HS256 del
+//     esquema de llaves heredado que usa este proyecto. Con el token del
+//     usuario se crea el cliente de datos → las políticas RLS "solo el
 //     dueño" aplican a cada herramienta sin código adicional.
 // Los cálculos (estados financieros, prioridades, FODA) son los MISMOS
 // módulos puros que usa la app, copiados con `npm run mcp:sync`.
@@ -19,7 +22,9 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 import { createMcpHandler, McpServer } from 'npm:@modelcontextprotocol/server@^2.0.0'
 import { pipeline } from 'npm:@supabase/middleware@1'
-import { withOAuthProtectedResource, withSupabase } from 'npm:@supabase/server@1'
+import { withOAuthProtectedResource } from 'npm:@supabase/server@1'
+import { unauthorizedResponse } from 'npm:@supabase/server@1/oauth-protected-resource'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@^4.3.6'
 
 import { SALES_SECTION, BALANCE_SECTION, yearLabel } from '../_shared/app/finConfig.js'
@@ -163,11 +168,34 @@ const fullRisk = (r: Db, deptName: string | null) => ({
   creado: r.created_at,
 })
 
+// ---------- autenticación ----------
+// Verifica el bearer token con el servidor de Auth y devuelve un cliente
+// Supabase que lleva ese token en cada petición (RLS del usuario).
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+async function clientForRequest(req: Request): Promise<Db | null> {
+  const header = req.headers.get('authorization') || ''
+  const match = /^Bearer\s+(.+)$/i.exec(header)
+  if (!match) return null
+  const token = match[1].trim()
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data?.user || data.user.role !== 'authenticated') return null
+  return supabase
+}
+
 // ---------- servidor ----------
 Deno.serve(
   pipeline(
-    [withOAuthProtectedResource(), withSupabase({ auth: 'user' })],
-    async (req, { supabase }) => {
+    [withOAuthProtectedResource()],
+    async (req) => {
+      const supabase = await clientForRequest(req)
+      if (!supabase) return unauthorizedResponse(req)
+
       const handler = createMcpHandler(() => {
         const server = new McpServer({ name: 'mara-perez', version: VERSION })
 
@@ -185,13 +213,13 @@ Deno.serve(
             const { data: risks, error } = await supabase.from('risks').select('*')
             if (error) throw new Error(error.message)
             const rs = (risks || []).map(compactRisk)
-            const criticos = rs.filter((r) => isCritical(r.nivel_inherente))
+            const criticos = rs.filter((r: Db) => isCritical(r.nivel_inherente))
             out.riesgos = {
               total: rs.length,
               criticos_inherente: criticos.length,
-              criticos_sin_controles: criticos.filter((r) => r.mitigantes === 0).length,
+              criticos_sin_controles: criticos.filter((r: Db) => r.mitigantes === 0).length,
               por_nivel_residual: Object.fromEntries(
-                Object.keys(LEVEL_ORDER).map((k) => [k, rs.filter((r) => r.nivel_residual === k).length])
+                Object.keys(LEVEL_ORDER).map((k) => [k, rs.filter((r: Db) => r.nivel_residual === k).length])
               ),
             }
             const plan = await getPlan(supabase)

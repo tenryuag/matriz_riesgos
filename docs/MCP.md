@@ -97,6 +97,14 @@ npx @modelcontextprotocol/inspector
 
 Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen neto entre 2024 y 2025?"*.
 
+## Nota técnica: verificación del token (llaves HS256)
+
+El patrón oficial de Supabase usa `withSupabase({ auth: 'user' })`, que verifica los tokens **localmente contra el JWKS** del proyecto y, por diseño, **rechaza los tokens HS256** del esquema de llaves heredado (ver `docs/auth-modes.md` de `@supabase/server`). Este proyecto todavía firma con HS256, así que la función verifica el bearer token **contra el servidor de Auth** (`auth.getUser`) y con ese token crea el cliente de datos; la RLS aplica igual. Se conserva `withOAuthProtectedResource()` para el descubrimiento OAuth.
+
+Cuando el proyecto migre a *JWT Signing Keys* asimétricas (Supabase → Project Settings → JWT Keys), se puede volver al middleware oficial, pero no es necesario.
+
+Para probar sin pasar por Claude: crear un usuario de prueba con `POST /auth/v1/signup` (apikey anon) y llamar a la función con su `access_token` como bearer; después borrarlo con `DELETE FROM auth.users WHERE email LIKE 'mcp-prueba-%';`.
+
 ## Seguridad
 
 - La función no guarda nada: toda escritura futura pasará por herramientas explícitas con confirmación.
