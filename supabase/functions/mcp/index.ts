@@ -172,7 +172,10 @@ const fullRisk = (r: Db, deptName: string | null) => ({
 // Verifica el bearer token con el servidor de Auth y devuelve un cliente
 // Supabase que lleva ese token en cada petición (RLS del usuario).
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+// Llave de API para el cliente de datos: la publicable nueva (secreto
+// PUBLISHABLE_KEY, formato sb_publishable_…) si ya se migraron las llaves del
+// proyecto; si no, la anon heredada que inyecta la plataforma.
+const SUPABASE_ANON_KEY = Deno.env.get('PUBLISHABLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || ''
 
 async function clientForRequest(req: Request): Promise<Db | null> {
   const header = req.headers.get('authorization') || ''
