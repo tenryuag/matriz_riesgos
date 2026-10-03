@@ -1,2 +1,19 @@
-/documentacion.html /documentacion.html 200
-/* /index.html 200
+# ---------- Dominio raíz (mara-perez.online) ----------
+# El dominio raíz es solo de correo; aquí sirve el favicon (para que Claude y
+# otros clientes muestren el logo del conector) y redirige todo lo demás a la app.
+https://mara-perez.online/favicon.ico   /favicon.png   200
+https://mara-perez.online/favicon.png   /favicon.png   200
+https://mara-perez.online/favicon-32.png /favicon-32.png 200
+https://mara-perez.online/*             https://app.mara-perez.online/:splat  301!
+https://www.mara-perez.online/*         https://app.mara-perez.online/:splat  301!
+
+# ---------- Servidor MCP bajo el dominio propio ----------
+# Proxy (200 = reenvío transparente) hacia la Edge Function de Supabase, para
+# que el conector se registre como app.mara-perez.online/mcp.
+/mcp     https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp         200
+/mcp/*   https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp/:splat  200
+
+# ---------- App (SPA) ----------
+/favicon.ico            /favicon.png          200
+/documentacion.html     /documentacion.html   200
+/*                      /index.html           200
