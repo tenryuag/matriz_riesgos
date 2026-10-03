@@ -172,6 +172,11 @@ const fullRisk = (r: Db, deptName: string | null) => ({
 // Verifica el bearer token con el servidor de Auth y devuelve un cliente
 // Supabase que lleva ese token en cada petición (RLS del usuario).
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+// URL pública del conector cuando se sirve detrás del proxy de Netlify
+// (secreto PUBLIC_MCP_URL, p. ej. https://app.mara-perez.online/mcp). Si no
+// está, se anuncia la URL directa de la función.
+const PUBLIC_MCP_URL = (Deno.env.get('PUBLIC_MCP_URL') || '').replace(/\/+$/, '')
+const APP_URL = Deno.env.get('PUBLIC_APP_URL') || 'https://app.mara-perez.online'
 // Llave de API para el cliente de datos: la publicable nueva (secreto
 // PUBLISHABLE_KEY, formato sb_publishable_…) si ya se migraron las llaves del
 // proyecto; si no, la anon heredada que inyecta la plataforma.
@@ -194,13 +199,26 @@ async function clientForRequest(req: Request): Promise<Db | null> {
 // ---------- servidor ----------
 Deno.serve(
   pipeline(
-    [withOAuthProtectedResource()],
+    [withOAuthProtectedResource(PUBLIC_MCP_URL ? { resourceServer: PUBLIC_MCP_URL } : {})],
     async (req) => {
       const supabase = await clientForRequest(req)
-      if (!supabase) return unauthorizedResponse(req)
+      if (!supabase) {
+        return unauthorizedResponse(
+          req,
+          PUBLIC_MCP_URL ? { resourceMetadataUrl: `${PUBLIC_MCP_URL}/oauth-protected-resource` } : undefined
+        )
+      }
 
       const handler = createMcpHandler(() => {
-        const server = new McpServer({ name: 'mara-perez', version: VERSION })
+        const server = new McpServer({
+          name: 'mara-perez',
+          version: VERSION,
+          // Metadatos de la especificación MCP 2025-11-25 (título, sitio e icono);
+          // los clientes que ya los soportan muestran el logo de la empresa.
+          title: 'Mara Pérez',
+          websiteUrl: APP_URL,
+          icons: [{ src: `${APP_URL}/apple-touch-icon-180x180.png`, mimeType: 'image/png', sizes: ['180x180'] }],
+        })
 
         // ===== General =====
         server.registerTool(
