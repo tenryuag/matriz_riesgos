@@ -7,7 +7,9 @@ La app expone un **servidor MCP** (Model Context Protocol) para que un cliente d
 - **Mismos cálculos que la app**: prioridades, FODA y estados financieros salen de los módulos de `src/config/` copiados a la función con `npm run mcp:sync`.
 - **Costo para nosotros**: solo la invocación de la Edge Function (despreciable). La conversación la paga el usuario con su propia cuenta de Claude.
 
-URL del servidor: `https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp`
+URL del servidor (la que se registra en Claude): **`https://app.mara-perez.online/mcp`**
+
+Es un proxy transparente de Netlify (`public/_redirects`) hacia la Edge Function `https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp`. Se usa el dominio propio por dos razones: la URL es más limpia y **Claude toma el icono del conector del dominio registrable de la URL** (pide el favicon de `mara-perez.online` a un servicio de Google); con la URL de Supabase mostraba el logo de Supabase. La función anuncia la URL pública en el descubrimiento OAuth mediante el secreto `PUBLIC_MCP_URL`.
 
 ## Cómo funciona
 
@@ -42,6 +44,16 @@ Piezas en el repositorio:
 
 > No corras `supabase config push`: el `config.toml` del repo es mínimo y sobreescribiría la configuración de Auth del panel.
 
+### 1b. Dominio raíz y favicon (para el icono del conector)
+
+El dominio `mara-perez.online` es solo de correo. Para que Claude muestre el logo, la raíz debe servir una página con favicon: `_redirects` hace que la raíz sirva `/favicon.png` y redirija todo lo demás a `app.`. Requiere, una sola vez:
+
+1. Netlify → Domain management → *Add domain alias*: `mara-perez.online` y `www.mara-perez.online` (sitio `matrizriesgos`).
+2. En el DNS del dominio: registro `A` de `@` → `75.2.60.5` (balanceador de Netlify) y `CNAME` de `www` → `matrizriesgos.netlify.app`. Los registros `MX` del correo no se tocan.
+3. Netlify emite el certificado solo. El icono tarda hasta unos días en refrescarse en el caché de favicons de Google.
+
+Secretos de la función relacionados: `PUBLIC_MCP_URL=https://app.mara-perez.online/mcp` y `PUBLIC_APP_URL=https://app.mara-perez.online` (también `PUBLISHABLE_KEY`, la llave de API nueva).
+
 ### 2. Desplegar la función (desde la laptop)
 
 ```bash
@@ -59,20 +71,20 @@ Cada vez que cambie algo en `src/config/finCalc.js`, `finConfig.js`, `strategicC
 Sin token debe responder `401` con el encabezado `www-authenticate` apuntando a los metadatos OAuth:
 
 ```bash
-curl -i https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp
+curl -i https://app.mara-perez.online/mcp
 ```
 
 Con el inspector oficial (hace el flujo OAuth completo en el navegador):
 
 ```bash
 npx @modelcontextprotocol/inspector
-# Transport: Streamable HTTP · URL: https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp
+# Transport: Streamable HTTP · URL: https://app.mara-perez.online/mcp
 ```
 
 ## Conectar un cliente
 
-- **Claude.ai / Claude Desktop**: Configuración → Conectores → *Agregar conector personalizado* → URL `https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp`. Al conectar, abre la pantalla de consentimiento de la app; el usuario inicia sesión con su cuenta de siempre y acepta.
-- **Claude Code**: `claude mcp add --transport http mara-perez https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp`
+- **Claude.ai / Claude Desktop**: Configuración → Conectores → *Agregar conector personalizado* → URL `https://app.mara-perez.online/mcp`. Al conectar, abre la pantalla de consentimiento de la app; el usuario inicia sesión con su cuenta de siempre y acepta.
+- **Claude Code**: `claude mcp add --transport http mara-perez https://app.mara-perez.online/mcp`
 - Otros clientes MCP con transporte HTTP y OAuth: misma URL.
 
 ## Herramientas disponibles (v1, solo lectura)
