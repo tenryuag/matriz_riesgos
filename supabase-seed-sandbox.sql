@@ -11,17 +11,45 @@
 --      ligados a tu usuario. (Análisis Financiero se sembrará cuando el
 --      módulo esté terminado.)
 --
+-- MODELO DE LA MATRIZ (perspectivas):
+--   La Matriz de Riesgos se organiza por 4 PERSPECTIVAS fijas, con las
+--   mismas claves que los carriles del mapa estratégico:
+--     financiera  → Finanzas
+--     cliente     → Clientes
+--     competitiva → Procesos y competitividad
+--     equipo      → Equipo y talento
+--   Cada riesgo demo lleva su perspective_key. Los DEPARTAMENTOS demo ya no
+--   son la organización principal: se siembran (con su perspectiva
+--   sugerida) para probar el asistente de migración departamento →
+--   perspectiva. Se incluyen además:
+--     - un riesgo Intolerable SIN mitigantes en la perspectiva financiera y
+--       sin departamento (candidato a entrar solo a Planeación Estratégica
+--       como objetivo de prioridad alta), y
+--     - un riesgo SIN departamento y SIN perspectiva, para probar el
+--       asistente de migración / el selector inline de perspectiva.
+--   Hasta la Fase 1, esos dos riesgos sin departamento solo se ven en el
+--   Dashboard y en "Todos los riesgos" (no en la vista por departamento) y
+--   no se editan desde el formulario actual.
+--   NO se siembran inherent_score ni *_level_key: los calcula el trigger de
+--   supabase-perspectivas.sql a partir de probabilidad × impacto.
+--
 -- ⚠️ IMPORTANTE:
 --   - Cambia v_email abajo si tu cuenta de la app usa otro correo.
---   - Requiere haber corrido antes supabase-per-user-plans.sql (planes por
---     usuario). Mientras exista el plan demo, TU cuenta verá SOLO los datos
---     de prueba en Planeación Estratégica (tu plan propio queda oculto
+--   - PRERREQUISITOS (correr antes, en este orden):
+--       · supabase-per-user-plans.sql  (planes por usuario).
+--       · supabase-perspectivas.sql    (columna perspective_key en
+--         departments y risks, department_id opcional en risks y trigger
+--         que calcula inherent_score / *_level_key). El script lo verifica
+--         y se detiene con un mensaje claro si falta.
+--   - Mientras exista el plan demo, TU cuenta verá SOLO los datos de
+--     prueba en Planeación Estratégica (tu plan propio queda oculto
 --     detrás; nadie más lo ve de todos modos). Al correr
 --     supabase-seed-cleanup.sql vuelves a ver tu plan propio.
---   - En Matriz de Riesgos verás los departamentos/riesgos demo MEZCLADOS
---     con los tuyos (la matriz ya es por usuario vía created_by_id).
+--   - En Matriz de Riesgos verás los riesgos demo MEZCLADOS con los tuyos,
+--     repartidos en las perspectivas Clientes, Procesos y competitividad y
+--     Finanzas (la matriz ya es por usuario vía created_by_id).
 --   - Lo que captures NUEVO desde la app (ej. un riesgo nuevo) NO es
---     sandbox: lo verán todos, como siempre.
+--     sandbox: queda como dato real tuyo y el cleanup no lo borra.
 --
 -- Ejecutar en Supabase → SQL Editor. Para borrar todo el seed:
 -- supabase-seed-cleanup.sql
@@ -76,24 +104,42 @@ BEGIN
     RAISE EXCEPTION 'No existe un usuario con el correo %. Edita v_email en el script.', v_email;
   END IF;
 
+  -- Prerrequisito: modelo de perspectivas (supabase-perspectivas.sql).
+  -- PL/pgSQL resuelve las columnas de cada sentencia al ejecutarla, así que
+  -- esta verificación corre antes de que fallen los INSERT de abajo.
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = 'risks'
+                   AND column_name = 'perspective_key')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'departments'
+                      AND column_name = 'perspective_key') THEN
+    RAISE EXCEPTION 'Falta la columna perspective_key en risks/departments. Corre primero supabase-perspectivas.sql.';
+  END IF;
+
   IF EXISTS (SELECT 1 FROM strategic_plans WHERE sandbox_owner_id = v_uid)
-     OR EXISTS (SELECT 1 FROM departments WHERE sandbox_owner_id = v_uid) THEN
+     OR EXISTS (SELECT 1 FROM departments WHERE sandbox_owner_id = v_uid)
+     OR EXISTS (SELECT 1 FROM risks       WHERE sandbox_owner_id = v_uid) THEN
     RAISE EXCEPTION 'Ya hay datos sandbox para este usuario. Corre primero supabase-seed-cleanup.sql.';
   END IF;
 
   -- ===== Matriz de Riesgos =====
-  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
-    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  -- Departamentos demo con su perspectiva sugerida. Sirven para probar el
+  -- asistente de migración departamento → perspectiva; los riesgos se
+  -- organizan por perspective_key.
+  INSERT INTO departments (name, description, perspective_key, created_by_id, sandbox_owner_id)
+    VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'cliente', v_uid, v_uid)
     RETURNING id INTO v_dep_ventas;
-  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
-    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  INSERT INTO departments (name, description, perspective_key, created_by_id, sandbox_owner_id)
+    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'competitiva', v_uid, v_uid)
     RETURNING id INTO v_dep_ops;
-  INSERT INTO departments (name, description, created_by_id, sandbox_owner_id)
-    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', v_uid, v_uid)
+  INSERT INTO departments (name, description, perspective_key, created_by_id, sandbox_owner_id)
+    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'competitiva', v_uid, v_uid)
     RETURNING id INTO v_dep_ti;
 
+  -- Riesgos demo. inherent_score e *_level_key NO se escriben aquí: los
+  -- calcula el trigger de supabase-perspectivas.sql al insertar.
   INSERT INTO risks (
-    department_id, threat_type, description,
+    department_id, perspective_key, threat_type, description,
     inherent_probability, inherent_impact, inherent_level,
     risk_strategy, mitigant_1, mitigant_impact_1,
     control_type_1, control_documented_1, process_type_1,
@@ -101,47 +147,67 @@ BEGIN
     residual_probability, residual_impact, residual_level,
     created_by_id, sandbox_owner_id
   ) VALUES
-  -- Ventas: intolerable → medio (mitigado)
-  (v_dep_ventas, 'Externa', 'Pérdida del cliente principal, que concentra el 40% de los ingresos',
+  -- Clientes · Ventas: intolerable → medio (mitigado)
+  (v_dep_ventas, 'cliente', 'Externa', 'Pérdida del cliente principal, que concentra el 40% de los ingresos',
    'Frecuente (81-100%)', 'Mayor', 'Intolerable',
    'Reducir', 'Plan de diversificación de cartera y contratos anuales con clientes clave', 'Mitiga la probabilidad',
-   'Control Preventivo', 'Sí', 'Combinado', 'Sí', 'Sí', 'Sí', 'Fuerte',
+   'Control Preventivo', 'Sí', 'Combinado', 'Sí', 'Sí', 'Sí', 'Medio',
    'Ocasional (41-60%)', 'Mayor', 'Medio',
    v_uid, v_uid),
-  -- Ventas: alto → bajo (mitigado)
-  (v_dep_ventas, 'Interna', 'Errores en cotizaciones por captura manual de precios',
+  -- Clientes · Ventas: alto → bajo (mitigado)
+  (v_dep_ventas, 'cliente', 'Interna', 'Errores en cotizaciones por captura manual de precios',
    'Probable (61-80%)', 'Mayor', 'Alto',
    'Reducir', 'Catálogo de precios centralizado con aprobación automática', 'Mitiga la probabilidad e impacto',
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Crítico', 'Bajo',
    v_uid, v_uid),
-  -- Operaciones: alto → alto (NO mitigado, dispara alertas del dashboard)
-  (v_dep_ops, 'Externa', 'Interrupción de la cadena de suministro por dependencia de un solo proveedor',
+  -- Procesos y competitividad · Operaciones: alto → alto (NO mitigado,
+  -- dispara alertas del dashboard)
+  (v_dep_ops, 'competitiva', 'Externa', 'Interrupción de la cadena de suministro por dependencia de un solo proveedor',
    'Probable (61-80%)', 'Mayor', 'Alto',
    'Reducir', 'Búsqueda de proveedores alternos (en proceso)', 'Mitiga la probabilidad',
    'Control Correctivo', 'No', 'Manual', 'No', 'Sí', 'No', 'Débil',
    'Probable (61-80%)', 'Mayor', 'Alto',
    v_uid, v_uid),
-  -- Operaciones: medio → tolerable
-  (v_dep_ops, 'Interna', 'Retrasos en entregas por falta de planeación de rutas',
+  -- Procesos y competitividad · Operaciones: medio → tolerable
+  (v_dep_ops, 'competitiva', 'Interna', 'Retrasos en entregas por falta de planeación de rutas',
    'Ocasional (41-60%)', 'Crítico', 'Medio',
    'Reducir', 'Software de optimización de rutas y monitoreo diario', 'Mitiga la probabilidad',
-   'Control Detectivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
+   'Control Detectivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Medio',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
    v_uid, v_uid),
-  -- TI: intolerable → medio
-  (v_dep_ti, 'Externa', 'Ataque de ransomware que detenga la operación',
+  -- Procesos y competitividad · TI: intolerable → bajo
+  (v_dep_ti, 'competitiva', 'Externa', 'Ataque de ransomware que detenga la operación',
    'Probable (61-80%)', 'Catastrófico', 'Intolerable',
    'Transferir', 'Respaldo diario cifrado, antivirus corporativo y póliza de ciberseguridad', 'Mitiga el impacto',
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Mayor', 'Bajo',
    v_uid, v_uid),
-  -- TI: tolerable (aceptado, sin mitigante)
-  (v_dep_ti, 'Interna', 'Indisponibilidad breve del sitio web por mantenimientos',
+  -- Procesos y competitividad · TI: tolerable (aceptado, sin mitigante)
+  (v_dep_ti, 'competitiva', 'Interna', 'Indisponibilidad breve del sitio web por mantenimientos',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
    'Aceptar', NULL, NULL,
    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
    'Improbable (21-40%)', 'Menor', 'Tolerable',
+   v_uid, v_uid),
+  -- Finanzas · sin departamento: intolerable SIN mitigantes ni residual.
+  -- Candidato a entrar solo a Planeación Estratégica como objetivo de
+  -- prioridad alta (fase posterior del proyecto de perspectivas).
+  (NULL, 'financiera', 'Externa', 'Pérdida cambiaria por deuda en dólares con ventas en pesos',
+   'Probable (61-80%)', 'Catastrófico', 'Intolerable',
+   'Transferir', NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+   NULL, NULL, NULL,
+   v_uid, v_uid),
+  -- SIN departamento y SIN perspectiva: medio → bajo, un mitigante sencillo.
+  -- Sirve para probar el asistente de migración / el selector inline de
+  -- perspectiva. (Grado de control: 0.30 + 0.01 + 0.10 + 0.01 + 0.10 + 0.01
+  -- = 0.53 → Débil.)
+  (NULL, NULL, 'Interna', 'Falta de documentación de procesos clave',
+   'Ocasional (41-60%)', 'Crítico', 'Medio',
+   'Reducir', 'Documentar los procesos críticos en manuales breves con un responsable asignado', 'Mitiga la probabilidad',
+   'Control Preventivo', 'No', 'Manual', 'No', 'Sí', 'No', 'Débil',
+   'Improbable (21-40%)', 'Crítico', 'Bajo',
    v_uid, v_uid);
 
   -- ===== Planeación Estratégica =====
