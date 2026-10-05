@@ -222,9 +222,11 @@ export const User = {
         email,
         password,
         options: {
+          // El rol NO se manda aquí: vive en app_metadata y solo un admin
+          // puede asignarlo (set_user_role). user_metadata es editable por
+          // el propio usuario.
           data: {
             full_name: fullName,
-            role: "user",
           },
         },
       });
@@ -280,6 +282,21 @@ export const User = {
       return data;
     } catch (err) {
       console.error("Error al suspender usuario:", err.message);
+      throw err;
+    }
+  },
+
+  // 🔹 Dar o quitar rol de administrador (solo admin)
+  async setRole(userId, role) {
+    try {
+      const { data, error } = await supabase.rpc("set_user_role", {
+        target_user_id: userId,
+        new_role: role,
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Error al cambiar el rol:", err.message);
       throw err;
     }
   },
@@ -428,5 +445,415 @@ export const InvitationCode = {
       console.error("Error al obtener estadísticas:", err.message);
       throw err;
     }
+  },
+};
+
+// 🔹 Acceso por módulo (Fase 2)
+export const ModuleAccess = {
+  // Módulos concedidos al usuario actual (arreglo de keys). RLS: solo lee lo suyo.
+  async myModules() {
+    const { data, error } = await supabase
+      .from("user_module_access")
+      .select("module_key");
+    if (error) handleQueryError(error);
+    return (data || []).map((r) => r.module_key);
+  },
+
+  // Todos los accesos (para admin). RLS: la política de admin permite ver todo.
+  async listAll() {
+    const { data, error } = await supabase
+      .from("user_module_access")
+      .select("user_id, module_key");
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // Reemplaza el conjunto de módulos de un usuario (admin). Usa el RPC.
+  async setUserModules(userId, moduleKeys) {
+    const { data, error } = await supabase.rpc("set_user_modules", {
+      target_user_id: userId,
+      module_keys: moduleKeys,
+    });
+    if (error) handleQueryError(error);
+    if (data && data.success === false) {
+      throw new Error(data.message || "No se pudieron asignar los módulos");
+    }
+    return true;
+  },
+};
+
+// Id del usuario actual leído del JWT local (sin llamada de red).
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user?.id || null;
+}
+
+// 🔹 Plan Estratégico (Fase 0.3 en adelante). Cada usuario tiene el suyo.
+export const StrategicPlan = {
+  // Devuelve el plan del usuario actual; si no existe, lo crea.
+  // (RLS ya limita la consulta al dueño; el filtro explícito lo documenta.)
+  async getOrCreate() {
+    const uid = await currentUserId();
+    if (!uid) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
+    const { data, error } = await supabase
+      .from("strategic_plans")
+      .select("*")
+      .eq("owner_id", uid)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) handleQueryError(error);
+    if (data && data.length > 0) return data[0];
+
+    const { data: created, error: createError } = await supabase
+      .from("strategic_plans")
+      .insert([{ owner_id: uid, created_by_id: uid }])
+      .select();
+    if (createError) handleQueryError(createError);
+    return created?.[0] || null;
+  },
+
+  // Actualiza campos del plan (visión, misión, valores, año, nombre).
+  async update(planId, fields) {
+    const { error } = await supabase
+      .from("strategic_plans")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", planId);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Respuestas de una sección (cuestionario) como mapa { question_key: answer }.
+  async getAnswers(planId, section) {
+    const { data, error } = await supabase
+      .from("plan_answers")
+      .select("question_key, answer")
+      .eq("plan_id", planId)
+      .eq("section", section);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      map[r.question_key] = r.answer || "";
+    });
+    return map;
+  },
+
+  // Guarda (upsert) todas las respuestas de una sección.
+  async saveAnswers(planId, section, answers) {
+    const rows = Object.entries(answers).map(([question_key, answer]) => ({
+      plan_id: planId,
+      section,
+      question_key,
+      answer,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rows.length === 0) return true;
+    const { error } = await supabase
+      .from("plan_answers")
+      .upsert(rows, { onConflict: "plan_id,section,question_key" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Respuestas de varias secciones en una sola consulta.
+  // Devuelve { [section]: { question_key: answer } }.
+  async getAnswersForSections(planId, sections) {
+    if (!sections || sections.length === 0) return {};
+    const { data, error } = await supabase
+      .from("plan_answers")
+      .select("section, question_key, answer")
+      .eq("plan_id", planId)
+      .in("section", sections);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      if (!map[r.section]) map[r.section] = {};
+      map[r.section][r.question_key] = r.answer || "";
+    });
+    return map;
+  },
+
+  // Guarda (upsert) varias secciones de una sola vez.
+  // `sectionsMap` tiene la forma { [section]: { question_key: answer } }.
+  async saveSections(planId, sectionsMap) {
+    const now = new Date().toISOString();
+    const rows = [];
+    Object.entries(sectionsMap).forEach(([section, answers]) => {
+      Object.entries(answers).forEach(([question_key, answer]) => {
+        rows.push({ plan_id: planId, section, question_key, answer, updated_at: now });
+      });
+    });
+    if (rows.length === 0) return true;
+    const { error } = await supabase
+      .from("plan_answers")
+      .upsert(rows, { onConflict: "plan_id,section,question_key" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Competidores del análisis del mercado (Fase 1.2)
+export const Competitor = {
+  async list(planId) {
+    const { data, error } = await supabase
+      .from("competitors")
+      .select("*")
+      .eq("plan_id", planId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async create(planId, name, position = 0) {
+    const { data, error } = await supabase
+      .from("competitors")
+      .insert([{ plan_id: planId, name, position }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async rename(id, name) {
+    const { error } = await supabase
+      .from("competitors")
+      .update({ name })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina el competidor y sus respuestas asociadas en plan_answers.
+  async remove(planId, id) {
+    const { error: answersError } = await supabase
+      .from("plan_answers")
+      .delete()
+      .eq("plan_id", planId)
+      .eq("section", `market-comp:${id}`);
+    if (answersError) handleQueryError(answersError);
+
+    const { error } = await supabase.from("competitors").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Iniciativas estratégicas (Fase 3.4)
+export const Initiative = {
+  async list(planId) {
+    const { data, error } = await supabase
+      .from("strategic_initiatives")
+      .select("*")
+      .eq("plan_id", planId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // Inserta/actualiza varias iniciativas de una vez (autoguardado).
+  async upsertMany(planId, rows) {
+    if (!rows || rows.length === 0) return true;
+    const clean = rows.map((r, i) => ({
+      id: r.id,
+      plan_id: planId,
+      strategy_id: r.strategy_id,
+      title: r.title || "",
+      expected_result: r.expected_result || null,
+      area: r.area || null,
+      owner: r.owner || null,
+      start_date: r.start_date || null,
+      end_date: r.end_date || null,
+      budget: r.budget === "" || r.budget == null ? null : Number(r.budget),
+      kpi: r.kpi || null,
+      steps: r.steps || null,
+      position: i,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from("strategic_initiatives")
+      .upsert(clean, { onConflict: "id" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  async remove(id) {
+    const { error } = await supabase
+      .from("strategic_initiatives")
+      .delete()
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Análisis Financiero (sección histórica del modelo financiero). Cada usuario tiene el suyo.
+export const FinAnalysis = {
+  // Devuelve el análisis del usuario actual; si no existe, lo crea.
+  async getOrCreate() {
+    const uid = await currentUserId();
+    if (!uid) {
+      forceLogout();
+      throw new Error("Sesión expirada");
+    }
+    const { data, error } = await supabase
+      .from("fin_analyses")
+      .select("*")
+      .eq("owner_id", uid)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) handleQueryError(error);
+    if (data && data.length > 0) return data[0];
+
+    const { data: created, error: createError } = await supabase
+      .from("fin_analyses")
+      .insert([{ owner_id: uid, created_by_id: uid }])
+      .select();
+    if (createError) handleQueryError(createError);
+    return created?.[0] || null;
+  },
+
+  // Actualiza los datos generales (empresa, país, actividad, moneda).
+  async update(analysisId, fields) {
+    const { error } = await supabase
+      .from("fin_analyses")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", analysisId);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Ejercicios (años) del análisis financiero
+export const FinYear = {
+  async list(analysisId) {
+    const { data, error } = await supabase
+      .from("fin_years")
+      .select("*")
+      .eq("analysis_id", analysisId)
+      .order("year", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async add(analysisId, year, months = 12) {
+    const { data, error } = await supabase
+      .from("fin_years")
+      .insert([{ analysis_id: analysisId, year, months }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async update(id, fields) {
+    const { error } = await supabase
+      .from("fin_years")
+      .update(fields)
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina el año; sus cifras caen en cascada (FK en fin_values).
+  async remove(id) {
+    const { error } = await supabase.from("fin_years").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Líneas de negocio del análisis financiero
+export const FinLine = {
+  async list(analysisId) {
+    const { data, error } = await supabase
+      .from("fin_lines")
+      .select("*")
+      .eq("analysis_id", analysisId)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  async create(analysisId, name, position = 0) {
+    const { data, error } = await supabase
+      .from("fin_lines")
+      .insert([{ analysis_id: analysisId, name, position }])
+      .select();
+    if (error) handleQueryError(error);
+    return data?.[0] || null;
+  },
+
+  async rename(id, name) {
+    const { error } = await supabase
+      .from("fin_lines")
+      .update({ name })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Elimina la línea y sus cifras (ventas y costos asociados).
+  async remove(analysisId, id) {
+    const { error: salesError } = await supabase
+      .from("fin_values")
+      .delete()
+      .eq("analysis_id", analysisId)
+      .eq("section", "sales")
+      .eq("concept_key", id);
+    if (salesError) handleQueryError(salesError);
+
+    const { error: costError } = await supabase
+      .from("fin_values")
+      .delete()
+      .eq("analysis_id", analysisId)
+      .eq("section", `cost:${id}`);
+    if (costError) handleQueryError(costError);
+
+    const { error } = await supabase.from("fin_lines").delete().eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
+};
+
+// 🔹 Cifras del análisis financiero
+export const FinValue = {
+  // Cifras de varias secciones: { [section]: { [concept_key]: { [year_id]: amount } } }.
+  async getSections(analysisId, sections) {
+    if (!sections || sections.length === 0) return {};
+    const { data, error } = await supabase
+      .from("fin_values")
+      .select("year_id, section, concept_key, amount")
+      .eq("analysis_id", analysisId)
+      .in("section", sections);
+    if (error) handleQueryError(error);
+    const map = {};
+    (data || []).forEach((r) => {
+      if (!map[r.section]) map[r.section] = {};
+      if (!map[r.section][r.concept_key]) map[r.section][r.concept_key] = {};
+      map[r.section][r.concept_key][r.year_id] = r.amount;
+    });
+    return map;
+  },
+
+  // Guarda (upsert) cifras. `rows`: [{ year_id, section, concept_key, amount }].
+  async saveRows(analysisId, rows) {
+    if (!rows || rows.length === 0) return true;
+    const now = new Date().toISOString();
+    const clean = rows.map((r) => ({
+      analysis_id: analysisId,
+      year_id: r.year_id,
+      section: r.section,
+      concept_key: r.concept_key,
+      amount: r.amount === "" || r.amount == null ? null : Number(r.amount),
+      updated_at: now,
+    }));
+    const { error } = await supabase
+      .from("fin_values")
+      .upsert(clean, { onConflict: "analysis_id,year_id,section,concept_key" });
+    if (error) handleQueryError(error);
+    return true;
   },
 };

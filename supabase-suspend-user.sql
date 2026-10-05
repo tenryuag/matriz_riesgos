@@ -1,3 +1,5 @@
+-- ⚠️ ACTUALIZADO (sep-2026): el rol se verifica con public.is_admin() (app_metadata).
+--    Requiere haber corrido supabase-fix-role-security.sql. Nunca usar user_metadata.
 -- =====================================================
 -- FUNCIONES RPC PARA SUSPENSIÓN DE CUENTAS
 -- =====================================================
@@ -29,10 +31,7 @@ DECLARE
   target_email TEXT;
 BEGIN
   -- Verificar que quien llama es admin
-  caller_role := COALESCE(
-    auth.jwt() -> 'user_metadata' ->> 'role',
-    auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-  );
+  caller_role := CASE WHEN public.is_admin() THEN 'admin' ELSE NULL END;
 
   IF caller_role IS NULL OR caller_role != 'admin' THEN
     RETURN jsonb_build_object(
@@ -98,10 +97,7 @@ DECLARE
   target_email TEXT;
 BEGIN
   -- Verificar que quien llama es admin
-  caller_role := COALESCE(
-    auth.jwt() -> 'user_metadata' ->> 'role',
-    auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-  );
+  caller_role := CASE WHEN public.is_admin() THEN 'admin' ELSE NULL END;
 
   IF caller_role IS NULL OR caller_role != 'admin' THEN
     RETURN jsonb_build_object(
@@ -154,10 +150,7 @@ DECLARE
   result JSONB;
 BEGIN
   -- Verificar que quien llama es admin
-  caller_role := COALESCE(
-    auth.jwt() -> 'user_metadata' ->> 'role',
-    auth.jwt() -> 'raw_user_meta_data' ->> 'role'
-  );
+  caller_role := CASE WHEN public.is_admin() THEN 'admin' ELSE NULL END;
 
   IF caller_role IS NULL OR caller_role != 'admin' THEN
     RETURN jsonb_build_object(
@@ -174,7 +167,7 @@ BEGIN
         'id', u.id,
         'email', u.email,
         'full_name', COALESCE(u.raw_user_meta_data->>'full_name', ''),
-        'role', COALESCE(u.raw_user_meta_data->>'role', 'user'),
+        'role', COALESCE(u.raw_app_meta_data->>'role', 'user'),
         'banned_until', u.banned_until,
         'created_at', u.created_at,
         'last_sign_in_at', u.last_sign_in_at

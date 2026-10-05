@@ -54,9 +54,7 @@ export default function InvitationCodes() {
       const currentUser = await User.me();
 
       // Verificar si el usuario es admin
-      const role = currentUser?.user_metadata?.role ||
-                   currentUser?.raw_user_meta_data?.role ||
-                   'user';
+      const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
     } catch (error) {

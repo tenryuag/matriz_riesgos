@@ -25,11 +25,81 @@ import ForgotPassword from "./ForgotPassword";
 
 import UpdatePassword from "./UpdatePassword";
 
+import FinanceDashboard from "./FinanceDashboard";
+
+import StrategicPlanning from "./StrategicPlanning";
+
+import CustomerAnalysis from "./CustomerAnalysis";
+
+import MarketAnalysis from "./MarketAnalysis";
+
+import StrategicInitiatives from "./StrategicInitiatives";
+
+import ScoreCard from "./ScoreCard";
+
+import MarketConclusions from "./MarketConclusions";
+
+import OpportunityAnalysis from "./OpportunityAnalysis";
+
+import OpportunityConclusions from "./OpportunityConclusions";
+
+import FinancialStrategies from "./FinancialStrategies";
+
+import StrategicSummary from "./StrategicSummary";
+
+import StrategicMap from "./StrategicMap";
+
+import StrategicMapCalibrated from "./StrategicMapCalibrated";
+
+import FodaAnalysis from "./FodaAnalysis";
+
+import BusinessAnalysis from "./BusinessAnalysis";
+
+import SwotAnalysis from "./SwotAnalysis";
+
+import FinancialHistory from "./FinancialHistory";
+
+import FinancialProjection from "./FinancialProjection";
+
+import FinancialCurrent from "./FinancialCurrent";
+
+import FinAnalysisHome from "./FinAnalysisHome";
+
+import FinAnalysisData from "./FinAnalysisData";
+
+import FinAnalysisSales from "./FinAnalysisSales";
+
+import FinAnalysisCosts from "./FinAnalysisCosts";
+
+import FinAnalysisExpenses from "./FinAnalysisExpenses";
+
+import FinAnalysisIncome from "./FinAnalysisIncome";
+
+import FinAnalysisBalance from "./FinAnalysisBalance";
+
+import FinAnalysisCashflow from "./FinAnalysisCashflow";
+
+import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
+
 import OAuthConsent from "./OAuthConsent";
+
+import ModuleLauncher from "./ModuleLauncher";
+
+import ModuleInDevelopment from "./ModuleInDevelopment";
+
+import ModuleAccessAdmin from "./ModuleAccessAdmin";
+
+import { ModuleAccessProvider } from "@/components/ModuleAccessContext";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
+
+    ModuleLauncher: ModuleLauncher,
+
+    ModuleInDevelopment: ModuleInDevelopment,
+
+    ModuleAccess: ModuleAccessAdmin,
 
     Dashboard: Dashboard,
 
@@ -48,6 +118,62 @@ const PAGES = {
     AddInvitationCode: AddInvitationCode,
 
     UserManagement: UserManagement,
+
+    FinanceDashboard: FinanceDashboard,
+
+    StrategicPlanning: StrategicPlanning,
+
+    CustomerAnalysis: CustomerAnalysis,
+
+    MarketAnalysis: MarketAnalysis,
+
+    MarketConclusions: MarketConclusions,
+
+    OpportunityAnalysis: OpportunityAnalysis,
+
+    OpportunityConclusions: OpportunityConclusions,
+
+    FinancialStrategies: FinancialStrategies,
+
+    Foda: FodaAnalysis,
+
+    StrategicSummary: StrategicSummary,
+
+    StrategicMap: StrategicMap,
+
+    StrategicMapCalibrated: StrategicMapCalibrated,
+
+    StrategicInitiatives: StrategicInitiatives,
+
+    ScoreCard: ScoreCard,
+
+    BusinessAnalysis: BusinessAnalysis,
+
+    SwotAnalysis: SwotAnalysis,
+
+    FinAnalysisHome: FinAnalysisHome,
+
+    FinAnalysisData: FinAnalysisData,
+
+    FinAnalysisSales: FinAnalysisSales,
+
+    FinAnalysisCosts: FinAnalysisCosts,
+
+    FinAnalysisExpenses: FinAnalysisExpenses,
+
+    FinAnalysisIncome: FinAnalysisIncome,
+
+    FinAnalysisBalance: FinAnalysisBalance,
+
+    FinAnalysisCashflow: FinAnalysisCashflow,
+
+    FinAnalysisCashflowDirect: FinAnalysisCashflowDirect,
+
+    FinancialHistory: FinancialHistory,
+
+    FinancialProjection: FinancialProjection,
+
+    FinancialCurrent: FinancialCurrent,
 
 }
 
@@ -94,7 +220,22 @@ function PagesContent() {
             {/* Protected routes - inside Layout */}
             <Route path="/" element={
                 <Layout currentPageName={currentPage}>
-                    <Dashboard />
+                    <ModuleLauncher />
+                </Layout>
+            } />
+            <Route path="/ModuleLauncher" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleLauncher />
+                </Layout>
+            } />
+            <Route path="/ModuleInDevelopment" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleInDevelopment />
+                </Layout>
+            } />
+            <Route path="/ModuleAccess" element={
+                <Layout currentPageName={currentPage}>
+                    <ModuleAccessAdmin />
                 </Layout>
             } />
             <Route path="/Dashboard" element={
@@ -142,6 +283,146 @@ function PagesContent() {
                     <UserManagement />
                 </Layout>
             } />
+            <Route path="/FinanceDashboard" element={
+                <Layout currentPageName={currentPage}>
+                    <FinanceDashboard />
+                </Layout>
+            } />
+            <Route path="/StrategicPlanning" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicPlanning />
+                </Layout>
+            } />
+            <Route path="/CustomerAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <CustomerAnalysis />
+                </Layout>
+            } />
+            <Route path="/MarketAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <MarketAnalysis />
+                </Layout>
+            } />
+            <Route path="/MarketConclusions" element={
+                <Layout currentPageName={currentPage}>
+                    <MarketConclusions />
+                </Layout>
+            } />
+            <Route path="/OpportunityAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <OpportunityAnalysis />
+                </Layout>
+            } />
+            <Route path="/OpportunityConclusions" element={
+                <Layout currentPageName={currentPage}>
+                    <OpportunityConclusions />
+                </Layout>
+            } />
+            <Route path="/FinancialStrategies" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialStrategies />
+                </Layout>
+            } />
+            <Route path="/Foda" element={
+                <Layout currentPageName={currentPage}>
+                    <FodaAnalysis />
+                </Layout>
+            } />
+            <Route path="/StrategicSummary" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicSummary />
+                </Layout>
+            } />
+            <Route path="/StrategicMap" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicMap />
+                </Layout>
+            } />
+            <Route path="/StrategicMapCalibrated" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicMapCalibrated />
+                </Layout>
+            } />
+            <Route path="/StrategicInitiatives" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicInitiatives />
+                </Layout>
+            } />
+            <Route path="/ScoreCard" element={
+                <Layout currentPageName={currentPage}>
+                    <ScoreCard />
+                </Layout>
+            } />
+            <Route path="/BusinessAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <BusinessAnalysis />
+                </Layout>
+            } />
+            <Route path="/SwotAnalysis" element={
+                <Layout currentPageName={currentPage}>
+                    <SwotAnalysis />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisHome" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisHome />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisData" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisData />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSales" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSales />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCosts" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCosts />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisExpenses" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisExpenses />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisIncome" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisIncome />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisBalance" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisBalance />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCashflow" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCashflow />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCashflowDirect" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCashflowDirect />
+                </Layout>
+            } />
+            <Route path="/FinancialHistory" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialHistory />
+                </Layout>
+            } />
+            <Route path="/FinancialProjection" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialProjection />
+                </Layout>
+            } />
+            <Route path="/FinancialCurrent" element={
+                <Layout currentPageName={currentPage}>
+                    <FinancialCurrent />
+                </Layout>
+            } />
         </Routes>
     );
 }
@@ -149,7 +430,9 @@ function PagesContent() {
 export default function Pages() {
     return (
         <Router>
-            <PagesContent />
+            <ModuleAccessProvider>
+                <PagesContent />
+            </ModuleAccessProvider>
         </Router>
     );
 }

@@ -1,3 +1,5 @@
+-- ⚠️ ACTUALIZADO (sep-2026): el rol se verifica con public.is_admin() (app_metadata).
+--    Requiere haber corrido supabase-fix-role-security.sql. Nunca usar user_metadata.
 -- =====================================================
 -- POLÍTICAS RLS PARA CONTROL DE ADMINISTRADORES
 -- =====================================================
@@ -23,8 +25,7 @@ CREATE POLICY "Solo administradores pueden leer códigos"
   FOR SELECT
   TO authenticated
   USING (
-    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR
-    (auth.jwt() -> 'raw_user_meta_data' ->> 'role') = 'admin'
+    (SELECT public.is_admin())
   );
 
 -- Política: Solo administradores pueden crear códigos
@@ -33,8 +34,7 @@ CREATE POLICY "Solo administradores pueden crear códigos"
   FOR INSERT
   TO authenticated
   WITH CHECK (
-    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR
-    (auth.jwt() -> 'raw_user_meta_data' ->> 'role') = 'admin'
+    (SELECT public.is_admin())
   );
 
 -- Política: Solo administradores pueden actualizar códigos
@@ -43,8 +43,7 @@ CREATE POLICY "Solo administradores pueden actualizar códigos"
   FOR UPDATE
   TO authenticated
   USING (
-    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR
-    (auth.jwt() -> 'raw_user_meta_data' ->> 'role') = 'admin'
+    (SELECT public.is_admin())
   );
 
 -- Política: Solo administradores pueden eliminar códigos
@@ -53,8 +52,7 @@ CREATE POLICY "Solo administradores pueden eliminar códigos"
   FOR DELETE
   TO authenticated
   USING (
-    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR
-    (auth.jwt() -> 'raw_user_meta_data' ->> 'role') = 'admin'
+    (SELECT public.is_admin())
   );
 
 -- Política: Usuarios anónimos pueden validar códigos (para registro)

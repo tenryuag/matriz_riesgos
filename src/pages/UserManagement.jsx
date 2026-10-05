@@ -9,6 +9,7 @@ import {
   Calendar,
   Search,
   RefreshCw,
+  Crown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,9 +51,7 @@ export default function UserManagement() {
     try {
       const currentUser = await User.me();
       setCurrentUserId(currentUser?.id);
-      const role = currentUser?.user_metadata?.role ||
-                   currentUser?.raw_user_meta_data?.role ||
-                   'user';
+      const role = currentUser?.app_metadata?.role || 'user';
       setIsAdmin(role === 'admin');
     } catch (error) {
       console.error("Error checking admin status:", error);
@@ -112,6 +111,33 @@ export default function UserManagement() {
     setProcessing(false);
     setActionUser(null);
   };
+
+  const handleSetRole = async (userId, role) => {
+    setProcessing(true);
+    try {
+      const result = await User.setRole(userId, role);
+      if (result?.success) {
+        toast.success(t('userRoleUpdatedSuccess'));
+        loadUsers();
+      } else {
+        toast.error(result?.message || t('userRoleUpdateError'));
+      }
+    } catch (error) {
+      console.error("Error changing role:", error);
+      toast.error(t('userRoleUpdateError'));
+    }
+    setProcessing(false);
+    setActionUser(null);
+  };
+
+  // Textos y estilo del diálogo de confirmación según la acción.
+  const actionMeta = {
+    suspend: { title: t('usersSuspendTitle'), desc: t('usersSuspendDescription'), btn: t('usersSuspendBtn'), cls: "bg-red-500 text-white hover:bg-red-600" },
+    reactivate: { title: t('usersReactivateTitle'), desc: t('usersReactivateDescription'), btn: t('usersReactivateBtn'), cls: "bg-green-500 text-white hover:bg-green-600" },
+    make_admin: { title: t('usersMakeAdminTitle'), desc: t('usersMakeAdminDescription'), btn: t('usersMakeAdminBtn'), cls: "bg-accent text-accent-foreground hover:bg-accent/90" },
+    remove_admin: { title: t('usersRemoveAdminTitle'), desc: t('usersRemoveAdminDescription'), btn: t('usersRemoveAdminBtn'), cls: "bg-amber-500 text-white hover:bg-amber-600" },
+  };
+  const meta = actionUser ? actionMeta[actionUser.action] : null;
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -357,26 +383,39 @@ export default function UserManagement() {
                       <td className="p-4 text-right">
                         {user.id === currentUserId ? (
                           <span className="text-xs text-muted italic">{t('usersYou')}</span>
-                        ) : isSuspended(user) ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionUser({ user, action: 'reactivate' })}
-                            className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                          >
-                            <ShieldCheck className="w-4 h-4 mr-1" />
-                            {t('usersReactivateBtn')}
-                          </Button>
                         ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionUser({ user, action: 'suspend' })}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                          >
-                            <ShieldBan className="w-4 h-4 mr-1" />
-                            {t('usersSuspendBtn')}
-                          </Button>
+                          <div className="flex items-center justify-end gap-1 flex-wrap">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setActionUser({ user, action: user.role === 'admin' ? 'remove_admin' : 'make_admin' })}
+                              className="text-accent hover:text-accent hover:bg-accent/10"
+                            >
+                              <Crown className="w-4 h-4 mr-1" />
+                              {t(user.role === 'admin' ? 'usersRemoveAdminBtn' : 'usersMakeAdminBtn')}
+                            </Button>
+                            {isSuspended(user) ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setActionUser({ user, action: 'reactivate' })}
+                                className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                              >
+                                <ShieldCheck className="w-4 h-4 mr-1" />
+                                {t('usersReactivateBtn')}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setActionUser({ user, action: 'suspend' })}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              >
+                                <ShieldBan className="w-4 h-4 mr-1" />
+                                {t('usersSuspendBtn')}
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -393,14 +432,10 @@ export default function UserManagement() {
         <AlertDialogContent className="border border-white/10 rounded-xl" style={{ backgroundColor: '#1a1a2e' }}>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg" style={{ color: '#f0f0f0' }}>
-              {actionUser?.action === 'suspend'
-                ? t('usersSuspendTitle')
-                : t('usersReactivateTitle')}
+              {meta?.title}
             </AlertDialogTitle>
             <AlertDialogDescription style={{ color: '#a0a0b0' }}>
-              {actionUser?.action === 'suspend'
-                ? t('usersSuspendDescription')
-                : t('usersReactivateDescription')}
+              {meta?.desc}
               {actionUser && (
                 <span className="block mt-2 font-mono text-sm" style={{ color: '#f0c060' }}>
                   {actionUser.user.email}
@@ -418,24 +453,17 @@ export default function UserManagement() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (actionUser?.action === 'suspend') {
-                  handleSuspend(actionUser.user.id);
-                } else {
-                  handleReactivate(actionUser.user.id);
-                }
+                const id = actionUser?.user?.id;
+                const a = actionUser?.action;
+                if (a === 'suspend') handleSuspend(id);
+                else if (a === 'reactivate') handleReactivate(id);
+                else if (a === 'make_admin') handleSetRole(id, 'admin');
+                else if (a === 'remove_admin') handleSetRole(id, 'user');
               }}
               disabled={processing}
-              className={actionUser?.action === 'suspend'
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-green-500 text-white hover:bg-green-600"
-              }
+              className={meta?.cls || ""}
             >
-              {processing
-                ? t('loading')
-                : actionUser?.action === 'suspend'
-                  ? t('usersSuspendBtn')
-                  : t('usersReactivateBtn')
-              }
+              {processing ? t('loading') : meta?.btn}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

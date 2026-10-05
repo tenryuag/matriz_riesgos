@@ -8,6 +8,8 @@ import { User } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
 import { useIdleTimeout, resetIdleTimer } from "@/hooks/useIdleTimeout";
+import { findModuleByPage, canAccessModule } from "@/config/modules";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 import {
   LayoutDashboard,
   Building2,
@@ -26,7 +28,12 @@ import {
   CheckCircle,
   Ticket,
   Users,
-  BookOpen
+  BookOpen,
+  TrendingUp,
+  Target,
+  LayoutGrid,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -64,13 +71,17 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
       // Inicia la ventana de inactividad desde cero al autenticarse.
       resetIdleTimer();
       onLoginSuccess();
+      // Tras iniciar sesión, ir siempre al selector de módulos (sin importar
+      // en qué URL estuviera el usuario al momento de autenticarse).
       // Si el login vino de una autorización OAuth (conector MCP), regresa a
-      // la pantalla de consentimiento.
+      // la pantalla de consentimiento en lugar de al selector de módulos.
       const pendingAuth = sessionStorage.getItem('oauth_authorization_id');
       if (pendingAuth) {
         sessionStorage.removeItem('oauth_authorization_id');
         navigate(`/oauth/consent?authorization_id=${encodeURIComponent(pendingAuth)}`);
+        return;
       }
+      navigate(createPageUrl('ModuleLauncher'));
     } catch (error) {
       console.error('Login error:', error);
       
@@ -293,7 +304,7 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
   );
 };
 
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, currentPageName }) => {
   const location = useLocation();
   const [user, setUser] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -301,6 +312,30 @@ const AppLayout = ({ children }) => {
   const [theme, setTheme] = React.useState("dark");
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { language, changeLanguage, t } = useLanguage();
+  // Acceso por módulo del usuario (Fase 2): para proteger las páginas.
+  const { isAdmin: hasAdminAccess, grantedModules, loading: accessLoading } = useModuleAccess();
+
+  // Grupos del menú lateral abiertos. El grupo de la página activa se abre
+  // automáticamente; el usuario puede plegar/desplegar los demás.
+  const [openGroups, setOpenGroups] = React.useState(() => new Set());
+  React.useEffect(() => {
+    const mod = findModuleByPage(currentPageName);
+    const page = mod?.pages.find((p) => p.pageKey === currentPageName);
+    if (page?.group) {
+      setOpenGroups((prev) =>
+        prev.has(page.group) ? prev : new Set([...prev, page.group])
+      );
+    }
+  }, [currentPageName]);
+
+  const toggleGroup = (key) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   // Cierra la sesión tras 8 horas de inactividad (solo con sesión activa).
   useIdleTimeout(!!user);
@@ -356,9 +391,7 @@ const AppLayout = ({ children }) => {
       setUser(currentUser);
 
       // Verificar si el usuario es admin
-      const role = currentUser?.user_metadata?.role ||
-                   currentUser?.raw_user_meta_data?.role ||
-                   'user';
+      const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
     } catch (error) {
@@ -625,23 +658,79 @@ const AppLayout = ({ children }) => {
     );
   }
 
-  const allNavigationItems = [
-    { name: t("dashboard"), href: createPageUrl("Dashboard"), icon: LayoutDashboard },
-    { name: t("departments"), href: createPageUrl("Departments"), icon: Building2 },
-    { name: t("allRisks"), href: createPageUrl("AllRisks"), icon: ShieldCheck },
-    { name: t("addRisk"), href: createPageUrl("AddRisk"), icon: Plus },
-    { name: t("invitationCodes"), href: createPageUrl("InvitationCodes"), icon: Ticket, adminOnly: true },
-    { name: t("userManagement"), href: createPageUrl("UserManagement"), icon: Users, adminOnly: true },
-    { name: t("documentation"), href: "/documentacion.html", icon: BookOpen, adminOnly: true, external: true }
-  ];
+  // El menú lateral se acota al módulo activo (según la página actual).
+  // En el selector de módulos y el placeholder "en desarrollo" no hay módulo,
+  // así que se muestra una barra superior mínima en vez del menú de módulo.
+  const activeModule = findModuleByPage(currentPageName);
+  const isLauncherMode = !activeModule;
 
-  // Filtrar items del menú según el rol del usuario
-  const navigationItems = allNavigationItems.filter(item => {
-    if (item.adminOnly) {
-      return isAdmin;
-    }
-    return true;
+  // Estructura del menú: items sueltos y secciones plegables (grupos).
+  const toNavItem = (p) => ({
+    name: t(p.nameKey),
+    href: p.external || createPageUrl(p.pageKey),
+    icon: p.icon,
+    external: !!p.external,
   });
+  const navStructure = [];
+  if (activeModule) {
+    const groupIndex = {};
+    activeModule.pages
+      .filter((p) => !p.hidden)
+      .forEach((p) => {
+        if (!p.group) {
+          navStructure.push({ type: "link", ...toNavItem(p) });
+          return;
+        }
+        if (!groupIndex[p.group]) {
+          const def = (activeModule.groups || []).find((g) => g.key === p.group);
+          groupIndex[p.group] = {
+            type: "group",
+            key: p.group,
+            name: def ? t(def.nameKey) : p.group,
+            items: [],
+          };
+          navStructure.push(groupIndex[p.group]);
+        }
+        groupIndex[p.group].items.push(toNavItem(p));
+      });
+  }
+
+  // Protección de acceso: si el usuario entra (por URL) a una página de un
+  // módulo al que no tiene acceso, no se la mostramos.
+  // Se considera admin si CUALQUIERA de las dos fuentes de rol lo confirma
+  // (el loadUser del Layout o el hook de acceso), para que un admin nunca
+  // quede bloqueado por un fallo puntual de carga.
+  const effectiveAdmin = isAdmin || hasAdminAccess;
+  const accessChecked = !accessLoading;
+  const deniedModuleAccess =
+    activeModule &&
+    accessChecked &&
+    !canAccessModule(activeModule, { isAdmin: effectiveAdmin, grantedModules });
+
+  if (deniedModuleAccess) {
+    return (
+      <div className={`min-h-screen font-body ${theme}`}>
+        <div
+          className="min-h-screen flex items-center justify-center p-6"
+          style={{ background: `linear-gradient(135deg, var(--background-start), var(--background-end))` }}
+        >
+          <style>{themeStyles}</style>
+          <div className="glass rounded-3xl p-10 max-w-md text-center">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-red-500/15 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-red-500" />
+            </div>
+            <h1 className="font-title text-2xl mb-2">{t('moduleAccessDeniedTitle')}</h1>
+            <p className="text-muted mb-6">{t('moduleAccessDeniedDesc')}</p>
+            <Link to={createPageUrl('ModuleLauncher')}>
+              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <LayoutGrid className="w-4 h-4 mr-2" /> {t('moduleBackToLauncher')}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen font-body ${theme}`}>
@@ -653,70 +742,167 @@ const AppLayout = ({ children }) => {
       >
         <style>{themeStyles}</style>
 
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-6 left-6 z-50">
-          <Button onClick={() => setSidebarOpen(!sidebarOpen)} size="icon" className="glass">
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </div>
+        {/* Barra superior: selector de módulos y placeholder "en desarrollo" */}
+        {isLauncherMode && (
+          <header className="sticky top-0 z-30 glass-darker">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
+              <div>
+                <h1 className="font-title text-lg text-foreground">{t('riskManagement')}</h1>
+                <p className="text-xs text-accent">{t('professionalManagement')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={toggleTheme} variant="ghost" size="icon" className="nav-glass" title={theme === 'light' ? t('darkMode') : t('lightMode')}>
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                </Button>
+                <Button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} variant="ghost" size="icon" className="nav-glass">
+                  <Globe className="w-4 h-4" />
+                </Button>
+                <Button onClick={handleLogout} variant="ghost" size="icon" className="nav-glass text-foreground" title={t('logout')}>
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </header>
+        )}
 
-        {/* Sidebar */}
+        {/* Mobile Menu Button (solo dentro de un módulo) */}
+        {!isLauncherMode && (
+          <div className="lg:hidden fixed top-6 left-6 z-50">
+            <Button onClick={() => setSidebarOpen(!sidebarOpen)} size="icon" className="glass">
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        )}
+
+        {/* Sidebar (solo dentro de un módulo) */}
+        {!isLauncherMode && (
         <div className={`fixed inset-y-0 left-0 z-40 w-80 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
           <div className="h-full glass-darker p-8 flex flex-col">
-            <div className="flex items-center gap-4 mb-12">
-              <div>
-                <h1 className="font-title text-xl text-foreground">Gestión del Riesgo</h1>
-                <p className="text-sm text-accent">{t('professionalManagement')}</p>
+            <div className="mb-8">
+              {/* Miga de pan: Módulos › [módulo actual]. El enlace "Módulos"
+                  regresa al selector; va en dorado para que sea evidente. */}
+              <Link
+                to={createPageUrl('ModuleLauncher')}
+                onClick={() => setSidebarOpen(false)}
+                className="group inline-flex items-center gap-2 font-subtitle text-sm text-accent hover:underline underline-offset-4 transition-colors mb-3"
+                title={t('moduleBackToLauncher')}
+              >
+                <span className="w-7 h-7 rounded-lg glass flex items-center justify-center group-hover:border-accent transition-colors">
+                  <LayoutGrid className="w-4 h-4" />
+                </span>
+                {t('moduleBackToLauncher')}
+                <ChevronRight className="w-4 h-4 text-muted" />
+              </Link>
+              <div className="flex items-center gap-3">
+                {activeModule?.icon && (
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeModule.bg}`}>
+                    <activeModule.icon className={`w-5 h-5 ${activeModule.accent}`} />
+                  </div>
+                )}
+                <div>
+                  <h1 className="font-title text-lg text-foreground leading-tight">
+                    {activeModule ? t(activeModule.nameKey) : ''}
+                  </h1>
+                  <p className="text-xs text-accent">{t('professionalManagement')}</p>
+                </div>
               </div>
             </div>
 
-            <nav className="space-y-3 flex-grow">
-              {navigationItems.map((item) => {
+            <nav className="space-y-2 flex-grow overflow-y-auto pr-1">
+              {navStructure.map((entry) => {
                 const currentPath = location.pathname;
-                const itemPath = item.href;
-                const isActive = !item.external && currentPath === itemPath;
-                const className = `flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
-                  isActive ? 'nav-glass active' : 'nav-glass'
-                }`;
 
-                if (item.external) {
+                // Renderizador común para un item de navegación.
+                const renderItem = (item, compact = false) => {
+                  const isActive = !item.external && currentPath === item.href;
+                  const className = compact
+                    ? `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm ${
+                        isActive ? 'nav-glass active' : 'nav-glass'
+                      }`
+                    : `flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
+                        isActive ? 'nav-glass active' : 'nav-glass'
+                      }`;
+                  if (item.external) {
+                    return (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setSidebarOpen(false)}
+                        className={className}
+                      >
+                        <item.icon className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
+                        <span className="font-subtitle text-sm">{item.name}</span>
+                      </a>
+                    );
+                  }
                   return (
-                    <a
+                    <Link
                       key={item.href}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      to={item.href}
                       onClick={() => setSidebarOpen(false)}
                       className={className}
                     >
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
                       <span className="font-subtitle text-sm">{item.name}</span>
-                    </a>
+                    </Link>
                   );
-                }
+                };
 
+                if (entry.type === 'link') return renderItem(entry);
+
+                // Sección plegable
+                const open = openGroups.has(entry.key);
+                const hasActiveChild = entry.items.some(
+                  (it) => !it.external && currentPath === it.href
+                );
                 return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    onClick={(e) => {
-                      setSidebarOpen(false);
-                    }}
-                    className={className}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-subtitle text-sm">{item.name}</span>
-                  </Link>
+                  <div key={entry.key} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(entry.key)}
+                      className={`w-full flex items-center justify-between px-6 py-3 rounded-2xl nav-glass transition-all ${
+                        hasActiveChild && !open ? 'text-accent' : ''
+                      }`}
+                      aria-expanded={open}
+                    >
+                      <span className="text-xs font-subtitle uppercase tracking-wider">
+                        {entry.name}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted">{entry.items.length}</span>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                        />
+                      </span>
+                    </button>
+                    {open && (
+                      <div className="space-y-1 pl-3">
+                        {entry.items.map((item) => renderItem(item, true))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>
             
             {/* User & Controls Section */}
             <div className="space-y-2">
+              {/* Regreso al selector de módulos (complementa la miga de pan
+                  de arriba: visible aunque el usuario esté hasta abajo). */}
+              <Link
+                to={createPageUrl('ModuleLauncher')}
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl glass border border-accent/40 text-accent hover:bg-accent/10 hover:border-accent transition-all font-subtitle text-sm"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                {t('moduleBackToLauncherLong')}
+              </Link>
               <div className="flex gap-2">
-                <Button 
-                  onClick={toggleTheme} 
-                  variant="ghost" 
+                <Button
+                  onClick={toggleTheme}
+                  variant="ghost"
                   className="w-full justify-start nav-glass"
                 >
                   {theme === 'light' ? <Moon className="w-4 h-4 mr-3" /> : <Sun className="w-4 h-4 mr-3" />}
@@ -738,7 +924,7 @@ const AppLayout = ({ children }) => {
                 <h3 className="font-subtitle text-sm text-foreground mb-1">{user.user_metadata?.full_name || user.full_name || user.email}</h3>
                 <p className="text-xs text-accent truncate mb-3">{user.email}</p>
                 <span className="inline-block px-3 py-1 text-xs rounded-full glass border border-accent/30 text-accent">
-                  {user.user_metadata?.role || user.raw_user_meta_data?.role || 'user'}
+                  {user.app_metadata?.role || 'user'}
                 </span>
               </div>
               
@@ -753,17 +939,18 @@ const AppLayout = ({ children }) => {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Mobile Overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden" 
-            onClick={() => setSidebarOpen(false)} 
+        {/* Mobile Overlay (solo dentro de un módulo) */}
+        {!isLauncherMode && sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Main Content */}
-        <div className="lg:pl-80">
+        <div className={isLauncherMode ? '' : 'lg:pl-80'}>
           <main className="p-6 lg:p-12">
             <div className="max-w-7xl mx-auto">
               {children}
