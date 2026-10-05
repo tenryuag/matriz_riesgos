@@ -11,11 +11,18 @@
 -- Planeación Estratégica y Análisis Financiero siguen este mismo criterio
 -- (ver supabase-per-user-plans.sql).
 --
+-- El modelo de PERSPECTIVAS (supabase-perspectivas.sql) no cambia estas
+-- políticas: solo agrega columnas a departments y risks (ver la sección de
+-- risks más abajo). El filtro sigue siendo created_by_id = auth.uid().
+--
 -- NO HACE FALTA CORRERLO. Es idempotente (DROP IF EXISTS + CREATE) por si
 -- algún día hay que recrear la base desde cero.
 -- ============================================================
 
 -- ---------- departments ----------
+-- Con el modelo de perspectivas, cada departamento lleva una perspective_key
+-- sugerida (financiera | cliente | competitiva | equipo) que usa el
+-- asistente de migración departamento → perspectiva. No afecta las políticas.
 DROP POLICY IF EXISTS "Enable insert for users based on user_id" ON departments;
 CREATE POLICY "Enable insert for users based on user_id" ON departments
   FOR INSERT TO authenticated
@@ -42,6 +49,19 @@ CREATE POLICY "delete" ON departments
 --   DROP POLICY IF EXISTS "Usuarios autenticados pueden eliminar departamentos" ON departments;
 
 -- ---------- risks ----------
+-- Columnas del modelo de perspectivas (supabase-perspectivas.sql):
+--   perspective_key   TEXT   financiera | cliente | competitiva | equipo.
+--                            Organiza la matriz; department_id pasa a ser
+--                            opcional (los riesgos viejos lo conservan).
+--   inherent_score, inherent_level_key, residual_level_key
+--                            Las calcula un TRIGGER a partir de
+--                            probabilidad × impacto (puntaje 1-25 y nivel
+--                            normalizado independiente del idioma). La app
+--                            NO las escribe; cualquier valor enviado se
+--                            sobreescribe en la misma fila.
+-- Ninguna de ellas altera las políticas: el trigger corre dentro del INSERT
+-- o UPDATE del dueño y las políticas siguen filtrando por
+-- created_by_id = auth.uid().
 DROP POLICY IF EXISTS "delete" ON risks;
 CREATE POLICY "delete" ON risks
   FOR DELETE TO authenticated

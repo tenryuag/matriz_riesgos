@@ -68,7 +68,90 @@ export const Department = {
 
     return true;
   },
+
+  // 🔹 Perspectiva por defecto del departamento (Proyecto Perspectivas, Fase 0).
+  // `key` es una de las 4 claves del catálogo (financiera, cliente,
+  // competitiva, equipo) o null para quitarla. La BD valida la clave con un
+  // CHECK; si no existe, handleQueryError traduce el error 23514.
+  async setPerspective(id, key) {
+    const { error } = await supabase
+      .from("departments")
+      .update({ perspective_key: key || null })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
+  },
 };
+
+// ------------------------------------------------------------
+// Riesgos
+// ------------------------------------------------------------
+
+// Columnas de `risks` que la app puede escribir (lista blanca). Todo lo que
+// no esté aquí se descarta antes del INSERT/UPDATE:
+// - id, created_at, created_date, sandbox_owner_id: los pone la BD.
+// - created_by_id: solo lo agrega Risk.create (un riesgo nunca cambia de dueño).
+// - inherent_score, residual_score, inherent_level_key, residual_level_key:
+//   columnas calculadas por el trigger de la BD a partir de probabilidad e
+//   impacto; el cliente no debe mandarlas.
+export const RISK_WRITABLE_FIELDS = [
+  "department_id",
+  "perspective_key",
+  "threat_type",
+  "description",
+  "inherent_probability",
+  "inherent_impact",
+  "inherent_level",
+  "risk_strategy",
+  "mitigant_1",
+  "mitigant_2",
+  "mitigant_3",
+  "mitigant_impact_1",
+  "mitigant_impact_2",
+  "mitigant_impact_3",
+  "control_type_1",
+  "control_type_2",
+  "control_type_3",
+  "control_documented_1",
+  "control_documented_2",
+  "control_documented_3",
+  "process_type_1",
+  "process_type_2",
+  "process_type_3",
+  "control_evidence_1",
+  "control_evidence_2",
+  "control_evidence_3",
+  "control_responsible_1",
+  "control_responsible_2",
+  "control_responsible_3",
+  "control_frequency_1",
+  "control_frequency_2",
+  "control_frequency_3",
+  "control_grade_1",
+  "control_grade_2",
+  "control_grade_3",
+  "residual_probability",
+  "residual_impact",
+  "residual_level",
+];
+
+// Llaves foráneas / columnas con CHECK: el formulario usa "" para "sin
+// elegir", pero a la BD debe llegar NULL (un "" rompería la FK o el CHECK).
+const RISK_NULL_IF_EMPTY = new Set(["department_id", "perspective_key"]);
+
+// Filtra el objeto del formulario a las columnas escribibles. Solo copia las
+// claves presentes en el objeto: un update parcial no toca lo que no se mandó
+// (por ejemplo perspective_key, que hoy el formulario no envía).
+function pickRiskFields(riskData) {
+  const out = {};
+  if (!riskData) return out;
+  for (const key of RISK_WRITABLE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(riskData, key)) continue;
+    const value = riskData[key];
+    out[key] = RISK_NULL_IF_EMPTY.has(key) && value === "" ? null : value;
+  }
+  return out;
+}
 
 export const Risk = {
   async list(order = "created_at") {
@@ -92,7 +175,8 @@ export const Risk = {
     return data;
   },
 
-  // 🔹 Crear nuevo riesgo
+  // 🔹 Crear nuevo riesgo. Acepta el objeto completo del formulario; solo
+  // viajan las columnas de RISK_WRITABLE_FIELDS más created_by_id.
   async create(riskData) {
     const { data: userData, error: authError } = await supabase.auth.getUser();
     if (authError) handleQueryError(authError);
@@ -107,14 +191,16 @@ export const Risk = {
 
     const { data, error } = await supabase
       .from("risks")
-      .insert([{ ...riskData, created_by_id: userId }])
+      .insert([{ ...pickRiskFields(riskData), created_by_id: userId }])
       .select();
 
     if (error) handleQueryError(error);
     return data;
   },
 
-  // 🔹 Actualizar riesgo por ID
+  // 🔹 Actualizar riesgo por ID. Acepta el objeto completo del formulario y
+  // lo filtra con RISK_WRITABLE_FIELDS; created_by_id nunca se reescribe
+  // (RLS ya garantiza que solo el dueño llega aquí).
   async update(id, riskData) {
     const { data: userData, error: authError } = await supabase.auth.getUser();
     if (authError) handleQueryError(authError);
@@ -127,12 +213,96 @@ export const Risk = {
 
     const { data, error } = await supabase
       .from("risks")
-      .update({ ...riskData, created_by_id: userId })
+      .update(pickRiskFields(riskData))
       .eq("id", id)
       .select();
 
     if (error) handleQueryError(error);
     return data;
+  },
+
+  // ---------- Proyecto Perspectivas (Fase 0) ----------
+  // Las consultas siguientes usan las columnas calculadas por el trigger de
+  // la BD (inherent_score, residual_score, inherent_level_key) y la columna
+  // perspective_key. Requieren haber corrido el SQL de la Fase 0.
+
+  // 🔹 Riesgos críticos: nivel INHERENTE Alto o Intolerable (puntaje
+  // probabilidad × impacto >= 13). Son los que entran a la Planeación
+  // Estratégica como objetivos de prioridad alta. Opcionalmente filtra por
+  // perspectiva. Orden: los más graves primero; entre iguales, los que aún no
+  // tienen puntaje residual (sin mitigar) van antes.
+  async listCritical({ perspective } = {}) {
+    let query = supabase.from("risks").select("*").gte("inherent_score", 13);
+    if (perspective) query = query.eq("perspective_key", perspective);
+    const { data, error } = await query
+      .order("inherent_score", { ascending: false })
+      .order("residual_score", { ascending: false, nullsFirst: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // 🔹 Cuántos riesgos aún no tienen puntaje inherente (probabilidad o
+  // impacto sin capturar, o texto fuera del catálogo). Sirve para avisar que
+  // esos riesgos no pueden entrar a la planeación hasta completarse.
+  async countUnscored() {
+    const { count, error } = await supabase
+      .from("risks")
+      .select("id", { count: "exact", head: true })
+      .is("inherent_score", null);
+    if (error) handleQueryError(error);
+    return count ?? 0;
+  },
+
+  // 🔹 Riesgos sin perspectiva asignada (versión compacta para la pantalla
+  // de asignación). Los más graves primero.
+  async listUnassigned() {
+    const { data, error } = await supabase
+      .from("risks")
+      .select("id, description, department_id, inherent_level_key, inherent_score")
+      .is("perspective_key", null)
+      .order("inherent_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: true });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
+  // 🔹 Asigna una perspectiva a todos los riesgos de un departamento que aún
+  // no tengan una (no pisa asignaciones manuales). Devuelve cuántos cambió.
+  async assignPerspectiveByDepartment(departmentId, key) {
+    if (!key) throw new Error("Falta la perspectiva a asignar");
+    const { data, error } = await supabase
+      .from("risks")
+      .update({ perspective_key: key })
+      .eq("department_id", departmentId)
+      .is("perspective_key", null)
+      .select("id");
+    if (error) handleQueryError(error);
+    return data?.length ?? 0;
+  },
+
+  // 🔹 Deshace la asignación anterior: quita la perspectiva `key` solo a los
+  // riesgos del departamento que la tengan (los que el usuario cambió a otra
+  // perspectiva no se tocan). Devuelve cuántos cambió.
+  async undoPerspectiveByDepartment(departmentId, key) {
+    if (!key) throw new Error("Falta la perspectiva a deshacer");
+    const { data, error } = await supabase
+      .from("risks")
+      .update({ perspective_key: null })
+      .eq("department_id", departmentId)
+      .eq("perspective_key", key)
+      .select("id");
+    if (error) handleQueryError(error);
+    return data?.length ?? 0;
+  },
+
+  // 🔹 Cambia la perspectiva de un riesgo (null para quitarla).
+  async setPerspective(id, key) {
+    const { error } = await supabase
+      .from("risks")
+      .update({ perspective_key: key || null })
+      .eq("id", id);
+    if (error) handleQueryError(error);
+    return true;
   },
 
   // 🔹 Eliminar riesgo por ID
@@ -594,6 +764,53 @@ export const StrategicPlan = {
   },
 };
 
+// 🔹 Respuestas sueltas de plan_answers (Proyecto Perspectivas, Fase 0).
+// A diferencia de StrategicPlan.saveAnswers (que reescribe TODA una sección),
+// estas operan sobre UNA fila. Sirven para registrar decisiones puntuales del
+// usuario sin tocar las demás respuestas, por ejemplo en las secciones
+// 'risk-controls' (mitigantes adoptados como iniciativas) y 'risk-objectives'
+// (riesgos aceptados o descartados como objetivos).
+export const PlanAnswer = {
+  // Guarda (upsert) una sola respuesta. `answer` es TEXT en la BD: las
+  // cadenas van tal cual, null/undefined borran el valor y cualquier otro
+  // tipo se serializa como JSON.
+  async set(planId, section, key, value) {
+    const answer =
+      value == null ? null : typeof value === "string" ? value : JSON.stringify(value);
+    const { error } = await supabase.from("plan_answers").upsert(
+      [
+        {
+          plan_id: planId,
+          section,
+          question_key: key,
+          answer,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "plan_id,section,question_key" }
+    );
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Borra una sola respuesta (si no existe, no hace nada).
+  async remove(planId, section, key) {
+    const { error } = await supabase
+      .from("plan_answers")
+      .delete()
+      .eq("plan_id", planId)
+      .eq("section", section)
+      .eq("question_key", key);
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Respuestas de una sección como mapa { question_key: answer }.
+  async getSection(planId, section) {
+    return StrategicPlan.getAnswers(planId, section);
+  },
+};
+
 // 🔹 Competidores del análisis del mercado (Fase 1.2)
 export const Competitor = {
   async list(planId) {
@@ -654,27 +871,89 @@ export const Initiative = {
   },
 
   // Inserta/actualiza varias iniciativas de una vez (autoguardado).
+  //
+  // source_key y strategy_label viajan TAL CUAL vienen en la fila, y solo si
+  // la fila trae la propiedad. source_key nace únicamente en
+  // createFromSource; aquí solo se conserva. Si ninguna fila trae la clave,
+  // la columna no viaja y la BD conserva su valor. Ojo: supabase-js arma el
+  // parámetro `columns` con la unión de claves de TODAS las filas, así que si
+  // una fila trae source_key y otra no, la segunda se guarda con NULL. Por
+  // eso las páginas deben partir de las filas tal como las devuelve list()
+  // (que ya incluye ambas columnas) y no reconstruirlas a mano.
   async upsertMany(planId, rows) {
     if (!rows || rows.length === 0) return true;
-    const clean = rows.map((r, i) => ({
-      id: r.id,
-      plan_id: planId,
-      strategy_id: r.strategy_id,
-      title: r.title || "",
-      expected_result: r.expected_result || null,
-      area: r.area || null,
-      owner: r.owner || null,
-      start_date: r.start_date || null,
-      end_date: r.end_date || null,
-      budget: r.budget === "" || r.budget == null ? null : Number(r.budget),
-      kpi: r.kpi || null,
-      steps: r.steps || null,
-      position: i,
-      updated_at: new Date().toISOString(),
-    }));
+    const clean = rows.map((r, i) => {
+      const row = {
+        id: r.id,
+        plan_id: planId,
+        strategy_id: r.strategy_id,
+        title: r.title || "",
+        expected_result: r.expected_result || null,
+        area: r.area || null,
+        owner: r.owner || null,
+        start_date: r.start_date || null,
+        end_date: r.end_date || null,
+        budget: r.budget === "" || r.budget == null ? null : Number(r.budget),
+        kpi: r.kpi || null,
+        steps: r.steps || null,
+        position: i,
+        updated_at: new Date().toISOString(),
+      };
+      // Omitir la clave (no mandar undefined): una clave con valor undefined
+      // sí entraría en `columns` y se guardaría como NULL.
+      if (r.source_key !== undefined) row.source_key = r.source_key;
+      if (r.strategy_label !== undefined) row.strategy_label = r.strategy_label;
+      return row;
+    });
     const { error } = await supabase
       .from("strategic_initiatives")
       .upsert(clean, { onConflict: "id" });
+    if (error) handleQueryError(error);
+    return true;
+  },
+
+  // Crea iniciativas "sembradas" desde una fuente externa — hoy, los riesgos
+  // críticos de la matriz (source_key = "risk:<id del riesgo>"). Es la ÚNICA
+  // vía por la que una iniciativa nace con source_key.
+  //
+  // rows = [{ strategy_id, source_key, strategy_label, title, expected_result,
+  //           area, owner, start_date, end_date, budget, kpi, steps, position }]
+  //
+  // Idempotente: la restricción única (plan_id, source_key) + ignoreDuplicates
+  // hacen que repetir la llamada NO duplique ni pise lo que el usuario ya
+  // editó (las filas que ya existen se ignoran). El id lo genera la BD.
+  // Devuelve true.
+  async createFromSource(planId, rows) {
+    if (!rows || rows.length === 0) return true;
+    const now = new Date().toISOString();
+    const clean = rows.map((r, i) => {
+      if (!r?.source_key) {
+        throw new Error("createFromSource: toda fila necesita source_key");
+      }
+      if (!r.strategy_id) {
+        throw new Error("createFromSource: toda fila necesita strategy_id");
+      }
+      return {
+        plan_id: planId,
+        source_key: r.source_key,
+        strategy_id: r.strategy_id,
+        strategy_label: r.strategy_label ?? null,
+        title: r.title || "",
+        expected_result: r.expected_result || null,
+        area: r.area || null,
+        owner: r.owner || null,
+        start_date: r.start_date || null,
+        end_date: r.end_date || null,
+        budget: r.budget === "" || r.budget == null ? null : Number(r.budget),
+        kpi: r.kpi || null,
+        steps: r.steps || null,
+        position: r.position ?? i,
+        updated_at: now,
+      };
+    });
+    const { error } = await supabase
+      .from("strategic_initiatives")
+      .upsert(clean, { onConflict: "plan_id,source_key", ignoreDuplicates: true });
     if (error) handleQueryError(error);
     return true;
   },

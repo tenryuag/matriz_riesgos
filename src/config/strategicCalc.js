@@ -93,7 +93,11 @@ const OPP_GROUP_BY_KEY = {};
 OPP_GROUPS.forEach((g) => g.questions.forEach((q) => { OPP_GROUP_BY_KEY[q.key] = g.title || g.key || ""; }));
 
 export function perspectiveFor(item) {
-  const [src, key] = String(item.id || "").split(":");
+  const [src, key] = String(item?.id || "").split(":");
+  // Riesgos críticos de la matriz ('risk:<id>'): traen su perspectiva
+  // puesta (perspective, o perspective_key tal cual viene de la tabla
+  // risks); si no la traen, null (no se inventa un carril).
+  if (src === "risk") return item.perspective || item.perspective_key || null;
   if (src === "mkt") return "cliente";
   if (src === "fin") return key === "ventas_area_comercial" ? "competitiva" : "financiera";
   if (src !== "opp") return "cliente";

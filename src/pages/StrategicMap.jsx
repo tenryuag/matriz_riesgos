@@ -35,46 +35,19 @@ import {
 // Perspectiva de cada estrategia: lógica compartida con el servidor MCP.
 export { perspectiveFor } from "@/config/strategicCalc";
 import { perspectiveFor } from "@/config/strategicCalc";
+import { LANES as PERSPECTIVE_LANES } from "@/config/perspectives";
 
 // Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
 // (el resultado) y el equipo abajo (la base que lo impulsa todo).
-// Colores adaptados de la lámina del Excel a nuestro tema (el morado original
-// se sustituyó por rosa para no confundir con el branding de otro programa):
-// financiera dorado · cliente rosa · competitiva azul · equipo verde.
-export const LANES = [
-  {
-    key: "financiera",
-    title: "Financiera",
-    desc: "El resultado: la salud y el crecimiento de tus números.",
-    icon: Banknote,
-    label: "bg-accent/20 text-accent border-accent/40",
-    bubble: "bg-accent/15 border-accent/45 hover:border-accent",
-  },
-  {
-    key: "cliente",
-    title: "Cliente",
-    desc: "Lo que tu cliente ve, recibe y siente.",
-    icon: Users,
-    label: "bg-rose-500/20 text-rose-500 border-rose-500/40",
-    bubble: "bg-rose-500/15 border-rose-500/45 hover:border-rose-500",
-  },
-  {
-    key: "competitiva",
-    title: "Competitiva",
-    desc: "Tus ventajas frente al mercado: alianzas, información y producto.",
-    icon: Rocket,
-    label: "bg-blue-500/20 text-blue-500 border-blue-500/40",
-    bubble: "bg-blue-500/15 border-blue-500/45 hover:border-blue-500",
-  },
-  {
-    key: "equipo",
-    title: "Desarrollo del Equipo",
-    desc: "La base: tu gente, su talento y su compromiso.",
-    icon: HeartHandshake,
-    label: "bg-green-500/20 text-green-600 dark:text-green-500 border-green-500/40",
-    bubble: "bg-green-500/15 border-green-500/45 hover:border-green-500",
-  },
-];
+// Vienen del catálogo único de perspectivas (src/config/perspectives.js),
+// el mismo que usa la Matriz de Riesgos: nombres, colores y orden se
+// definen allá. Aquí solo se cambia el nombre del icono por el componente
+// de lucide (los componentes React no pueden vivir en el catálogo puro).
+const LANE_ICONS = { Banknote, Users, Rocket, HeartHandshake };
+export const LANES = PERSPECTIVE_LANES.map((lane) => ({
+  ...lane,
+  icon: LANE_ICONS[lane.iconName] || Map,
+}));
 
 const PRIORITY_DOT = {
   Alta: "bg-green-500",
