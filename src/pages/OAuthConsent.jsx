@@ -108,7 +108,7 @@ export default function OAuthConsent() {
           </div>
           <div>
             <h1 className="text-2xl font-title">Conectar con tu cuenta</h1>
-            <p className="text-sm text-muted">Autorización para un conector externo</p>
+            <p className="text-sm text-muted">Autorización para una aplicación externa</p>
           </div>
         </div>
 
@@ -135,8 +135,7 @@ export default function OAuthConsent() {
           <>
             <div className="p-4 rounded-xl glass space-y-2">
               <p className="text-sm">
-                <strong>{clientName}</strong> quiere leer la información de tu cuenta: tu matriz de riesgos, tu planeación
-                estratégica y tu análisis financiero.
+                <strong>{clientName}</strong> quiere acceder a la información de tu cuenta en el software de Mara Pérez.
               </p>
               {clientUri && (
                 <p className="text-xs text-muted break-all">{clientUri}</p>
@@ -149,8 +148,9 @@ export default function OAuthConsent() {
             <div className="flex items-start gap-2 text-xs text-muted">
               <ShieldCheck className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
               <span>
-                Solo podrá ver tus propios datos, nunca los de otros usuarios, y en esta versión no puede modificar nada.
-                Puedes revocar el acceso cuando quieras desde la aplicación que conectaste.
+                Solo podrá consultar tu propia información, únicamente de los módulos a los que tienes acceso, y nunca la
+                de otros usuarios. En esta versión no puede modificar nada. Puedes revocar el acceso cuando quieras desde
+                la aplicación que conectaste.
               </span>
             </div>
 
