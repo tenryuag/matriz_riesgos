@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Risk } from "@/api/entities";
 import { Department } from "@/api/entities";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { AlertTriangle, ArrowLeft, Save, Calculator, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Save, Calculator, ShieldCheck, Compass, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,32 +13,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLanguage } from '@/components/LanguageContext';
-import { supabase } from "@/api/supabaseClient";
 import { isAuthError } from "@/api/authHelpers";
 import { normalizeRiskLevel, getRiskLevelColorClasses } from '@/lib/utils';
-
-const PROBABILITY_LEVELS = ["Remoto (0-20%)", "Improbable (21-40%)", "Ocasional (41-60%)", "Probable (61-80%)", "Frecuente (81-100%)"];
-const IMPACT_LEVELS = ["Insignificante", "Menor", "Crítico", "Mayor", "Catastrófico"];
-const STRATEGY_LEVELS = ["Aceptar", "Reducir", "Transferir"];
-const MITIGANT_IMPACT_OPTIONS = ["Mitiga la probabilidad", "Mitiga el impacto", "Mitiga la probabilidad e impacto"];
-
-// Opciones de Evaluación del Control
-const CONTROL_TYPES = ["Control Preventivo", "Control Correctivo", "Control Detectivo"];
-const PROCESS_TYPES = ["Manual", "Automatizado", "Combinado"];
-const YES_NO_OPTIONS = ["Sí", "No"];
-
-// Puntajes para el cálculo del Grado de Control
-const CONTROL_TYPE_SCORES = { "Control Preventivo": 0.30, "Control Correctivo": 0.05, "Control Detectivo": 0.15 };
-const PROCESS_TYPE_SCORES = { "Manual": 0.10, "Automatizado": 0.40, "Combinado": 0.25 };
-const YES_SCORE = 0.10;
-const NO_SCORE = 0.01;
+import {
+  PROBABILITY_LEVELS, IMPACT_LEVELS, STRATEGY_LEVELS, MITIGANT_IMPACT_OPTIONS,
+  CONTROL_TYPES, PROCESS_TYPES, YES_NO_OPTIONS,
+  riskScore, levelKeyFromScore, labelForLevelKey, controlGrade, isCriticalScore,
+} from "@/config/riskCalc";
+import { PERSPECTIVE_BY_KEY, isPerspectiveKey } from "@/config/perspectives";
+import { NO_DEPARTMENT } from "@/lib/perspectiveView";
+import PerspectivePicker from "@/components/perspectives/PerspectivePicker";
 
 export default function AddRisk() {
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [editingRisk, setEditingRisk] = useState(null);
+  const [exampleLoaded, setExampleLoaded] = useState(false);
   const [formData, setFormData] = useState({
-    department_id: "", threat_type: "", description: "",
+    perspective_key: "", department_id: "", threat_type: "", description: "",
     inherent_probability: "", inherent_impact: "", inherent_level: "",
     risk_strategy: "", mitigant_1: "", mitigant_impact_1: "",
     mitigant_2: "", mitigant_impact_2: "", mitigant_3: "", mitigant_impact_3: "",
@@ -57,6 +49,8 @@ export default function AddRisk() {
     control_grade_3: "",
   });
   const [loading, setLoading] = useState(true);
+  // Clave i18n del error (vacío = sin error); se traduce al pintar para que
+  // cambiar de idioma no vuelva a ejecutar loadData.
   const [error, setError] = useState("");
   const { t } = useLanguage();
 
@@ -65,6 +59,8 @@ export default function AddRisk() {
       const urlParams = new URLSearchParams(window.location.search);
       const riskId = urlParams.get('id');
       const departmentId = urlParams.get('department');
+      const perspectiveParam = urlParams.get('perspective');
+      const exampleParam = urlParams.get('example');
       const departmentsList = await Department.list("-created_date");
       setDepartments(departmentsList);
 
@@ -73,61 +69,60 @@ export default function AddRisk() {
         if (riskList.length > 0) {
           const riskToEdit = riskList[0];
           setEditingRisk(riskToEdit);
-          // Ensure 'area' is not set if it doesn't exist in riskToEdit
-          const { area, ...restOfRisk } = riskToEdit;
-          setFormData({ ...restOfRisk });
+          // 'area' ya no existe en el formulario. Las columnas vacías vienen
+          // null de la BD y el formulario (inputs controlados) trabaja con "".
+          const restOfRisk = { ...riskToEdit };
+          delete restOfRisk.area;
+          setFormData(
+            Object.fromEntries(Object.entries(restOfRisk).map(([k, v]) => [k, v ?? ""]))
+          );
         } else {
-          setError(t('riskNotFound'));
+          setError('riskNotFound');
         }
-      } else if (departmentId) {
-        setFormData(prev => ({ ...prev, department_id: departmentId }));
+      } else {
+        const prefill = {};
+        // ?perspective=<clave> (solo claves válidas)
+        const perspectiveKey = isPerspectiveKey(perspectiveParam) ? perspectiveParam : "";
+        if (perspectiveKey) {
+          prefill.perspective_key = perspectiveKey;
+          // ?example=<n> junto con perspective: prellenar descripción y tipo
+          if (exampleParam !== null) {
+            const ex = PERSPECTIVE_BY_KEY[perspectiveKey].examples[Number(exampleParam)];
+            if (ex) {
+              prefill.description = ex.description;
+              prefill.threat_type = ex.threat_type;
+              setExampleLoaded(true);
+            }
+          }
+        }
+        // ?department=<id> (compatibilidad con Departamentos / DepartmentRisks)
+        if (departmentId) {
+          prefill.department_id = departmentId;
+          if (!perspectiveKey) {
+            const dept = departmentsList.find(d => d.id === departmentId);
+            if (dept && isPerspectiveKey(dept.perspective_key)) {
+              prefill.perspective_key = dept.perspective_key;
+            }
+          }
+        }
+        if (Object.keys(prefill).length > 0) {
+          setFormData(prev => ({ ...prev, ...prefill }));
+        }
       }
     } catch (err) {
       console.error("Error loading data:", err);
-      setError(t('dataLoadError'));
+      setError('dataLoadError');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Texto del nivel (t('high'), etc.) a partir de probabilidad × impacto.
   const calculateRiskLevel = (probability, impact) => {
-    if (!probability || !impact) return "";
-    const probValues = { [PROBABILITY_LEVELS[0]]: 1, [PROBABILITY_LEVELS[1]]: 2, [PROBABILITY_LEVELS[2]]: 3, [PROBABILITY_LEVELS[3]]: 4, [PROBABILITY_LEVELS[4]]: 5 };
-    const impactValues = { [IMPACT_LEVELS[0]]: 1, [IMPACT_LEVELS[1]]: 2, [IMPACT_LEVELS[2]]: 3, [IMPACT_LEVELS[3]]: 4, [IMPACT_LEVELS[4]]: 5 };
-    const score = (probValues[probability] || 0) * (impactValues[impact] || 0);
-    if (score <= 4) return t('tolerable');
-    if (score <= 8) return t('low');
-    if (score <= 12) return t('medium');
-    if (score <= 16) return t('high');
-    return t('intolerable');
-  };
-
-  const calculateControlGrade = (data, num) => {
-    const controlType = data[`control_type_${num}`];
-    const documented = data[`control_documented_${num}`];
-    const processType = data[`process_type_${num}`];
-    const evidence = data[`control_evidence_${num}`];
-    const responsible = data[`control_responsible_${num}`];
-    const frequency = data[`control_frequency_${num}`];
-
-    // Solo calcular si todos los campos tienen valor
-    if (!controlType || !documented || !processType || !evidence || !responsible || !frequency) {
-      return "";
-    }
-
-    const total =
-      (CONTROL_TYPE_SCORES[controlType] || 0) +
-      (documented === "Sí" ? YES_SCORE : NO_SCORE) +
-      (PROCESS_TYPE_SCORES[processType] || 0) +
-      (evidence === "Sí" ? YES_SCORE : NO_SCORE) +
-      (responsible === "Sí" ? YES_SCORE : NO_SCORE) +
-      (frequency === "Sí" ? YES_SCORE : NO_SCORE);
-
-    if (total >= 1.10) return "Fuerte";
-    if (total >= 0.70) return "Medio";
-    return "Débil";
+    const k = levelKeyFromScore(riskScore(probability, impact));
+    return k ? labelForLevelKey(k, t) : "";
   };
 
   // Campos de control que disparan el recálculo
@@ -145,7 +140,7 @@ export default function AddRisk() {
       // Recalcular grado de control si se cambió un sub-criterio
       for (const num of [1, 2, 3]) {
         if (CONTROL_FIELDS.some(f => field === `${f}_${num}`)) {
-          updated[`control_grade_${num}`] = calculateControlGrade(updated, num);
+          updated[`control_grade_${num}`] = controlGrade(updated, num);
         }
       }
       return updated;
@@ -155,30 +150,37 @@ export default function AddRisk() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['department_id', 'threat_type', 'description'];
+    // Riesgo nuevo: perspectiva obligatoria. Edición: opcional (aviso, no
+    // bloqueo, para no frenar riesgos antiguos). El departamento ya no es
+    // obligatorio en ningún caso.
+    if (!editingRisk && !formData.perspective_key) {
+      setError('perspRequiredError');
+      return;
+    }
+    const requiredFields = ['threat_type', 'description'];
     if (requiredFields.some(field => !formData[field]?.trim())) {
-      setError(t('errorRequiredFields'));
+      setError('errorRequiredFields');
       return;
     }
     setLoading(true);
     setError("");
     try {
-      // Obtener el usuario actual y enriquecer formData
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id;
-      const enrichedData = { ...formData, created_by_id: userId };
       if (editingRisk) {
-        await Risk.update(editingRisk.id, enrichedData);
+        await Risk.update(editingRisk.id, formData);
+        // Regresa a la lista desde la que se entró (Matriz, perspectiva, etc.)
+        navigate(-1);
       } else {
-        await Risk.create(enrichedData);
+        await Risk.create(formData);
+        navigate(formData.perspective_key
+          ? createPageUrl(`PerspectiveRisks?key=${formData.perspective_key}`)
+          : createPageUrl("AllRisks"));
       }
-      navigate(createPageUrl(`DepartmentRisks?id=${formData.department_id}`));
     } catch (error) {
       // Si la sesión expiró, ya se está cerrando sesión y redirigiendo al
       // login; no mostramos el error genérico para evitar el parpadeo.
       const sessionEnded = isAuthError(error) || error?.message === "Sesión expirada";
       if (!sessionEnded) {
-        setError(t('errorSavingRisk'));
+        setError('errorSavingRisk');
         setLoading(false);
       }
       console.error("Error saving risk:", error);
@@ -230,17 +232,28 @@ export default function AddRisk() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && <Alert variant="destructive" className="bg-red-500/20 border-red-400/30 text-red-200"><AlertDescription>{error}</AlertDescription></Alert>}
+        {exampleLoaded && (
+          <div className="glass rounded-xl p-4 border border-accent/40 text-sm flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+            <p>{t('exampleLoaded')}</p>
+          </div>
+        )}
+        {error && <Alert variant="destructive" className="bg-red-500/20 border-red-400/30 text-red-200"><AlertDescription>{t(error)}</AlertDescription></Alert>}
 
         <Card className="glass">
           <CardHeader><CardTitle className="font-subtitle flex items-center gap-2"><AlertTriangle className="w-5 h-5" />{t('riskInfo')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('departmentLabel')}</Label>
-              <Select value={formData.department_id} onValueChange={(value) => handleChange("department_id", value)} disabled={loading}>
-                <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentPlaceholder')} /></SelectTrigger>
-                <SelectContent className="glass dark:bg-zinc-900 dark:text-white">{departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}</SelectContent>
-              </Select>
+              {editingRisk && !formData.perspective_key && (
+                <div className="glass rounded-xl p-3 text-sm">{t('perspEditMissing')}</div>
+              )}
+              <Label>{editingRisk ? t('perspLabel') : t('perspLabelRequired')}</Label>
+              <PerspectivePicker
+                variant="cards"
+                value={formData.perspective_key || null}
+                onChange={(k) => handleChange("perspective_key", k)}
+                disabled={loading}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('threatTypeLabel')}</Label>
@@ -252,6 +265,16 @@ export default function AddRisk() {
             <div className="space-y-2">
               <Label>{t('riskDescriptionLabel')}</Label>
               <Textarea value={formData.description} onChange={(e) => handleChange("description", e.target.value)} placeholder={t('riskDescriptionPlaceholder')} rows={3} className="input-glass resize-none" disabled={loading} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('departmentOptionalLabel')}</Label>
+              <Select value={formData.department_id || NO_DEPARTMENT} onValueChange={(v) => handleChange("department_id", v === NO_DEPARTMENT ? "" : v)} disabled={loading}>
+                <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentPlaceholder')} /></SelectTrigger>
+                <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                  <SelectItem value={NO_DEPARTMENT}>{t('departmentNone')}</SelectItem>
+                  {departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -276,6 +299,19 @@ export default function AddRisk() {
               </div>
             </div>
             {formData.inherent_level && <div className="p-4 glass rounded-xl flex items-center justify-between"><span className="text-muted">{t('inherentRiskLevel')}</span><span className={`px-3 py-1 rounded-full text-sm border ${getRiskLevelColor(formData.inherent_level)}`}>{formData.inherent_level}</span></div>}
+            {/* Aviso informativo (no bloquea): inherente Alto o Intolerable (puntaje ≥ 13) */}
+            {isCriticalScore(riskScore(formData.inherent_probability, formData.inherent_impact)) && (
+              <div className="rounded-xl border-2 border-orange-500/40 bg-orange-500/10 p-4 flex items-start gap-3">
+                <Compass className="w-5 h-5 text-orange-500 mt-0.5" />
+                <div>
+                  <p className="font-subtitle text-sm">{t('criticalNoticeTitle')}</p>
+                  <p className="text-sm text-muted">
+                    {/* Nivel en el idioma activo (inherent_level guarda el texto con que se capturó) */}
+                    {t('criticalNoticeDesc', { level: labelForLevelKey(levelKeyFromScore(riskScore(formData.inherent_probability, formData.inherent_impact)), t) })}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

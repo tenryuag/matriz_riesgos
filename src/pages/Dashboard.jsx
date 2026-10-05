@@ -1,14 +1,12 @@
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { Department } from "@/api/entities";
 import { Risk } from "@/api/entities";
-import { User } from "@/api/entities";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-  Building2,
   AlertTriangle,
-  TrendingUp,
   TrendingDown,
   Shield,
   Plus,
@@ -19,16 +17,23 @@ import {
   Flame,
   CircleAlert,
   ChevronRight,
-  Activity
+  Activity,
+  Layers,
+  HelpCircle,
+  CircleDashed
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/components/LanguageContext';
 import { normalizeRiskLevel, isHighRisk, isLowRisk, getRiskLevelColorClasses } from '@/lib/utils';
+import { PERSPECTIVES } from "@/config/perspectives";
+import { countByPerspective, migrationProgress, isUnscored, perspectiveOf, UNASSIGNED } from "@/lib/perspectiveView";
+import { iconForPerspective } from "@/components/perspectives/perspectiveIcons";
+import PerspectiveBadge from "@/components/perspectives/PerspectiveBadge";
+import MigrationBanner from "@/components/perspectives/MigrationBanner";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  RadialBarChart, RadialBar, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from "recharts";
 
 const LEVEL_COLORS = {
@@ -42,10 +47,45 @@ const LEVEL_COLORS = {
 
 const LEVEL_ORDER = ["INTOLERABLE", "HIGH", "MEDIUM", "LOW", "TOLERABLE", "UNCLASSIFIED"];
 
+// Parte una etiqueta en renglones de hasta `max` caracteres sin cortar palabras.
+const wrapLabel = (text, max = 13) => {
+  const lines = [];
+  let current = "";
+  for (const word of String(text).split(" ")) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > max && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
+// Etiqueta del eje de categorías en varios renglones (nombres largos de perspectiva).
+const CategoryTick = ({ x = 0, y = 0, payload }) => {
+  const lines = wrapLabel(payload?.value ?? "");
+  const lineHeight = 12;
+  const firstDy = 4 - ((lines.length - 1) * lineHeight) / 2;
+  return (
+    <text x={x} y={y} textAnchor="end" fill="var(--foreground-muted)" fontSize={11}>
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? firstDy : lineHeight}>{line}</tspan>
+      ))}
+    </text>
+  );
+};
+CategoryTick.propTypes = {
+  x: PropTypes.number,
+  y: PropTypes.number,
+  payload: PropTypes.shape({ value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]) }),
+};
+
 export default function Dashboard() {
   const [departments, setDepartments] = useState([]);
   const [risks, setRisks] = useState([]);
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
 
@@ -55,12 +95,10 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [currentUser, departmentsList, risksList] = await Promise.all([
-        User.me(),
+      const [departmentsList, risksList] = await Promise.all([
         Department.list("-created_date"),
         Risk.list("-created_date")
       ]);
-      setUser(currentUser);
       setDepartments(departmentsList);
       setRisks(risksList);
     } catch (error) {
@@ -102,19 +140,6 @@ export default function Dashboard() {
     const lowRisks = risks.filter(r => isLowRisk(r.residual_level));
     const mediumCount = byNormalized.MEDIUM || 0;
 
-    // Risks by department
-    const byDepartment = {};
-    risks.forEach(risk => {
-      const deptId = risk.department_id;
-      if (!byDepartment[deptId]) {
-        byDepartment[deptId] = { total: 0, critical: 0, medium: 0, low: 0 };
-      }
-      byDepartment[deptId].total++;
-      if (isHighRisk(risk.residual_level)) byDepartment[deptId].critical++;
-      else if (normalizeRiskLevel(risk.residual_level) === 'MEDIUM') byDepartment[deptId].medium++;
-      else byDepartment[deptId].low++;
-    });
-
     const unmitigatedCritical = criticalRisks;
 
     // Inherent vs residual improvement
@@ -135,8 +160,7 @@ export default function Dashboard() {
       lowCount: lowRisks.length,
       criticalRisks,
       unmitigatedCritical,
-      improved,
-      byDepartment
+      improved
     };
   };
 
@@ -177,17 +201,19 @@ export default function Dashboard() {
       normalized: level
     }));
 
-  // Data for department bar chart
-  const deptBarData = departments.slice(0, 6).map(dept => {
-    const deptStats = stats.byDepartment[dept.id] || { total: 0, critical: 0, medium: 0, low: 0 };
-    return {
-      name: dept.name.length > 12 ? dept.name.substring(0, 12) + "..." : dept.name,
-      fullName: dept.name,
-      [t('dashCritical')]: deptStats.critical,
-      [t('medium')]: deptStats.medium,
-      [t('dashControlled')]: deptStats.low,
-    };
-  }).filter(d => d[t('dashCritical')] > 0 || d[t('medium')] > 0 || d[t('dashControlled')] > 0);
+  // Perspectivas: progreso de migración y conteos (crítico = inherente >= 13).
+  const progress = migrationProgress(risks);
+  const counts = countByPerspective(risks);
+  const unscoredCount = risks.filter(isUnscored).length;
+  const perspBarRow = (name, bucket) => ({
+    name,
+    [t('perspCritical')]: bucket.critical,
+    [t('perspOthers')]: bucket.total - bucket.critical,
+  });
+  const perspBarData = [
+    ...PERSPECTIVES.map(p => perspBarRow(p.label, counts[p.key])),
+    ...(counts[UNASSIGNED].total > 0 ? [perspBarRow(t('perspUnassigned'), counts[UNASSIGNED])] : []),
+  ];
 
   // Mitigation effectiveness
   const mitigationPct = stats.total > 0 ? Math.round((stats.improved / stats.total) * 100) : 0;
@@ -204,6 +230,8 @@ export default function Dashboard() {
     return null;
   };
 
+  CustomTooltip.propTypes = { active: PropTypes.bool, payload: PropTypes.array };
+
   const BarTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -217,6 +245,7 @@ export default function Dashboard() {
     }
     return null;
   };
+  BarTooltip.propTypes = { active: PropTypes.bool, payload: PropTypes.array, label: PropTypes.node };
 
   return (
     <div className="space-y-8">
@@ -232,10 +261,10 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-col gap-3 w-full md:w-auto">
-            <Link to={createPageUrl("Departments")} className="w-full md:w-auto">
+            <Link to={createPageUrl("Perspectives")} className="w-full md:w-auto">
               <Button variant="outline" className="w-full glass hover:border-accent">
-                <Building2 className="w-4 h-4 mr-2" />
-                {t('departments')}
+                <Layers className="w-4 h-4 mr-2" />
+                {t('perspectives')}
               </Button>
             </Link>
             <Link to={createPageUrl("AddRisk")} className="w-full md:w-auto">
@@ -247,6 +276,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Aviso de migración: riesgos sin perspectiva */}
+      <MigrationBanner count={progress.unassigned} />
 
       {/* Critical Risk Alert Banner */}
       {stats.unmitigatedCritical.length > 0 && (
@@ -270,7 +302,10 @@ export default function Dashboard() {
                       <Flame className="w-4 h-4 text-red-500 flex-shrink-0" />
                       <div className="flex-grow min-w-0">
                         <span className="font-subtitle text-sm truncate block">{risk.description?.substring(0, 80) || t('noDescription')}{risk.description?.length > 80 ? "..." : ""}</span>
-                        <span className="text-xs text-muted">{dept?.name || "—"}</span>
+                        <span className="flex items-center gap-2 text-xs text-muted">
+                          <PerspectiveBadge perspectiveKey={perspectiveOf(risk)} size="sm" />
+                          <span className="truncate">{dept?.name || "—"}</span>
+                        </span>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-subtitle border flex-shrink-0 ${getRiskLevelColor(risk.residual_level)}`}>
                         {risk.residual_level}
@@ -296,16 +331,16 @@ export default function Dashboard() {
 
       {/* Stats Cards - 5 cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="glass">
+        <Card className={`glass ${unscoredCount > 0 ? "border-amber-500/30" : ""}`}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-subtitle text-muted">{t('departments')}</CardTitle>
-              <Building2 className="w-4 h-4 text-accent" />
+              <CardTitle className="text-xs font-subtitle text-muted">{t('perspUnscored')}</CardTitle>
+              <HelpCircle className="w-4 h-4 text-amber-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-title">{departments.length}</div>
-            <p className="text-xs text-muted mt-1">{t('active')}</p>
+            <div className={`text-2xl font-title ${unscoredCount > 0 ? "text-amber-500" : ""}`}>{unscoredCount}</div>
+            <p className="text-xs text-muted mt-1">{t('dashUnscoredHint')}</p>
           </CardContent>
         </Card>
         <Card className="glass">
@@ -480,51 +515,48 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Bar Chart - Risks by Department */}
+          {/* Bar Chart - Risks by Perspective */}
           <Card className="glass">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-subtitle">
-                <Building2 className="w-5 h-5" />
-                {t('dashRisksByDept')}
+                <Layers className="w-5 h-5" />
+                {t('dashByPerspective')}
               </CardTitle>
+              <p className="text-xs text-muted">{t('perspCriticalHint')}</p>
             </CardHeader>
             <CardContent>
-              {deptBarData.length > 0 ? (
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={deptBarData} barGap={2}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fill: 'var(--foreground-muted)', fontSize: 11 }}
-                        axisLine={{ stroke: 'var(--card-border)' }}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: 'var(--foreground-muted)', fontSize: 11 }}
-                        axisLine={{ stroke: 'var(--card-border)' }}
-                        tickLine={false}
-                        allowDecimals={false}
-                      />
-                      <Tooltip content={<BarTooltip />} />
-                      <Bar dataKey={t('dashCritical')} fill="#ef4444" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey={t('medium')} fill="#eab308" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey={t('dashControlled')} fill="#22c55e" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-72 flex items-center justify-center text-muted text-sm">
-                  {t('noDepartmentsRegistered')}
-                </div>
-              )}
-              {deptBarData.length > 0 && (
-                <div className="flex justify-center gap-6 mt-2">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-red-500" /><span className="text-xs text-muted">{t('dashCritical')}</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-yellow-500" /><span className="text-xs text-muted">{t('medium')}</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-green-500" /><span className="text-xs text-muted">{t('dashControlled')}</span></div>
-                </div>
-              )}
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  {/* Barras horizontales: los nombres de las perspectivas son largos
+                      y en el eje X se encimaban (sobre todo en celular). */}
+                  <BarChart data={perspBarData} layout="vertical" barGap={2} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tick={{ fill: 'var(--foreground-muted)', fontSize: 11 }}
+                      axisLine={{ stroke: 'var(--card-border)' }}
+                      tickLine={false}
+                      allowDecimals={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={104}
+                      interval={0}
+                      tick={<CategoryTick />}
+                      axisLine={{ stroke: 'var(--card-border)' }}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<BarTooltip />} />
+                    <Bar dataKey={t('perspCritical')} fill="#ef4444" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey={t('perspOthers')} fill="#DDBF5A" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-center gap-6 mt-2">
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-red-500" /><span className="text-xs text-muted">{t('perspCritical')}</span></div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "#DDBF5A" }} /><span className="text-xs text-muted">{t('perspOthers')}</span></div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -585,7 +617,7 @@ export default function Dashboard() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--card-border)]">
-                    <th className="text-left py-3 px-4 font-subtitle text-muted">{t('tableDepartment')}</th>
+                    <th className="text-left py-3 px-4 font-subtitle text-muted">{t('tablePerspective')}</th>
                     <th className="text-left py-3 px-4 font-subtitle text-muted">{t('tableDescription')}</th>
                     <th className="text-center py-3 px-4 font-subtitle text-muted">{t('tableInherentLevel')}</th>
                     <th className="text-center py-3 px-4 font-subtitle text-muted">{t('tableResidualLevel')}</th>
@@ -600,7 +632,8 @@ export default function Dashboard() {
                     return (
                       <tr key={risk.id} className={`border-b border-[var(--card-border)] hover:bg-[var(--table-row-hover)] ${residualStillCritical ? "bg-red-500/5" : ""}`}>
                         <td className="py-3 px-4">
-                          <span className="font-subtitle">{dept?.name || "—"}</span>
+                          <PerspectiveBadge perspectiveKey={perspectiveOf(risk)} />
+                          {dept?.name && <div className="text-xs text-muted mt-1">{dept.name}</div>}
                         </td>
                         <td className="py-3 px-4 max-w-xs">
                           <span className="truncate block">{risk.description?.substring(0, 60) || "—"}{risk.description?.length > 60 ? "..." : ""}</span>
@@ -639,42 +672,44 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Bottom Row: Recent Departments */}
+      {/* Bottom Row: Perspective Summary */}
       <Card className="glass">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 font-subtitle">
-              <Building2 className="w-5 h-5" />
-              {t('recentDepartments')}
+              <Layers className="w-5 h-5" />
+              {t('dashPerspectiveSummary')}
             </CardTitle>
-            <Link to={createPageUrl("Departments")}>
+            <Link to={createPageUrl("Perspectives")}>
               <Button variant="ghost" size="sm" className="hover:glass text-accent">
                 {t('seeAll')}
               </Button>
             </Link>
           </div>
+          <p className="text-xs text-muted">{t('perspCriticalHint')}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {departments.slice(0, 5).map((dept) => {
-              const deptStats = stats.byDepartment[dept.id] || { total: 0, critical: 0 };
+            {PERSPECTIVES.map((p) => {
+              const Icon = iconForPerspective(p.key);
+              const bucket = counts[p.key];
               return (
-                <div key={dept.id} className="flex items-center justify-between p-3 glass rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${deptStats.critical > 0 ? "bg-red-500/20" : "bg-accent text-accent-foreground"}`}>
-                      <Building2 className={`w-5 h-5 ${deptStats.critical > 0 ? "text-red-500" : ""}`} />
+                <div key={p.key} className="flex items-center justify-between gap-3 p-3 glass rounded-xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${p.colorClasses.bg}`}>
+                      <Icon className={`w-5 h-5 ${p.colorClasses.text}`} />
                     </div>
-                    <div>
-                      <h3 className="font-subtitle text-sm">{dept.name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="font-subtitle text-sm">{p.label}</h3>
                       <p className="text-xs text-muted">
-                        {deptStats.total} {t('totalRisks').toLowerCase()}
-                        {deptStats.critical > 0 && (
-                          <span className="text-red-400 ml-2">{deptStats.critical} {t('dashCritical').toLowerCase()}</span>
+                        {t('perspTotalRisks', { count: bucket.total })}
+                        {bucket.critical > 0 && (
+                          <span className="text-red-400 ml-2">{t('perspCriticalCount', { count: bucket.critical })}</span>
                         )}
                       </p>
                     </div>
                   </div>
-                  <Link to={createPageUrl(`DepartmentRisks?id=${dept.id}`)}>
+                  <Link to={createPageUrl(`PerspectiveRisks?key=${p.key}`)}>
                     <Button size="sm" variant="ghost" className="hover:glass text-accent">
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -682,13 +717,37 @@ export default function Dashboard() {
                 </div>
               );
             })}
-            {departments.length === 0 && (
+            {counts[UNASSIGNED].total > 0 && (
+              <div className="flex items-center justify-between gap-3 p-3 glass rounded-xl border-dashed">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-500/15">
+                    <CircleDashed className="w-5 h-5 text-muted" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-subtitle text-sm">{t('perspUnassigned')}</h3>
+                    <p className="text-xs text-muted">
+                      {t('perspTotalRisks', { count: counts[UNASSIGNED].total })}
+                      {counts[UNASSIGNED].critical > 0 && (
+                        <span className="text-red-400 ml-2">{t('perspCriticalCount', { count: counts[UNASSIGNED].critical })}</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Link to={createPageUrl("PerspectiveMigration")}>
+                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    {t('dashAssignNow')}
+                  </Button>
+                </Link>
+              </div>
+            )}
+            {risks.length === 0 && (
               <div className="text-center py-8 text-muted">
-                <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>{t('noDepartmentsRegistered')}</p>
-                <Link to={createPageUrl("AddDepartment")}>
+                <Layers className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>{t('noRisksRegistered')}</p>
+                <Link to={createPageUrl("AddRisk")}>
                   <Button className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">
-                    {t('createFirstDepartment')}
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('registerFirstRisk')}
                   </Button>
                 </Link>
               </div>

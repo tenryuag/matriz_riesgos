@@ -4,7 +4,6 @@ import {
   ShieldCheck,
   Plus,
   Compass,
-  Search,
   Map,
   TrendingUp,
   FileText,
@@ -61,11 +60,14 @@ export const MODULES = [
     home: "Dashboard",
     pages: [
       { pageKey: "Dashboard", nameKey: "dashboard", icon: LayoutDashboard },
-      { pageKey: "Departments", nameKey: "departments", icon: Building2 },
+      { pageKey: "Perspectives", nameKey: "perspectives", icon: Layers },
       { pageKey: "AllRisks", nameKey: "allRisks", icon: ShieldCheck },
       { pageKey: "AddRisk", nameKey: "addRisk", icon: Plus },
-      // Páginas del módulo que no aparecen en el menú (se llega a ellas desde
-      // otras pantallas), pero deben mantener el menú del módulo activo.
+      // Accesibles por URL y desde Perspectivas/asistente, sin aparecer en el menú.
+      // Deben seguir registradas aquí para que mantengan el menú del módulo activo.
+      { pageKey: "Departments", hidden: true },
+      { pageKey: "PerspectiveRisks", hidden: true },
+      { pageKey: "PerspectiveMigration", hidden: true },
       { pageKey: "DepartmentRisks", hidden: true },
       { pageKey: "AddDepartment", hidden: true },
     ],

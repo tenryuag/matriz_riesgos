@@ -5,6 +5,12 @@ import Dashboard from "./Dashboard";
 
 import Departments from "./Departments";
 
+import Perspectives from "./Perspectives";
+
+import PerspectiveRisks from "./PerspectiveRisks";
+
+import PerspectiveMigration from "./PerspectiveMigration";
+
 import AddDepartment from "./AddDepartment";
 
 import AddRisk from "./AddRisk";
@@ -104,6 +110,12 @@ const PAGES = {
     Dashboard: Dashboard,
 
     Departments: Departments,
+
+    Perspectives: Perspectives,
+
+    PerspectiveRisks: PerspectiveRisks,
+
+    PerspectiveMigration: PerspectiveMigration,
 
     AddDepartment: AddDepartment,
 
@@ -246,6 +258,21 @@ function PagesContent() {
             <Route path="/Departments" element={
                 <Layout currentPageName={currentPage}>
                     <Departments />
+                </Layout>
+            } />
+            <Route path="/Perspectives" element={
+                <Layout currentPageName={currentPage}>
+                    <Perspectives />
+                </Layout>
+            } />
+            <Route path="/PerspectiveRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <PerspectiveRisks />
+                </Layout>
+            } />
+            <Route path="/PerspectiveMigration" element={
+                <Layout currentPageName={currentPage}>
+                    <PerspectiveMigration />
                 </Layout>
             } />
             <Route path="/AddDepartment" element={
