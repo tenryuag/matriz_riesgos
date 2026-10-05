@@ -196,6 +196,21 @@ async function clientForRequest(req: Request): Promise<Db | null> {
   return supabase
 }
 
+// ---------- accesos por módulo ----------
+// Mismas reglas que la app: los administradores (is_admin) ven todo; el resto
+// solo los módulos concedidos en user_module_access (RLS: cada quien lee los
+// suyos). Las herramientas se registran según estos accesos.
+type Access = { admin: boolean; modules: Set<string> }
+async function accessFor(supabase: Db): Promise<Access> {
+  const [adminRes, rowsRes] = await Promise.all([
+    supabase.rpc('is_admin'),
+    supabase.from('user_module_access').select('module_key'),
+  ])
+  const modules = new Set<string>(((rowsRes?.data as Db[]) || []).map((r: Db) => r.module_key))
+  return { admin: adminRes?.data === true, modules }
+}
+const can = (a: Access, m: string) => a.admin || a.modules.has(m)
+
 // ---------- servidor ----------
 Deno.serve(
   pipeline(
@@ -209,6 +224,7 @@ Deno.serve(
         )
       }
 
+      const access = await accessFor(supabase)
       const handler = createMcpHandler(() => {
         const server = new McpServer({
           name: 'mara-perez',
@@ -225,12 +241,16 @@ Deno.serve(
           'resumen_general',
           {
             description:
-              'Vista rápida de los tres módulos del usuario: riesgos críticos, prioridades del plan estratégico, iniciativas vencidas y últimas cifras financieras. Úsala primero para orientarte.',
+              'Vista rápida de los módulos a los que el usuario tiene acceso (riesgos críticos, prioridades del plan estratégico, iniciativas vencidas, últimas cifras financieras). Úsala primero para orientarte.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
           async () => {
             const out: Record<string, unknown> = { version: VERSION }
+            if (!access.admin && access.modules.size === 0) {
+              return text({ mensaje: 'Esta cuenta no tiene módulos asignados en el software. Pide acceso a un administrador.' })
+            }
+            if (can(access, 'risk')) {
             const { data: risks, error } = await supabase.from('risks').select('*')
             if (error) throw new Error(error.message)
             const rs = (risks || []).map(compactRisk)
@@ -243,6 +263,8 @@ Deno.serve(
                 Object.keys(LEVEL_ORDER).map((k) => [k, rs.filter((r: Db) => r.nivel_residual === k).length])
               ),
             }
+            }
+            if (can(access, 'strategic')) {
             const plan = await getPlan(supabase)
             if (plan) {
               const sections = await answersFor(supabase, plan.id, [MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION])
@@ -263,6 +285,8 @@ Deno.serve(
             } else {
               out.planeacion_estrategica = 'Aún no ha empezado su planeación estratégica.'
             }
+            }
+            if (can(access, 'fin-analysis')) {
             const fin = await finContext(supabase)
             if (fin && fin.years.length) {
               const inc = computeIncome({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
@@ -280,11 +304,13 @@ Deno.serve(
             } else {
               out.analisis_financiero = 'Aún no ha capturado información financiera.'
             }
+            }
             return text(out)
           }
         )
 
         // ===== Matriz de riesgos =====
+        if (can(access, 'risk')) {
         server.registerTool(
           'listar_departamentos',
           {
@@ -414,7 +440,10 @@ Deno.serve(
           }
         )
 
+        } // fin riesgos
+
         // ===== Planeación estratégica =====
+        if (can(access, 'strategic')) {
         server.registerTool(
           'resumen_plan',
           {
@@ -611,7 +640,10 @@ Deno.serve(
           }
         )
 
+        } // fin estratégica
+
         // ===== Análisis financiero =====
+        if (can(access, 'fin-analysis')) {
         server.registerTool(
           'empresa_financiera',
           {
@@ -771,6 +803,8 @@ Deno.serve(
             })
           }
         )
+
+        } // fin financiero
 
         return server
       })

@@ -89,6 +89,15 @@ npx @modelcontextprotocol/inspector
 
 ## Herramientas disponibles (v1, solo lectura)
 
+Las herramientas se ofrecen **según los módulos a los que el usuario tiene acceso** (misma regla que la app: `is_admin()` y la tabla `user_module_access`). Un administrador ve todas; un usuario con solo "Gestión del Riesgo" ve únicamente las de riesgos; una cuenta sin módulos solo ve `resumen_general`, que le indica pedir acceso. Por eso la pantalla de consentimiento habla en general de "tu cuenta en el software de Mara Pérez" sin listar módulos.
+
+| Módulo | Herramientas |
+|---|---|
+| (siempre) | `resumen_general` |
+| Gestión del Riesgo (`risk`) | `listar_departamentos`, `listar_riesgos`, `obtener_riesgo`, `resumen_riesgos` |
+| Planeación Estratégica (`strategic`) | `resumen_plan`, `prioridades`, `foda`, `iniciativas`, `analisis_cliente`, `competidores` |
+| Análisis Financiero (`fin-analysis`) | `empresa_financiera`, `estado_resultados`, `balance_general`, `flujo_efectivo` |
+
 | Herramienta | Qué devuelve |
 |---|---|
 | `resumen_general` | Vista rápida de los tres módulos: riesgos críticos, prioridades, iniciativas vencidas, últimas cifras |
