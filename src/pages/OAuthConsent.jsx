@@ -108,14 +108,14 @@ export default function OAuthConsent() {
           </div>
           <div>
             <h1 className="text-2xl font-title">Conectar con tu cuenta</h1>
-            <p className="text-sm text-muted">Autorización para una aplicación externa</p>
+            <p className="text-sm text-muted-foreground">Autorización para una aplicación externa</p>
           </div>
         </div>
 
-        {state === "loading" && <p className="text-sm text-muted">Verificando la solicitud…</p>}
+        {state === "loading" && <p className="text-sm text-muted-foreground">Verificando la solicitud…</p>}
 
         {state === "missing" && (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             Falta el identificador de la solicitud. Vuelve a iniciar la conexión desde la aplicación que quieres conectar.
           </p>
         )}
@@ -128,7 +128,7 @@ export default function OAuthConsent() {
         )}
 
         {state === "done" && (
-          <p className="text-sm text-muted">Listo. Ya puedes volver a la aplicación que pidió el acceso.</p>
+          <p className="text-sm text-muted-foreground">Listo. Ya puedes volver a la aplicación que pidió el acceso.</p>
         )}
 
         {(state === "ready" || state === "busy") && (
@@ -138,14 +138,14 @@ export default function OAuthConsent() {
                 <strong>{clientName}</strong> quiere acceder a la información de tu cuenta en el software de Mara Pérez.
               </p>
               {clientUri && (
-                <p className="text-xs text-muted break-all">{clientUri}</p>
+                <p className="text-xs text-muted-foreground break-all">{clientUri}</p>
               )}
               {scopes.length > 0 && (
-                <p className="text-xs text-muted">Permisos solicitados: {scopes.join(", ")}</p>
+                <p className="text-xs text-muted-foreground">Permisos solicitados: {scopes.join(", ")}</p>
               )}
             </div>
 
-            <div className="flex items-start gap-2 text-xs text-muted">
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
               <span>
                 Solo podrá consultar tu propia información, únicamente de los módulos a los que tienes acceso, y nunca la
