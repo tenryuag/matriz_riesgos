@@ -132,7 +132,7 @@ const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
         <div 
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(135deg, var(--accent), ${theme === 'light' ? '#B8860B' : '#8B7355'})`
+            background: `linear-gradient(135deg, hsl(var(--accent)), ${theme === 'light' ? '#B8860B' : '#8B7355'})`
           }}
         />
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-center">
@@ -423,10 +423,10 @@ const AppLayout = ({ children, currentPageName }) => {
     .light {
       --background-start: #FAF7F6;
       --background-end: #EFEBE4;
-      --foreground: #121212;
+      --foreground: 0 0% 7%; /* #121212 */
       --foreground-muted: rgba(18, 18, 18, 0.7);
-      --accent: #DDBF5A;
-      --accent-foreground: #121212;
+      --accent: 46 66% 61%; /* #DDBF5A en canales HSL: así Tailwind puede aplicar opacidad (bg-accent/10) */
+      --accent-foreground: 0 0% 7%; /* #121212 */
       --card-bg: rgba(255, 255, 255, 0.25);
       --card-border: rgba(18, 18, 18, 0.15);
       --sidebar-bg: rgba(250, 247, 246, 0.3);
@@ -440,10 +440,10 @@ const AppLayout = ({ children, currentPageName }) => {
     .dark {
       --background-start: #121212;
       --background-end: #1a1a1a;
-      --foreground: #FAF7F6;
+      --foreground: 15 29% 97%; /* #FAF7F6 */
       --foreground-muted: rgba(250, 247, 246, 0.7);
-      --accent: #DDBF5A;
-      --accent-foreground: #121212;
+      --accent: 46 66% 61%; /* #DDBF5A en canales HSL: así Tailwind puede aplicar opacidad (bg-accent/10) */
+      --accent-foreground: 0 0% 7%; /* #121212 */
       --card-bg: rgba(250, 247, 246, 0.12);
       --card-border: rgba(221, 191, 90, 0.3);
       --sidebar-bg: rgba(250, 247, 246, 0.05);
@@ -457,7 +457,7 @@ const AppLayout = ({ children, currentPageName }) => {
     body, .font-body {
       font-family: var(--font-body);
       font-weight: 300;
-      color: var(--foreground);
+      color: hsl(var(--foreground));
     }
 
     .font-title { 
@@ -475,7 +475,7 @@ const AppLayout = ({ children, currentPageName }) => {
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
       box-shadow: 0 8px 32px var(--shadow);
-      color: var(--foreground);
+      color: hsl(var(--foreground));
     }
 
     /* Fix for dropdown item text color in all themes */
@@ -483,14 +483,14 @@ const AppLayout = ({ children, currentPageName }) => {
     .glass [role="menuitem"],
     .glass [data-radix-select-item],
     .glass .select-item {
-      color: var(--foreground) !important;
+      color: hsl(var(--foreground)) !important;
     }
     
     .glass [role="option"]:hover,
     .glass [role="menuitem"]:hover,
     .glass [data-radix-select-item]:hover,
     .glass .select-item:hover {
-      color: var(--foreground) !important;
+      color: hsl(var(--foreground)) !important;
       background-color: rgba(221, 191, 90, 0.2) !important;
     }
     
@@ -508,7 +508,7 @@ const AppLayout = ({ children, currentPageName }) => {
       -webkit-backdrop-filter: blur(15px);
       border: 1px solid rgba(221, 191, 90, 0.3);
       box-shadow: 0 8px 32px rgba(221, 191, 90, 0.2);
-      color: var(--accent-foreground);
+      color: hsl(var(--accent-foreground));
     }
 
     .glass-hover:hover {
@@ -519,23 +519,23 @@ const AppLayout = ({ children, currentPageName }) => {
       transition: all 0.3s ease;
     }
 
-    .text-foreground { color: var(--foreground); }
+    .text-foreground { color: hsl(var(--foreground)); }
     .text-muted { color: var(--foreground-muted); }
-    .text-accent { color: var(--accent); }
+    .text-accent { color: hsl(var(--accent)); }
 
     .input-glass {
       background: var(--input-bg);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--card-border);
-      color: var(--foreground);
+      color: hsl(var(--foreground));
       box-shadow: inset 0 2px 8px var(--shadow);
     }
     .input-glass::placeholder {
       color: var(--foreground-muted);
     }
     .input-glass:focus {
-      border-color: var(--accent);
+      border-color: hsl(var(--accent));
       box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1), inset 0 2px 8px var(--shadow);
     }
 
@@ -546,8 +546,8 @@ const AppLayout = ({ children, currentPageName }) => {
 
     .theme-button:hover {
       background: var(--card-bg) !important;
-      border-color: var(--accent) !important;
-      color: var(--foreground) !important;
+      border-color: hsl(var(--accent)) !important;
+      color: hsl(var(--foreground)) !important;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(221, 191, 90, 0.2);
     }
@@ -588,10 +588,10 @@ const AppLayout = ({ children, currentPageName }) => {
     }
 
     .nav-glass.active {
-      background: var(--accent);
-      color: var(--accent-foreground);
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
       box-shadow: 0 8px 24px rgba(221, 191, 90, 0.3);
-      border-color: var(--accent);
+      border-color: hsl(var(--accent));
     }
 
     .button-glass {
@@ -600,12 +600,12 @@ const AppLayout = ({ children, currentPageName }) => {
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(221, 191, 90, 0.3);
       box-shadow: 0 4px 16px rgba(221, 191, 90, 0.2);
-      color: var(--accent-foreground);
+      color: hsl(var(--accent-foreground));
       transition: all 0.3s ease;
     }
 
     .button-glass:hover {
-      background: var(--accent);
+      background: hsl(var(--accent));
       box-shadow: 0 8px 24px rgba(221, 191, 90, 0.3);
       transform: translateY(-2px);
     }

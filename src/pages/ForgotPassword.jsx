@@ -82,10 +82,10 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
     .light {
       --background-start: #FAF7F6;
       --background-end: #EFEBE4;
-      --foreground: #121212;
+      --foreground: 0 0% 7%; /* #121212 */
       --foreground-muted: rgba(18, 18, 18, 0.7);
-      --accent: #DDBF5A;
-      --accent-foreground: #121212;
+      --accent: 46 66% 61%; /* #DDBF5A en canales HSL: así Tailwind puede aplicar opacidad (bg-accent/10) */
+      --accent-foreground: 0 0% 7%; /* #121212 */
       --card-bg: rgba(255, 255, 255, 0.25);
       --card-border: rgba(18, 18, 18, 0.15);
       --sidebar-bg: rgba(250, 247, 246, 0.3);
@@ -96,10 +96,10 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
     .dark {
       --background-start: #121212;
       --background-end: #1a1a1a;
-      --foreground: #FAF7F6;
+      --foreground: 15 29% 97%; /* #FAF7F6 */
       --foreground-muted: rgba(250, 247, 246, 0.7);
-      --accent: #DDBF5A;
-      --accent-foreground: #121212;
+      --accent: 46 66% 61%; /* #DDBF5A en canales HSL: así Tailwind puede aplicar opacidad (bg-accent/10) */
+      --accent-foreground: 0 0% 7%; /* #121212 */
       --card-bg: rgba(250, 247, 246, 0.12);
       --card-border: rgba(221, 191, 90, 0.3);
       --sidebar-bg: rgba(250, 247, 246, 0.05);
@@ -111,9 +111,9 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
     .font-title { font-family: var(--font-title); }
     .font-subtitle { font-family: var(--font-subtitle); }
 
-    .text-foreground { color: var(--foreground); }
+    .text-foreground { color: hsl(var(--foreground)); }
     .text-muted { color: var(--foreground-muted); }
-    .text-accent { color: var(--accent); }
+    .text-accent { color: hsl(var(--accent)); }
 
     .glass {
       background: var(--card-bg);
@@ -127,7 +127,7 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--card-border);
-      color: var(--foreground);
+      color: hsl(var(--foreground));
     }
 
     .input-glass::placeholder {
@@ -136,7 +136,7 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
 
     .input-glass:focus {
       outline: none;
-      border-color: var(--accent);
+      border-color: hsl(var(--accent));
       box-shadow: 0 0 0 3px rgba(221, 191, 90, 0.1);
     }
 
@@ -147,8 +147,8 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
 
     .theme-button:hover {
       background: var(--card-bg) !important;
-      border-color: var(--accent) !important;
-      color: var(--foreground) !important;
+      border-color: hsl(var(--accent)) !important;
+      color: hsl(var(--foreground)) !important;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(221, 191, 90, 0.2);
     }
@@ -173,7 +173,7 @@ const ForgotPasswordScreen = ({ theme, toggleTheme }) => {
             <div
               className="absolute inset-0"
               style={{
-                background: `linear-gradient(135deg, var(--accent), ${theme === 'light' ? '#B8860B' : '#8B7355'})`
+                background: `linear-gradient(135deg, hsl(var(--accent)), ${theme === 'light' ? '#B8860B' : '#8B7355'})`
               }}
             />
             <div className="relative z-10 flex flex-col justify-center items-center p-12 text-center">

@@ -410,10 +410,9 @@ export default function PerspectiveMigration() {
       {header}
 
       {/* Progreso (sticky para listas largas). En móvil baja para no quedar
-          bajo el botón ☰ fijo del Layout. El indicador usa var(--accent)
-          directo: --accent es hex y bg-accent (hsl(var(--accent))) no pinta. */}
+          bajo el botón ☰ fijo del Layout. */}
       <Card className="glass rounded-3xl p-6 sticky top-16 lg:top-0 z-10 space-y-3">
-        <Progress value={progress.pct} className="h-2 [&>div]:bg-[var(--accent)]" />
+        <Progress value={progress.pct} className="h-2 [&>div]:bg-accent" />
         <p className="text-sm text-muted">
           {t("pmigProgress", { assigned: progress.assigned, total: progress.total })}
         </p>
