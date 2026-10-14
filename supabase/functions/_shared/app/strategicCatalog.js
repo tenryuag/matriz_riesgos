@@ -329,3 +329,37 @@ export const FIN_GROUPS = [
 ];
 
 export const ALL_FIN_KEYS = FIN_GROUPS.flatMap((g) => g.items.map((i) => i.key));
+
+// ---------- Plantillas de iniciativa para riesgos críticos (Fase 2) ----------
+// Se ofrecen cuando el riesgo no tiene controles en la matriz y, para los
+// riesgos aceptados, siempre (son el mínimo que un riesgo crítico aceptado
+// necesita: señal de alerta y plan de reacción).
+export const RISK_INITIATIVE_TEMPLATES = {
+  Reducir: [
+    { key: "control",   title: "Definir un control preventivo y nombrar a su responsable",
+      expected_result: "El control opera y alguien responde por él",            kpi: "Control documentado y en operación" },
+    { key: "capacitar", title: "Capacitar al equipo para evitar que este riesgo ocurra",
+      expected_result: "El equipo sabe cómo prevenirlo y qué hacer si ocurre",   kpi: "% del equipo capacitado" },
+    { key: "alerta",    title: "Establecer un indicador de alerta temprana y revisarlo cada mes",
+      expected_result: "Nos enteramos a tiempo, antes de que el riesgo nos pegue", kpi: "Indicador revisado cada mes" },
+  ],
+  Transferir: [
+    { key: "poliza",    title: "Cotizar y contratar una póliza o contrato que cubra este riesgo",
+      expected_result: "El riesgo queda cubierto por un tercero",                 kpi: "Póliza o contrato vigente" },
+    { key: "clausulas", title: "Negociar cláusulas con proveedores o clientes que repartan el riesgo",
+      expected_result: "Si el riesgo ocurre, la pérdida se reparte",              kpi: "Contratos con la cláusula firmada" },
+    { key: "tercero",   title: "Respaldar la operación con un tercero (proveedor alterno o servicio externo)",
+      expected_result: "La operación sigue aunque el riesgo ocurra",              kpi: "Proveedor o servicio alterno listo" },
+  ],
+  Aceptar: [
+    { key: "senal",     title: "Definir la señal de alerta que avisa que el riesgo se materializó",
+      expected_result: "Sabremos el mismo día que el riesgo ocurrió",              kpi: "Señal de alerta definida y vigilada" },
+    { key: "reaccion",  title: "Escribir el plan de reacción y nombrar a quien lo ejecuta",
+      expected_result: "Todos saben qué hacer y quién decide si ocurre",          kpi: "Plan de reacción escrito y comunicado" },
+    { key: "revision",  title: "Revisar este riesgo cada mes y confirmar que sigue siendo aceptable",
+      expected_result: "La decisión de aceptarlo sigue siendo correcta",          kpi: "Revisiones mensuales hechas" },
+  ],
+};
+export const DEFAULT_RISK_TEMPLATE_STRATEGY = "Reducir";
+export const templatesForStrategy = (strategy) =>
+  RISK_INITIATIVE_TEMPLATES[strategy] || RISK_INITIATIVE_TEMPLATES[DEFAULT_RISK_TEMPLATE_STRATEGY];

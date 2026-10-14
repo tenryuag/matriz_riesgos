@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useMemo } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { StrategicPlan } from "@/api/entities";
 import {
   ArrowLeft,
   Map,
@@ -13,28 +13,27 @@ import {
   HeartHandshake,
   Sparkles,
   ChevronUp,
+  ShieldAlert,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-  scoreFor,
-  priorityFor,
-} from "./StrategicSummary";
+import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
+import { useStrategyInputs } from "@/hooks/useStrategyInputs";
+import UnassignedRisksNote from "@/components/strategy/UnassignedRisksNote";
 
 // ============================================================
 // Mapa estratégico (y su versión calibrada), estilo Balanced Scorecard:
 // carriles horizontales por perspectiva con las estrategias como burbujas,
 // leídos de abajo hacia arriba (cada nivel impulsa al de arriba).
 // El mapa calibrado muestra solo las de prioridad ALTA (el foco real).
+// Los riesgos críticos de la matriz entran solos como burbujas con escudo
+// en el carril de su perspectiva (Fase 2).
 // Se llena solo: no se captura nada aquí.
 // ============================================================
 
 // Perspectiva de cada estrategia: lógica compartida con el servidor MCP.
 export { perspectiveFor } from "@/config/strategicCalc";
-import { perspectiveFor } from "@/config/strategicCalc";
+import { perspectiveFor, riskObjectivesFrom } from "@/config/strategicCalc";
 import { LANES as PERSPECTIVE_LANES } from "@/config/perspectives";
 
 // Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
@@ -55,61 +54,79 @@ const PRIORITY_DOT = {
   Baja: "bg-gray-400",
 };
 
+// Punto de las burbujas de riesgo: rojo = intolerable, naranja = alto.
+const RISK_DOT = {
+  INTOLERABLE: "bg-red-500",
+  HIGH: "bg-orange-500",
+};
+
 function Bubble({ item }) {
+  const isRisk = item.source === "risk";
+  const dot = isRisk ? RISK_DOT[item.level] || "bg-orange-500" : PRIORITY_DOT[item.priority];
+  let title = "Sin calificar en el resumen";
+  if (isRisk) {
+    title = `Riesgo crítico · nivel ${item.levelLabel} · puntaje ${item.score}`;
+  } else if (item.priority) {
+    title = `Prioridad ${item.priority.toLowerCase()} · puntaje ${item.score}`;
+  }
   return (
     <div
       className={`relative glass border-2 rounded-[26px] px-4 py-3 max-w-[220px] text-center transition-all ${
         LANES.find((l) => l.key === item.perspective)?.bubble || ""
       } ${item.priority == null ? "border-dashed" : ""}`}
-      title={
-        item.priority
-          ? `Prioridad ${item.priority.toLowerCase()} · puntaje ${item.score}`
-          : "Sin calificar en el resumen"
-      }
+      title={title}
     >
-      {item.priority && (
+      {(isRisk || item.priority) && (
         <span
-          className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--background-start)] ${PRIORITY_DOT[item.priority]}`}
+          className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--background-start)] ${dot}`}
         />
       )}
-      <span className="text-xs leading-snug">{item.label}</span>
+      <span className="text-xs leading-snug">
+        {isRisk && <ShieldAlert className="w-3 h-3 inline-block mr-1 text-red-500" />}
+        {item.label}
+      </span>
     </div>
   );
 }
 
+Bubble.propTypes = {
+  item: PropTypes.shape({
+    id: PropTypes.string,
+    label: PropTypes.string,
+    perspective: PropTypes.string,
+    priority: PropTypes.string,
+    score: PropTypes.number,
+    source: PropTypes.string,
+    level: PropTypes.string,
+    levelLabel: PropTypes.string,
+  }).isRequired,
+};
+
 export function StrategicMapBase({ calibrated = false }) {
-  const [items, setItems] = useState([]);
-  const [unrated, setUnrated] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { inputs, loading, error } = useStrategyInputs();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const plan = await StrategicPlan.getOrCreate();
-      const sections = await StrategicPlan.getAnswersForSections(plan.id, [
-        ...SUMMARY_SOURCE_SECTIONS,
-        RATING_SECTION,
-      ]);
-      const ratings = sections[RATING_SECTION] || {};
-      const { weaknesses } = collectStrategies(sections);
-      const scored = weaknesses.map((w) => {
-        const score = scoreFor(ratings, w.id);
-        return { ...w, score, priority: priorityFor(score), perspective: perspectiveFor(w) };
-      });
-      setUnrated(scored.filter((w) => w.score == null).length);
-      setItems(calibrated ? scored.filter((w) => w.priority === "Alta") : scored);
-    } catch (err) {
-      console.error("Error al cargar el mapa estratégico:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, [calibrated]);
+  // Riesgos críticos como objetivos: ya traen priority 'Alta', perspective y
+  // source 'risk'. Sin acceso al módulo de riesgos, inputs.risks es [].
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const scored = useMemo(() => {
+    if (!inputs) return [];
+    const ratings = inputs.ratings || {};
+    const { weaknesses } = collectStrategies(inputs.sections || {});
+    return weaknesses.map((w) => {
+      const score = scoreFor(ratings, w.id);
+      return { ...w, score, priority: priorityFor(score), perspective: perspectiveFor(w) };
+    });
+  }, [inputs]);
+
+  const unrated = scored.filter((w) => w.score == null).length;
+  const riskItems = riskObjectives;
+  const items = calibrated
+    ? [...riskItems, ...scored.filter((w) => w.priority === "Alta")]
+    : [...riskItems, ...scored];
 
   if (loading) {
     return (
@@ -169,6 +186,12 @@ export function StrategicMapBase({ calibrated = false }) {
               <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> media</span>{" · "}
               <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block" /> baja</span>.
             </p>
+            {riskItems.length > 0 && (
+              <p>
+                Las burbujas con escudo son riesgos críticos de tu matriz: punto rojo = intolerable,
+                naranja = alto. Entran solos, sin calificarlos.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -204,52 +227,57 @@ export function StrategicMapBase({ calibrated = false }) {
           </CardContent>
         </Card>
       ) : (
-        /* Carriles estilo Balanced Scorecard */
-        <div className="space-y-1">
-          {LANES.map((lane, idx) => {
-            const list = items.filter((w) => w.perspective === lane.key);
-            const LIcon = lane.icon;
-            return (
-              <React.Fragment key={lane.key}>
-                <div className="glass rounded-2xl flex flex-col sm:flex-row overflow-hidden">
-                  {/* Banda lateral con la perspectiva */}
-                  <div
-                    className={`sm:w-40 flex sm:flex-col items-center justify-center gap-2 px-4 py-3 sm:py-6 border-b sm:border-b-0 sm:border-r ${lane.label}`}
-                  >
-                    <LIcon className="w-5 h-5" />
-                    <span className="font-subtitle text-xs uppercase tracking-wider text-center leading-tight">
-                      {lane.title}
-                    </span>
-                    <span className="text-[10px] opacity-70">{list.length}</span>
+        <>
+          {/* Carriles estilo Balanced Scorecard */}
+          <div className="space-y-1">
+            {LANES.map((lane, idx) => {
+              const list = items.filter((w) => w.perspective === lane.key);
+              const LIcon = lane.icon;
+              return (
+                <React.Fragment key={lane.key}>
+                  <div className="glass rounded-2xl flex flex-col sm:flex-row overflow-hidden">
+                    {/* Banda lateral con la perspectiva */}
+                    <div
+                      className={`sm:w-40 flex sm:flex-col items-center justify-center gap-2 px-4 py-3 sm:py-6 border-b sm:border-b-0 sm:border-r ${lane.label}`}
+                    >
+                      <LIcon className="w-5 h-5" />
+                      <span className="font-subtitle text-xs uppercase tracking-wider text-center leading-tight">
+                        {lane.title}
+                      </span>
+                      <span className="text-[10px] opacity-70">{list.length}</span>
+                    </div>
+                    {/* Burbujas */}
+                    <div className="flex-grow p-4 sm:p-5">
+                      {list.length === 0 ? (
+                        <p className="text-xs text-muted italic py-2">
+                          {calibrated
+                            ? "Sin estrategias de prioridad alta en este nivel."
+                            : "Sin estrategias en este nivel."}
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-3 items-center">
+                          {list.map((w) => (
+                            <Bubble key={w.id} item={w} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {/* Burbujas */}
-                  <div className="flex-grow p-4 sm:p-5">
-                    {list.length === 0 ? (
-                      <p className="text-xs text-muted italic py-2">
-                        {calibrated
-                          ? "Sin estrategias de prioridad alta en este nivel."
-                          : "Sin estrategias en este nivel."}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-3 items-center">
-                        {list.map((w) => (
-                          <Bubble key={w.id} item={w} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Conector causa-efecto entre carriles */}
-                {idx < LANES.length - 1 && (
-                  <div className="flex items-center justify-center gap-1.5 py-0.5 text-muted">
-                    <ChevronUp className="w-4 h-4 text-accent" />
-                    <span className="text-[10px] uppercase tracking-wider">impulsa</span>
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
+                  {/* Conector causa-efecto entre carriles */}
+                  {idx < LANES.length - 1 && (
+                    <div className="flex items-center justify-center gap-1.5 py-0.5 text-muted">
+                      <ChevronUp className="w-4 h-4 text-accent" />
+                      <span className="text-[10px] uppercase tracking-wider">impulsa</span>
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* Riesgos críticos que no caben en ningún carril (sin perspectiva) */}
+          <UnassignedRisksNote objectives={riskObjectives} />
+        </>
       )}
 
       {error && (
@@ -275,6 +303,10 @@ export function StrategicMapBase({ calibrated = false }) {
     </div>
   );
 }
+
+StrategicMapBase.propTypes = {
+  calibrated: PropTypes.bool,
+};
 
 export default function StrategicMap() {
   return <StrategicMapBase calibrated={false} />;
