@@ -24,10 +24,15 @@
 --   perspectiva. Se incluyen además:
 --     - un riesgo Intolerable SIN mitigantes en la perspectiva financiera y
 --       sin departamento (candidato a entrar solo a Planeación Estratégica
---       como objetivo de prioridad alta), y
+--       como objetivo de prioridad alta),
 --     - un riesgo SIN departamento y SIN perspectiva, para probar el
---       asistente de migración / el selector inline de perspectiva.
---   Hasta la Fase 1, esos dos riesgos sin departamento solo se ven en el
+--       asistente de migración / el selector inline de perspectiva, y
+--     - (Fase 2) un riesgo Alto ACEPTADO sin mitigantes en la perspectiva
+--       Equipo y talento y un riesgo Alto SIN perspectiva ni mitigantes,
+--       para probar la integración riesgos → plan (aviso "aceptado sin
+--       confirmar" y lista "Riesgos críticos sin perspectiva").
+--   Total: 9 riesgos demo, 7 críticos (3 Intolerable, 4 Alto).
+--   Hasta la Fase 1, los riesgos sin departamento solo se ven en el
 --   Dashboard y en "Todos los riesgos" (no en la vista por departamento) y
 --   no se editan desde el formulario actual.
 --   NO se siembran inherent_score ni *_level_key: los calcula el trigger de
@@ -208,6 +213,25 @@ BEGIN
    'Reducir', 'Documentar los procesos críticos en manuales breves con un responsable asignado', 'Mitiga la probabilidad',
    'Control Preventivo', 'No', 'Manual', 'No', 'Sí', 'No', 'Débil',
    'Improbable (21-40%)', 'Crítico', 'Bajo',
+   v_uid, v_uid),
+  -- (Fase 2) Equipo y talento · sin departamento: ALTO (16) ACEPTADO sin
+  -- mitigantes ni residual. En Planeación Estratégica entra como objetivo
+  -- de prioridad alta con el aviso "aceptado sin confirmar" y las tres
+  -- sugerencias mínimas de un riesgo aceptado.
+  (NULL, 'equipo', 'Interna', 'Demanda laboral de un exempleado',
+   'Probable (61-80%)', 'Mayor', 'Alto',
+   'Aceptar', NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+   NULL, NULL, NULL,
+   v_uid, v_uid),
+  -- (Fase 2) SIN departamento y SIN perspectiva: ALTO (15) sin mitigantes ni
+  -- residual. En Planeación Estratégica entra como objetivo de prioridad
+  -- alta, pero en los mapas aparece en "Riesgos críticos sin perspectiva".
+  (NULL, NULL, 'Interna', 'Falta de sucesor para el puesto de dirección',
+   'Frecuente (81-100%)', 'Crítico', 'Alto',
+   'Reducir', NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+   NULL, NULL, NULL,
    v_uid, v_uid);
 
   -- ===== Planeación Estratégica =====

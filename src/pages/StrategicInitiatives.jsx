@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { StrategicPlan, Initiative } from "@/api/entities";
+import { StrategicPlan, Initiative, PlanAnswer } from "@/api/entities";
+import { RISK_OBJECTIVES_SECTION } from "@/api/strategyInputs";
 import {
   ArrowLeft,
   ClipboardList,
@@ -12,6 +13,9 @@ import {
   Target,
   Gem,
   Download,
+  ExternalLink,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -19,27 +23,44 @@ import { perspectiveFor, LANES } from "./StrategicMap";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
+import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import RiskWarningsCard from "@/components/strategy/RiskWarningsCard";
+import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
+import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
 import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-  scoreFor,
-  priorityFor,
-} from "./StrategicSummary";
+  RISK_ACKNOWLEDGED,
+  riskObjectivesFrom,
+  localISODate,
+  riskInitiativeWarnings,
+  controlSourceKey,
+  templateSourceKey,
+  initiativeFromControl,
+  initiativeFromTemplate,
+  riskInitiativesOf,
+  existingForSource,
+  orphanLabelFor,
+  isRiskObjectiveId,
+  objectivesById,
+  templatesFor,
+} from "@/config/strategicCalc";
 
 // ============================================================
 // Iniciativas estratégicas: la estrategia se convierte en plan de acción.
 // - Visión / Misión / Valores de la empresa (encabezado del plan).
-// - Por cada objetivo (estrategia de prioridad ALTA del mapa calibrado),
-//   el usuario captura iniciativas con área, responsable, fechas, KPI,
-//   presupuesto y pasos del plan de trabajo.
+// - Por cada objetivo (estrategia de prioridad ALTA del mapa calibrado y,
+//   desde la Fase 2, cada riesgo crítico de la matriz), el usuario captura
+//   iniciativas con área, responsable, fechas, KPI, presupuesto y pasos del
+//   plan de trabajo. Los controles de un riesgo (o una plantilla por
+//   estrategia) se convierten en iniciativa con un clic, de forma
+//   idempotente por (plan_id, source_key).
 // ============================================================
 
-const emptyInitiative = (planId, strategyId) => ({
+const emptyInitiative = (planId, strategyId, strategyLabel = null) => ({
   id: crypto.randomUUID(),
   plan_id: planId,
   strategy_id: strategyId,
+  strategy_label: strategyLabel,
   title: "",
   expected_result: "",
   area: "",
@@ -51,68 +72,99 @@ const emptyInitiative = (planId, strategyId) => ({
   steps: "",
 });
 
+// Fila de Initiative.list() → fila editable. Conserva `...r`, por tanto
+// `source_key` y `strategy_label` (el autosave los re-sube tal cual).
+const toFormRow = (r) => ({
+  ...r,
+  start_date: r.start_date || "",
+  end_date: r.end_date || "",
+  budget: r.budget == null ? "" : String(r.budget),
+  expected_result: r.expected_result || "",
+  area: r.area || "",
+  owner: r.owner || "",
+  kpi: r.kpi || "",
+  steps: r.steps || "",
+});
+
 const FIELD_CLS =
   "w-full p-2.5 rounded-xl glass text-foreground text-sm placeholder:text-muted outline-none focus:border-accent";
 
+const SMALL_CHIP = "px-2 py-0.5 rounded-full text-[10px] font-subtitle border flex-shrink-0";
+const GRADE_CHIP = {
+  Fuerte: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40",
+  Medio: "bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/40",
+  Débil: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40",
+};
+
+const scrollToId = (domId) =>
+  document.getElementById(domId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
 export default function StrategicInitiatives() {
+  const { inputs, loading, error: loadError, risksEnabled } = useStrategyInputs();
+  const today = localISODate();
+
   const [planId, setPlanId] = useState(null);
   const [vmv, setVmv] = useState({ vision: "", mission: "", core_values: "" });
   const [initiatives, setInitiatives] = useState([]);
-  const [objectives, setObjectives] = useState([]); // estrategias prioridad ALTA
+  const [objectives, setObjectives] = useState([]); // debilidades prioridad ALTA
   const [allLabels, setAllLabels] = useState({}); // id → label (para huérfanas)
-  const [loading, setLoading] = useState(true);
+  const [ack, setAck] = useState({}); // plan_answers 'risk-objectives'
+  const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState("");
+  const [busyKey, setBusyKey] = useState(null);
+  const [scrollTo, setScrollTo] = useState(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const plan = await StrategicPlan.getOrCreate();
-      const [sections, rows] = await Promise.all([
-        StrategicPlan.getAnswersForSections(plan.id, [
-          ...SUMMARY_SOURCE_SECTIONS,
-          RATING_SECTION,
-        ]),
-        Initiative.list(plan.id),
-      ]);
-      const ratings = sections[RATING_SECTION] || {};
-      const { weaknesses } = collectStrategies(sections);
-      const labels = {};
-      weaknesses.forEach((w) => (labels[w.id] = w.label));
-      const alta = weaknesses.filter(
-        (w) => priorityFor(scoreFor(ratings, w.id)) === "Alta"
-      );
-      setPlanId(plan.id);
-      setVmv({
-        vision: plan.vision || "",
-        mission: plan.mission || "",
-        core_values: plan.core_values || "",
-      });
-      setObjectives(alta);
-      setAllLabels(labels);
-      setInitiatives(
-        rows.map((r) => ({
-          ...r,
-          start_date: r.start_date || "",
-          end_date: r.end_date || "",
-          budget: r.budget == null ? "" : String(r.budget),
-          expected_result: r.expected_result || "",
-          area: r.area || "",
-          owner: r.owner || "",
-          kpi: r.kpi || "",
-          steps: r.steps || "",
-        }))
-      );
-    } catch (err) {
-      console.error("Error al cargar iniciativas:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
-
+  // Hidratación única: las recargas silenciosas del hook no pisan lo tecleado.
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!inputs || hydrated) return;
+    const { plan, sections, ratings, risks, decisions } = inputs;
+    const { weaknesses } = collectStrategies(sections);
+    const labels = {};
+    weaknesses.forEach((w) => (labels[w.id] = w.label));
+    riskObjectivesFrom(risks, decisions).forEach((o) => (labels[o.id] = o.label));
+    const alta = weaknesses.filter(
+      (w) => priorityFor(scoreFor(ratings, w.id)) === "Alta"
+    );
+    setPlanId(plan.id);
+    setVmv({
+      vision: plan.vision || "",
+      mission: plan.mission || "",
+      core_values: plan.core_values || "",
+    });
+    setObjectives(alta);
+    setAllLabels(labels);
+    setInitiatives((inputs.initiatives || []).map(toFormRow));
+    setAck({ ...(decisions?.objectives || {}) });
+    setHydrated(true);
+  }, [inputs, hydrated]);
+
+  // Riesgos críticos como objetivos; la confirmación se refleja sin recargar.
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, { objectives: ack }) : []),
+    [inputs, ack]
+  );
+
+  const warnings = riskInitiativeWarnings(riskObjectives, initiatives, today);
+  const byInitiative = {};
+  warnings.forEach((w) => {
+    if (!w.initiativeId) return;
+    if (!byInitiative[w.initiativeId]) byInitiative[w.initiativeId] = [];
+    byInitiative[w.initiativeId].push(w);
+  });
+
+  // Desplazamiento por hash (#risk-<id> / #initiative-<id>) al terminar de cargar.
+  useEffect(() => {
+    if (!hydrated) return;
+    const hash = window.location.hash;
+    if (hash) scrollToId(hash.slice(1));
+  }, [hydrated]);
+
+  // Desplazamiento a la iniciativa recién creada (en el render siguiente).
+  useEffect(() => {
+    if (!scrollTo) return;
+    scrollToId(`initiative-${scrollTo}`);
+    setScrollTo(null);
+  }, [scrollTo]);
 
   const setField = (id, field, value) => {
     setInitiatives((prev) =>
@@ -120,8 +172,8 @@ export default function StrategicInitiatives() {
     );
   };
 
-  const addInitiative = (strategyId) => {
-    setInitiatives((prev) => [...prev, emptyInitiative(planId, strategyId)]);
+  const addInitiative = (strategyId, label = null) => {
+    setInitiatives((prev) => [...prev, emptyInitiative(planId, strategyId, label)]);
   };
 
   const removeInitiative = async (it) => {
@@ -136,9 +188,10 @@ export default function StrategicInitiatives() {
   };
 
   // Autoguardado: visión/misión/valores + todas las iniciativas.
+  // Línea base = datos ya hidratados → cero guardado espurio al abrir.
   const { status: saveStatus, flush } = useAutosave({
     data: { vmv, initiatives },
-    enabled: !loading && !!planId,
+    enabled: hydrated && !!planId,
     onSave: async () => {
       await Promise.all([
         StrategicPlan.update(planId, vmv),
@@ -146,6 +199,62 @@ export default function StrategicInitiatives() {
       ]);
     },
   });
+
+  // Convierte un control de la matriz (o una plantilla) en iniciativa.
+  // Idempotente por (plan_id, source_key). Tras crear, se ANEXA solo la fila
+  // creada (tal como la devuelve list()); nunca se reemplaza el estado, para
+  // no pisar ediciones en vuelo.
+  const adopt = async (objective, { control, template }) => {
+    const key = control
+      ? controlSourceKey(objective.id, control.n)
+      : templateSourceKey(objective.id, template.key);
+    if (busyKey) return;
+    setBusyKey(key);
+    setError("");
+    try {
+      await flush(); // mejor esfuerzo: si hay guardado en vuelo, retorna sin esperar
+      const row = control
+        ? initiativeFromControl(objective, control, today, initiatives.length)
+        : initiativeFromTemplate(objective, template, today, initiatives.length);
+      await Initiative.createFromSource(planId, [row]);
+      const created = (await Initiative.list(planId)).find((r) => r.source_key === key);
+      if (!created) throw new Error("La iniciativa no apareció tras crearla");
+      const formRow = toFormRow(created);
+      setInitiatives((prev) =>
+        prev.some((p) => p.id === formRow.id) ? prev : [...prev, formRow]
+      );
+      setScrollTo(formRow.id);
+    } catch (err) {
+      console.error("Error al crear la iniciativa:", err);
+      setError("No pudimos crear la iniciativa. Intenta de nuevo.");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const acknowledge = async (objective) => {
+    try {
+      await PlanAnswer.set(planId, RISK_OBJECTIVES_SECTION, objective.riskId, RISK_ACKNOWLEDGED);
+      setAck((p) => ({ ...p, [objective.riskId]: RISK_ACKNOWLEDGED }));
+    } catch (err) {
+      console.error("Error al guardar la confirmación:", err);
+      setError("No pudimos guardar tu confirmación. Intenta de nuevo.");
+    }
+  };
+
+  const unacknowledge = async (objective) => {
+    try {
+      await PlanAnswer.remove(planId, RISK_OBJECTIVES_SECTION, objective.riskId);
+      setAck((p) => {
+        const n = { ...p };
+        delete n[objective.riskId];
+        return n;
+      });
+    } catch (err) {
+      console.error("Error al quitar la confirmación:", err);
+      setError("No pudimos guardar tu confirmación. Intenta de nuevo.");
+    }
+  };
 
   // Exporta la identidad + todas las iniciativas a un archivo de Excel,
   // agrupadas por perspectiva (como la hoja original del Excel).
@@ -156,17 +265,33 @@ export default function StrategicInitiatives() {
       return d >= 0 ? d : "";
     };
 
-    const laneTitle = (strategyId) => {
-      const key = perspectiveFor({ id: strategyId });
-      return LANES.find((l) => l.key === key)?.title || "";
+    // Los objetivos de riesgo llevan su perspectiva en el objeto completo;
+    // si ya no son críticos (o no tienen perspectiva) van a "Sin perspectiva".
+    const byId = objectivesById([...riskObjectives, ...objectives]);
+    const laneKey = (it) =>
+      byId[it.strategy_id]
+        ? perspectiveFor(byId[it.strategy_id])
+        : isRiskObjectiveId(it.strategy_id)
+          ? null
+          : perspectiveFor({ id: it.strategy_id });
+    const laneTitle = (it) =>
+      LANES.find((l) => l.key === laneKey(it))?.title ||
+      (isRiskObjectiveId(it.strategy_id) ? "Sin perspectiva" : "");
+    const laneIdx = (it) => {
+      const idx = LANES.findIndex((l) => l.key === laneKey(it));
+      return idx < 0 ? LANES.length : idx; // sin perspectiva al final
+    };
+    const objectiveLabel = (it) => {
+      const sid = it.strategy_id;
+      return isRiskObjectiveId(sid)
+        ? `Riesgo crítico: ${allLabels[sid] || it.strategy_label || sid}`
+        : allLabels[sid] || sid;
     };
 
     const rows = [...initiatives].sort((a, b) => {
-      const laneIdx = (sid) =>
-        LANES.findIndex((l) => l.key === perspectiveFor({ id: sid }));
-      const diff = laneIdx(a.strategy_id) - laneIdx(b.strategy_id);
+      const diff = laneIdx(a) - laneIdx(b);
       if (diff !== 0) return diff;
-      return (allLabels[a.strategy_id] || "").localeCompare(allLabels[b.strategy_id] || "");
+      return objectiveLabel(a).localeCompare(objectiveLabel(b));
     });
 
     const header = [
@@ -184,8 +309,8 @@ export default function StrategicInitiatives() {
       [],
       header,
       ...rows.map((it) => [
-        laneTitle(it.strategy_id),
-        allLabels[it.strategy_id] || it.strategy_id,
+        laneTitle(it),
+        objectiveLabel(it),
         it.title || "",
         it.expected_result || "",
         it.area || "",
@@ -216,7 +341,10 @@ export default function StrategicInitiatives() {
   };
 
   // Iniciativas cuyo objetivo ya no es prioridad alta (no se ocultan).
-  const altaIds = new Set(objectives.map((o) => o.id));
+  const altaIds = new Set([
+    ...objectives.map((o) => o.id),
+    ...riskObjectives.map((o) => o.id),
+  ]);
   const orphanGroups = {};
   initiatives
     .filter((it) => !altaIds.has(it.strategy_id))
@@ -225,8 +353,20 @@ export default function StrategicInitiatives() {
       orphanGroups[it.strategy_id].push(it);
     });
 
+  const warningText = (w) => {
+    if (w.type === "far") {
+      return `Termina en ${w.days} días. Para un riesgo ${w.levelLabel.toLowerCase()} se sugiere cerrarla en ${w.limit} días o menos.`;
+    }
+    if (w.type === "no-owner") {
+      return w.responsibleInMatrix
+        ? "Escribe el nombre del responsable (en la matriz indicaste que este control sí tiene uno)."
+        : "Sin responsable.";
+    }
+    return w.message;
+  };
+
   const renderInitiativeCard = (it) => (
-    <div key={it.id} className="p-4 glass rounded-xl space-y-3">
+    <div key={it.id} id={`initiative-${it.id}`} className="p-4 glass rounded-xl space-y-3">
       <div className="flex items-start gap-2">
         <input
           type="text"
@@ -286,6 +426,20 @@ export default function StrategicInitiatives() {
         </div>
       </div>
 
+      {byInitiative[it.id]?.length > 0 && (
+        <div className="space-y-1">
+          {byInitiative[it.id].map((w) => (
+            <p
+              key={`${w.type}-${it.id}`}
+              className="text-xs flex items-start gap-1.5 text-amber-600 dark:text-amber-400"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <span>{warningText(w)}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
       <div>
         <label className="text-xs text-muted block mb-1">
           Plan de trabajo (los pasos, uno por línea)
@@ -301,7 +455,197 @@ export default function StrategicInitiatives() {
     </div>
   );
 
-  if (loading) {
+  // Botón "Convertir en iniciativa" / "Ya en tu plan ↓" para un control o
+  // una plantilla de un objetivo de riesgo.
+  const renderAdoptButton = (objective, key, payload) => {
+    const existing = existingForSource(initiatives, key);
+    if (existing) {
+      return (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-accent w-full sm:w-auto"
+          onClick={() => scrollToId(`initiative-${existing.id}`)}
+        >
+          Ya en tu plan ↓
+        </Button>
+      );
+    }
+    const busy = busyKey === key;
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        className="glass hover:border-accent font-subtitle w-full sm:w-auto"
+        disabled={busy}
+        onClick={() => adopt(objective, payload)}
+      >
+        <Plus className="w-4 h-4 mr-2" /> {busy ? "Creando…" : "Convertir en iniciativa"}
+      </Button>
+    );
+  };
+
+  const renderTemplates = (o) => {
+    const templates = templatesFor(o);
+    const verb = o.strategy === "Transferir" ? "transferir" : "reducir";
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-subtitle uppercase tracking-wide text-muted">
+          {o.accepted ? "Lo mínimo para un riesgo aceptado" : `Sugerencias para ${verb} este riesgo`}
+        </p>
+        <p className="text-xs text-muted">
+          {o.accepted
+            ? "Un riesgo crítico aceptado necesita al menos una señal de alerta y un plan de reacción. Elige las sugerencias que te falten; después podrás editarlas."
+            : "Este riesgo no tiene controles en tu matriz. Elige una o varias sugerencias para empezar; después podrás editarlas."}
+        </p>
+        {templates.map((t) => (
+          <div
+            key={t.key}
+            className="p-3 glass rounded-xl flex flex-col sm:flex-row sm:items-center gap-2"
+          >
+            <div className="flex-grow">
+              <p className="text-sm">{t.title}</p>
+              <p className="text-xs text-muted">{t.expected_result}</p>
+            </div>
+            {renderAdoptButton(o, templateSourceKey(o.id, t.key), { template: t })}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderRiskCard = (o) => {
+    const list = riskInitiativesOf(o.id, initiatives);
+    return (
+      <Card
+        key={o.id}
+        id={`risk-${o.riskId}`}
+        className={`glass border-2 ${o.level === "INTOLERABLE" ? "border-red-500/30" : "border-orange-500/30"}`}
+      >
+        <CardContent className="p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+            <p className="font-subtitle text-sm flex-grow">{o.label}</p>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-subtitle border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400 flex-shrink-0 self-start">
+              Prioridad alta
+            </span>
+          </div>
+
+          <RiskObjectiveBadges objective={o} />
+
+          <p className="text-xs text-muted">
+            Estrategia: {o.strategy || "Sin definir"}
+            {o.residualLabel
+              ? ` · Después de controles: ${o.residualLabel}`
+              : " · Sin nivel después de controles"}
+            {" · Prioridad alta por definición: no necesita calificación."}
+          </p>
+
+          {o.accepted && !o.acknowledged && (
+            <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm space-y-3">
+              <p>
+                Decidiste aceptar este riesgo. Un riesgo crítico aceptado al menos necesita una
+                señal de alerta y un plan de reacción. Si ya los tienes, confírmalo; si no,
+                convierte las sugerencias de abajo en iniciativas.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="glass hover:border-accent font-subtitle w-full sm:w-auto"
+                onClick={() => acknowledge(o)}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" /> Lo tengo controlado
+              </Button>
+            </div>
+          )}
+          {o.accepted && o.acknowledged && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-green-600 dark:text-green-400">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                Confirmaste que lo tienes controlado. Este riesgo ya no aparece en las alertas.
+              </span>
+              <button
+                type="button"
+                onClick={() => unacknowledge(o)}
+                className="text-accent hover:underline"
+              >
+                Quitar confirmación
+              </button>
+            </div>
+          )}
+
+          {o.controls.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-subtitle uppercase tracking-wide text-muted">
+                Controles de tu matriz
+              </p>
+              {o.controls.map((c) => (
+                <div
+                  key={c.n}
+                  className="p-3 glass rounded-xl flex flex-col sm:flex-row sm:items-center gap-2"
+                >
+                  <div className="flex-grow space-y-1.5">
+                    <p className="text-sm">{c.text}</p>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {c.impact && <span className={`${SMALL_CHIP} glass`}>{c.impact}</span>}
+                      {c.grade && (
+                        <span className={`${SMALL_CHIP} ${GRADE_CHIP[c.grade] || "glass"}`}>
+                          Control {c.grade}
+                        </span>
+                      )}
+                      <span className={`${SMALL_CHIP} glass text-muted`}>
+                        {c.hasResponsible
+                          ? "Tiene responsable en la matriz"
+                          : "Sin responsable en la matriz"}
+                      </span>
+                    </div>
+                  </div>
+                  {renderAdoptButton(o, controlSourceKey(o.id, c.n), { control: c })}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(o.controls.length === 0 || o.accepted) && renderTemplates(o)}
+
+          <div className="space-y-3">
+            {list.map(renderInitiativeCard)}
+            <button
+              type="button"
+              onClick={() => addInitiative(o.id, o.label)}
+              className="w-full flex items-center justify-center gap-2 p-3 glass rounded-xl text-accent hover:bg-accent/10 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-sm font-subtitle">
+                {list.length === 0 ? "Agregar la primera iniciativa" : "Agregar otra iniciativa"}
+              </span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-4 text-xs">
+            <Link
+              to={createPageUrl(`AddRisk?id=${o.riskId}`)}
+              className="inline-flex items-center gap-1.5 text-accent font-subtitle hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" /> Corregir probabilidad e impacto en la matriz →
+            </Link>
+            {!o.perspective && (
+              <Link
+                to={createPageUrl(`AddRisk?id=${o.riskId}`)}
+                className="inline-flex items-center gap-1.5 text-accent font-subtitle hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" /> Asignar perspectiva →
+              </Link>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Esqueleto también en el render intermedio entre "inputs llegó" y la
+  // hidratación (useEffect): si no, se pintan un instante los avisos y los
+  // estados vacíos con initiatives = [] y planId = null.
+  if (loading || (!hydrated && !loadError)) {
     return (
       <div className="space-y-6">
         <div className="glass rounded-3xl p-8 animate-pulse h-24" />
@@ -311,6 +655,8 @@ export default function StrategicInitiatives() {
       </div>
     );
   }
+
+  const shownError = loadError || error;
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto pb-24">
@@ -355,11 +701,16 @@ export default function StrategicInitiatives() {
                 por cada objetivo de <span className="font-subtitle">prioridad alta</span> de tu
                 mapa calibrado, agrega las iniciativas que lo harán realidad: quién lo hace,
                 para cuándo, con qué presupuesto y cómo medirás el éxito.
+                {riskObjectives.length > 0 &&
+                  " Los riesgos Alto o Intolerable de tu matriz aparecen primero: son prioridad alta por definición. Convierte sus controles en iniciativas con un clic."}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Avisos sobre riesgos (nunca bloquean) */}
+      <RiskWarningsCard warnings={warnings} />
 
       {/* Visión / Misión / Valores */}
       <Card className="glass">
@@ -412,12 +763,22 @@ export default function StrategicInitiatives() {
       {/* Objetivos de prioridad alta */}
       <div className="space-y-5">
         <h2 className="text-xl font-title">Tus objetivos de prioridad alta</h2>
+        {risksEnabled && riskObjectives.length === 0 && (
+          <p className="text-xs text-muted -mt-3">
+            Ningún riesgo de tu matriz es Alto o Intolerable. Si alguno sube de nivel, aparecerá
+            aquí como objetivo.
+          </p>
+        )}
+
+        {riskObjectives.map(renderRiskCard)}
+
         {objectives.length === 0 ? (
           <Card className="glass">
             <CardContent className="p-8 text-center text-muted space-y-3">
               <p className="text-sm">
-                Aún no hay estrategias de prioridad alta. Califica tus debilidades en el
-                resumen para definir tus objetivos.
+                {riskObjectives.length > 0
+                  ? "Aún no hay debilidades de prioridad alta. Califícalas en el resumen para sumarlas a tu plan."
+                  : "Aún no hay estrategias de prioridad alta. Califica tus debilidades en el resumen para definir tus objetivos."}
               </p>
               <Link to={createPageUrl("StrategicSummary")} className="text-accent text-sm font-subtitle hover:underline">
                 Ir al resumen y priorización →
@@ -467,17 +828,26 @@ export default function StrategicInitiatives() {
           {Object.entries(orphanGroups).map(([sid, list]) => (
             <Card key={sid} className="glass">
               <CardContent className="p-6">
-                <p className="font-subtitle text-sm mb-4">{allLabels[sid] || sid}</p>
-                <div className="space-y-3">{list.map(renderInitiativeCard)}</div>
+                <p className="font-subtitle text-sm mb-1">
+                  {allLabels[sid] || orphanLabelFor(list) || sid}
+                </p>
+                {isRiskObjectiveId(sid) && (
+                  <p className="text-xs text-muted">
+                    {risksEnabled
+                      ? "Este riesgo ya no es Alto ni Intolerable en tu matriz (o fue eliminado). Sus iniciativas se conservan."
+                      : "Estas iniciativas vienen de tu matriz de riesgos."}
+                  </p>
+                )}
+                <div className="space-y-3 mt-4">{list.map(renderInitiativeCard)}</div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {error && (
+      {shownError && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-          {error}
+          {shownError}
         </div>
       )}
 

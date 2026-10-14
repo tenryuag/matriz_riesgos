@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { StrategicPlan, Competitor } from "@/api/entities";
 import {
   ArrowLeft,
   Grid2x2,
@@ -14,16 +13,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CATALOG as MKT_CATALOG, SECTION as MKT_CONCL_SECTION } from "./MarketConclusions";
-import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
-import { SECTION as OPP_CONCL_SECTION, effectiveConclusions } from "./OpportunityConclusions";
-import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-  scoreFor,
-  priorityFor,
-} from "./StrategicSummary";
+import { useStrategyInputs, LOAD_ERROR_TEXT } from "@/hooks/useStrategyInputs";
+import RiskLevelChip from "@/components/strategy/RiskLevelChip";
 
 // ============================================================
 // FODA automático: se genera 100% de lo ya capturado en el módulo.
@@ -31,13 +22,14 @@ import {
 // - Debilidades: lo marcado "voy a cambiar" en las 3 fuentes (+ prioridad).
 // - Oportunidades: las respuestas Blue Ocean (crear / incrementar).
 // - Amenazas: señales calculadas de tus competidores.
+// - Riesgos críticos de la matriz (Fase 2): los internos entran como
+//   debilidades y los externos como amenazas, con su chip de nivel.
 // ============================================================
 
 // Motor compartido con el servidor MCP.
 export { MARKET_SECTION } from "@/config/strategicCatalog";
 export { buildFoda } from "@/config/strategicCalc";
-import { MARKET_SECTION } from "@/config/strategicCatalog";
-import { buildFoda } from "@/config/strategicCalc";
+import { buildFoda, mergeFodaWithRisks, riskObjectivesFrom } from "@/config/strategicCalc";
 
 const PRIORITY_CHIP = {
   Alta: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40",
@@ -46,41 +38,28 @@ const PRIORITY_CHIP = {
 };
 
 export default function FodaAnalysis() {
-  const [foda, setFoda] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { inputs, loading, error } = useStrategyInputs();
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
+  const foda = useMemo(
+    () =>
+      inputs
+        ? mergeFodaWithRisks(
+            buildFoda({
+              sections: inputs.sections,
+              competitors: inputs.competitors,
+              ratings: inputs.ratings,
+            }),
+            riskObjectives
+          )
+        : null,
+    [inputs, riskObjectives]
+  );
+  const hasRisks = riskObjectives.length > 0;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const plan = await StrategicPlan.getOrCreate();
-      const comps = await Competitor.list(plan.id);
-      const sections = await StrategicPlan.getAnswersForSections(plan.id, [
-        ...SUMMARY_SOURCE_SECTIONS,
-        RATING_SECTION,
-        MARKET_SECTION,
-        ...comps.map((c) => compSection(c.id)),
-      ]);
-      setFoda(
-        buildFoda({
-          sections,
-          competitors: comps,
-          ratings: sections[RATING_SECTION] || {},
-        })
-      );
-    } catch (err) {
-      console.error("Error al cargar el FODA:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  if (loading || !foda) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="glass rounded-3xl p-8 animate-pulse h-24" />
@@ -88,6 +67,24 @@ export default function FodaAnalysis() {
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="glass rounded-3xl p-6 animate-pulse h-48" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!foda) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-4">
+          <Link to={createPageUrl("StrategicPlanning")}>
+            <Button variant="ghost" size="icon" className="glass">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-title">FODA</h1>
+        </div>
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+          {error || LOAD_ERROR_TEXT}
         </div>
       </div>
     );
@@ -123,7 +120,7 @@ export default function FodaAnalysis() {
     {
       key: "debilidades",
       title: "Debilidades",
-      friendly: "Qué vamos a cambiar",
+      friendly: hasRisks ? "Qué vamos a cambiar · incluye riesgos internos" : "Qué vamos a cambiar",
       icon: Wrench,
       accent: "text-orange-600 dark:text-orange-500",
       bg: "bg-orange-500/15",
@@ -136,7 +133,9 @@ export default function FodaAnalysis() {
     {
       key: "amenazas",
       title: "Amenazas",
-      friendly: "Señales de tus competidores",
+      friendly: hasRisks
+        ? "Señales de tus competidores y riesgos críticos"
+        : "Señales de tus competidores",
       icon: ShieldAlert,
       accent: "text-red-600 dark:text-red-500",
       bg: "bg-red-500/15",
@@ -176,6 +175,8 @@ export default function FodaAnalysis() {
             Este FODA se genera automáticamente con lo que ya capturaste: tus conclusiones,
             tus respuestas Blue Ocean y la comparación con tus competidores. Si cambias algo
             en esas pantallas, aquí se actualiza solo.
+            {hasRisks &&
+              " Tus riesgos Alto o Intolerable de la matriz también entran: los internos como debilidades y los externos como amenazas."}
           </p>
         </CardContent>
       </Card>
@@ -205,6 +206,14 @@ export default function FodaAnalysis() {
                   {q.items.map((item, i) => (
                     <li key={i} className="flex items-center justify-between gap-2 p-2.5 glass rounded-lg text-sm">
                       <span className="flex-grow">{item.label}</span>
+                      {item.source === "risk" && (
+                        <>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-subtitle border bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 flex-shrink-0">
+                            Riesgo crítico
+                          </span>
+                          <RiskLevelChip levelKey={item.level} />
+                        </>
+                      )}
                       {item.priority && (
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-subtitle border flex-shrink-0 ${PRIORITY_CHIP[item.priority]}`}>
                           {item.priority}
@@ -230,12 +239,6 @@ export default function FodaAnalysis() {
           </Card>
         ))}
       </div>
-
-      {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-          {error}
-        </div>
-      )}
 
       {/* Navegación */}
       <div className="flex justify-between gap-3 flex-wrap">

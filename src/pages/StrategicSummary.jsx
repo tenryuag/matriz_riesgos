@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan } from "@/api/entities";
@@ -10,11 +10,14 @@ import {
   Wrench,
   Calculator,
   ChevronDown,
+  ShieldAlert,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import { useStrategyInputs } from "@/hooks/useStrategyInputs";
+import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
 import { CATALOG as MKT_CATALOG, SECTION as MKT_CONCL_SECTION } from "./MarketConclusions";
 import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
 import { SECTION as OPP_CONCL_SECTION, effectiveConclusions } from "./OpportunityConclusions";
@@ -32,7 +35,7 @@ export const SUMMARY_SOURCE_SECTIONS = [
 
 // Motor compartido con el servidor MCP (fuentes, puntaje y prioridad).
 export { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
-import { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
+import { collectStrategies, scoreFor, priorityFor, riskObjectivesFrom } from "@/config/strategicCalc";
 
 const SOURCES = [
   { key: "market", title: "Del análisis del mercado" },
@@ -70,35 +73,26 @@ function PriorityBadge({ priority, score }) {
 }
 
 export default function StrategicSummary() {
+  const { inputs, loading, error } = useStrategyInputs();
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
   const [planId, setPlanId] = useState(null);
   const [sections, setSections] = useState({});
   const [ratings, setRatings] = useState({});
   const [showStrengths, setShowStrengths] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const plan = await StrategicPlan.getOrCreate();
-      const stored = await StrategicPlan.getAnswersForSections(plan.id, [
-        ...SUMMARY_SOURCE_SECTIONS,
-        RATING_SECTION,
-      ]);
-      setPlanId(plan.id);
-      setSections(stored);
-      setRatings(stored[RATING_SECTION] || {});
-    } catch (err) {
-      console.error("Error al cargar el resumen:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
+  // Hidratación única: las recargas silenciosas del hook no pisan lo que el
+  // usuario ya calificó.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!inputs || hydrated) return;
+    setPlanId(inputs.plan.id);
+    setSections(inputs.sections || {});
+    setRatings(inputs.ratings || {});
+    setHydrated(true);
+  }, [inputs, hydrated]);
 
   const setRating = (id, dim, value) => {
     const key = `${id}:${dim}`;
@@ -108,7 +102,7 @@ export default function StrategicSummary() {
   // Autoguardado de las calificaciones.
   const { status: saveStatus, flush } = useAutosave({
     data: ratings,
-    enabled: !loading && !!planId,
+    enabled: hydrated && !!planId,
     onSave: async () => {
       await StrategicPlan.saveAnswers(planId, RATING_SECTION, ratings);
     },
@@ -122,7 +116,7 @@ export default function StrategicSummary() {
   const ratedCount = scored.filter((w) => w.score != null).length;
   const countBy = (p) => scored.filter((w) => w.priority === p).length;
 
-  if (loading) {
+  if (loading || (!hydrated && !error)) {
     return (
       <div className="space-y-6">
         <div className="glass rounded-3xl p-8 animate-pulse h-24" />
@@ -198,6 +192,13 @@ export default function StrategicSummary() {
 
       {/* Resumen */}
       <div className="flex flex-wrap gap-3">
+        {riskObjectives.length > 0 && (
+          <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm text-red-600 dark:text-red-400">
+            <ShieldAlert className="w-4 h-4" />
+            <span className="font-subtitle">{riskObjectives.length}</span>{" "}
+            {riskObjectives.length === 1 ? "riesgo crítico" : "riesgos críticos"}
+          </span>
+        )}
         <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm">
           <Wrench className="w-4 h-4 text-orange-500" />
           <span className="font-subtitle">{weaknesses.length}</span> debilidades
@@ -219,6 +220,62 @@ export default function StrategicSummary() {
           </>
         )}
       </div>
+
+      {/* Riesgos críticos de la matriz: prioridad alta sin calificar */}
+      {riskObjectives.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-subtitle text-sm text-accent uppercase tracking-wide">
+            Riesgos críticos de tu matriz ({riskObjectives.length})
+          </h2>
+          <p className="text-sm text-muted">
+            Entran a tu plan sin calificarlos: por su gravedad son prioridad alta. Si crees
+            que alguno está sobreestimado, corrige su probabilidad e impacto en la matriz.
+          </p>
+          {riskObjectives.map((o) => (
+            <Card key={o.id} id={`risk-${o.riskId}`} className="glass">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-sm font-subtitle break-words">{o.label}</p>
+                    <RiskObjectiveBadges objective={o} />
+                  </div>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-subtitle border flex-shrink-0 border-green-500/50 bg-green-500/15 text-green-600 dark:text-green-400"
+                    title={`Prioridad alta por la gravedad del riesgo (puntaje ${o.score} de 25)`}
+                  >
+                    Prioridad alta · por su gravedad
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Estrategia: {o.strategy || "Sin definir"} · Controles: {o.controls.length || "ninguno"}
+                  {o.residualLabel ? ` · Después de controles: ${o.residualLabel}` : ""}
+                </p>
+                {o.controls.length > 0 && (
+                  <ul className="text-xs text-muted space-y-1 list-disc pl-5">
+                    {o.controls.map((c) => (
+                      <li key={c.n}>{c.text}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap gap-4 text-xs">
+                  <Link
+                    to={createPageUrl("StrategicInitiatives") + "#risk-" + o.riskId}
+                    className="text-accent font-subtitle hover:underline"
+                  >
+                    {o.controls.length > 0 ? "Planear sus controles →" : "Planear este riesgo →"}
+                  </Link>
+                  <Link
+                    to={createPageUrl(`AddRisk?id=${o.riskId}`)}
+                    className="text-accent font-subtitle hover:underline"
+                  >
+                    Ver en la matriz →
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Sin debilidades aún */}
       {weaknesses.length === 0 && (

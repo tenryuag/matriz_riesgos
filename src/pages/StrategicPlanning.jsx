@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -28,24 +28,28 @@ import {
   Crosshair,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { StrategicPlan, Competitor, Initiative } from "@/api/entities";
-import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
+import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-  scoreFor,
-  priorityFor,
-} from "./StrategicSummary";
-import { buildFoda, MARKET_SECTION } from "./FodaAnalysis";
+  localISODate,
+  riskObjectivesFrom,
+  riskInitiativeWarnings,
+  summarizeRiskWarnings,
+  focusItems,
+  mergeFodaWithRisks,
+  riskCountIn,
+} from "@/config/strategicCalc";
+import RiskLevelChip from "@/components/strategy/RiskLevelChip";
+import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
+import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
+import { buildFoda } from "./FodaAnalysis";
 
 // ============================================================
 // Inicio del módulo: dashboard ejecutivo de toma de decisiones.
 // Todo se calcula de los datos capturados; el recorrido por fases queda
 // al final en versión compacta para navegar.
+// Fase 2: los riesgos críticos de la matriz entran como objetivos de
+// prioridad alta (foco, alertas, mini FODA y destino de "Continuar").
 // ============================================================
-
-const compSection = (id) => `market-comp:${id}`;
 
 const money = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -87,94 +91,105 @@ const PHASES = [
   },
 ];
 
+// Estado de cada fila de "Tu foco ahora" (focusItems de strategicCalc).
+function focusStatusFor(item) {
+  if (item.status === "planned") {
+    return (
+      <span className="text-xs text-muted flex-shrink-0">{item.initiativeCount} iniciativa(s)</span>
+    );
+  }
+  if (item.status === "accepted") {
+    return <span className="text-xs text-muted flex-shrink-0">Aceptado</span>;
+  }
+  if (item.status === "accepted-unconfirmed") {
+    return (
+      <span className="text-xs text-amber-500 font-subtitle flex-shrink-0">
+        Aceptado · sin confirmar ⚠
+      </span>
+    );
+  }
+  return <span className="text-xs text-orange-500 font-subtitle flex-shrink-0">Sin plan ⚠</span>;
+}
+
 export default function StrategicPlanning() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { inputs, loading, error } = useStrategyInputs({ extraSections: [CUSTOMER_SECTION] });
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
+  const today = localISODate();
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const plan = await StrategicPlan.getOrCreate();
-        const [comps, initiatives] = await Promise.all([
-          Competitor.list(plan.id),
-          Initiative.list(plan.id),
-        ]);
-        const sections = await StrategicPlan.getAnswersForSections(plan.id, [
-          CUSTOMER_SECTION,
-          ...SUMMARY_SOURCE_SECTIONS,
-          RATING_SECTION,
-          MARKET_SECTION,
-          ...comps.map((c) => compSection(c.id)),
-        ]);
+  const data = useMemo(() => {
+    if (!inputs) return null;
+    const { sections, ratings, initiatives, competitors: comps } = inputs;
 
-        const ratings = sections[RATING_SECTION] || {};
-        const customer = sections[CUSTOMER_SECTION] || {};
-        const customerAnswered = CUSTOMER_QUESTIONS.filter(
-          (q) => (customer[q.key] || "").trim()
-        ).length;
+    const customer = sections[CUSTOMER_SECTION] || {};
+    const customerAnswered = CUSTOMER_QUESTIONS.filter(
+      (q) => (customer[q.key] || "").trim()
+    ).length;
 
-        const { weaknesses } = collectStrategies(sections);
-        const scored = weaknesses.map((w) => {
-          const score = scoreFor(ratings, w.id);
-          return { ...w, score, priority: priorityFor(score) };
-        });
-        const alta = scored
-          .filter((w) => w.priority === "Alta")
-          .sort((a, b) => a.score - b.score);
-        const unrated = scored.filter((w) => w.score == null).length;
+    const { weaknesses } = collectStrategies(sections);
+    const scored = weaknesses.map((w) => {
+      const score = scoreFor(ratings, w.id);
+      return { ...w, score, priority: priorityFor(score) };
+    });
+    const alta = scored
+      .filter((w) => w.priority === "Alta")
+      .sort((a, b) => a.score - b.score);
+    const unrated = scored.filter((w) => w.score == null).length;
 
-        const initByStrategy = {};
-        initiatives.forEach((it) => {
-          initByStrategy[it.strategy_id] = (initByStrategy[it.strategy_id] || 0) + 1;
-        });
-        const altaWithPlan = alta.map((w) => ({
-          ...w,
-          initiativeCount: initByStrategy[w.id] || 0,
-        }));
-        const altaNoPlan = altaWithPlan.filter((w) => w.initiativeCount === 0).length;
+    const initByStrategy = {};
+    initiatives.forEach((it) => {
+      initByStrategy[it.strategy_id] = (initByStrategy[it.strategy_id] || 0) + 1;
+    });
+    const altaWithPlan = alta.map((w) => ({
+      ...w,
+      initiativeCount: initByStrategy[w.id] || 0,
+    }));
+    const altaNoPlan = altaWithPlan.filter((w) => w.initiativeCount === 0).length;
 
-        const budget = initiatives.reduce((s, r) => s + (Number(r.budget) || 0), 0);
-        const today = new Date();
-        const in30 = new Date(today.getTime() + 30 * 86400000);
-        const overdue = initiatives.filter(
-          (it) => it.end_date && new Date(it.end_date) < today
-        ).length;
-        const endingSoon = initiatives.filter((it) => {
-          if (!it.end_date) return false;
-          const d = new Date(it.end_date);
-          return d >= today && d <= in30;
-        }).length;
+    const budget = initiatives.reduce((s, r) => s + (Number(r.budget) || 0), 0);
+    const now = new Date();
+    const in30 = new Date(now.getTime() + 30 * 86400000);
+    const overdue = initiatives.filter(
+      (it) => it.end_date && new Date(it.end_date) < now
+    ).length;
+    const endingSoon = initiatives.filter((it) => {
+      if (!it.end_date) return false;
+      const dt = new Date(it.end_date);
+      return dt >= now && dt <= in30;
+    }).length;
 
-        const foda = buildFoda({ sections, competitors: comps, ratings });
+    // Riesgos críticos (Fase 2)
+    const warnings = riskInitiativeWarnings(riskObjectives, initiatives, today);
+    const riskLines = summarizeRiskWarnings(warnings);
+    const riskNoPlan = warnings.filter((w) => w.type === "no-plan").length;
+    const riskUnconfirmed = warnings.filter((w) => w.type === "accepted-unconfirmed").length;
+    const focus = focusItems(riskObjectives, altaWithPlan, initiatives);
+    const foda = mergeFodaWithRisks(
+      buildFoda({ sections, competitors: comps, ratings }),
+      riskObjectives
+    );
 
-        if (active) {
-          setData({
-            customerAnswered,
-            scored,
-            alta: altaWithPlan,
-            altaNoPlan,
-            unrated,
-            fCount: foda.fortalezas.length,
-            dCount: scored.length,
-            initiativeCount: initiatives.length,
-            budget,
-            overdue,
-            endingSoon,
-            foda,
-          });
-        }
-      } catch (err) {
-        console.error("Error al cargar el dashboard:", err);
-        if (active) setData(null);
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
+    return {
+      customerAnswered,
+      scored,
+      alta: altaWithPlan,
+      altaNoPlan,
+      unrated,
+      fCount: foda.fortalezas.length,
+      dCount: scored.length,
+      initiativeCount: initiatives.length,
+      budget,
+      overdue,
+      endingSoon,
+      foda,
+      riskLines,
+      riskNoPlan,
+      riskUnconfirmed,
+      focus,
     };
-  }, []);
+  }, [inputs, riskObjectives, today]);
 
   if (loading) {
     return (
@@ -193,20 +208,28 @@ export default function StrategicPlanning() {
   const d = data;
 
   // A dónde lleva "Continuar": el siguiente paso que aporta más valor.
+  // Quien no ha empezado el análisis va primero al análisis; con algo de
+  // análisis, los riesgos críticos sin plan van antes que priorizar debilidades.
   const continueTarget = !d
     ? { key: "CustomerAnalysis", label: "Empezar" }
-    : d.dCount === 0
-      ? d.customerAnswered < CUSTOMER_QUESTIONS.length
-        ? { key: "CustomerAnalysis", label: d.customerAnswered > 0 ? "Continuar" : "Empezar" }
-        : { key: "MarketAnalysis", label: "Continuar" }
-      : d.unrated > 0
-        ? { key: "StrategicSummary", label: "Priorizar" }
-        : d.altaNoPlan > 0
-          ? { key: "StrategicInitiatives", label: "Planear" }
-          : { key: "ScoreCard", label: "Ver Score Card" };
+    : d.dCount === 0 && d.customerAnswered === 0
+      ? { key: "CustomerAnalysis", label: "Empezar" }
+      : d.riskNoPlan > 0
+        ? { key: "StrategicInitiatives", label: "Planear riesgos" }
+        : d.dCount === 0
+          ? d.customerAnswered < CUSTOMER_QUESTIONS.length
+            ? { key: "CustomerAnalysis", label: "Continuar" }
+            : { key: "MarketAnalysis", label: "Continuar" }
+          : d.unrated > 0
+            ? { key: "StrategicSummary", label: "Priorizar" }
+            : d.altaNoPlan > 0
+              ? { key: "StrategicInitiatives", label: "Planear" }
+              : { key: "ScoreCard", label: "Ver Score Card" };
 
   const alerts = [];
   if (d) {
+    // Riesgos primero
+    d.riskLines.forEach((l) => alerts.push({ label: l.label, href: l.href, hash: l.hash }));
     if (d.overdue > 0)
       alerts.push({ label: `${d.overdue} iniciativa(s) con fecha de término vencida`, href: "StrategicInitiatives" });
     if (d.altaNoPlan > 0)
@@ -217,12 +240,16 @@ export default function StrategicPlanning() {
       alerts.push({ label: `${d.unrated} debilidad(es) sin calificar en el resumen`, href: "StrategicSummary" });
   }
 
+  const focus = d?.focus ?? { items: [], hidden: 0, total: 0 };
+  const sinPlan = d ? d.riskNoPlan + d.altaNoPlan : 0;
+  const porConfirmar = d?.riskUnconfirmed ?? 0;
+
   const fodaMini = d
     ? [
         { title: "Fortalezas", count: d.foda.fortalezas.length, icon: Award, cls: "text-green-600 dark:text-green-500" },
         { title: "Oportunidades", count: d.foda.oportunidades.length, icon: Sprout, cls: "text-blue-600 dark:text-blue-500" },
-        { title: "Debilidades", count: d.foda.debilidades.length, icon: Wrench, cls: "text-orange-600 dark:text-orange-500" },
-        { title: "Amenazas", count: d.foda.amenazas.length, icon: ShieldAlert, cls: "text-red-600 dark:text-red-500" },
+        { title: "Debilidades", count: d.foda.debilidades.length, risks: riskCountIn(d.foda.debilidades), icon: Wrench, cls: "text-orange-600 dark:text-orange-500" },
+        { title: "Amenazas", count: d.foda.amenazas.length, risks: riskCountIn(d.foda.amenazas), icon: ShieldAlert, cls: "text-red-600 dark:text-red-500" },
       ]
     : [];
 
@@ -257,6 +284,12 @@ export default function StrategicPlanning() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="glass">
@@ -287,10 +320,16 @@ export default function StrategicPlanning() {
               <span className="text-xs font-subtitle text-muted uppercase tracking-wide">Tu foco</span>
               <Crosshair className="w-4 h-4 text-accent" />
             </div>
-            <div className="text-3xl font-title text-accent">{d?.alta.length ?? 0}</div>
+            <div className="text-3xl font-title text-accent">{focus.total}</div>
             <p className="text-xs text-muted mt-1">
-              {d && d.altaNoPlan > 0 ? (
-                <span className="text-orange-500">{d.altaNoPlan} sin plan</span>
+              {sinPlan > 0 || porConfirmar > 0 ? (
+                <>
+                  {sinPlan > 0 && <span className="text-orange-500">{sinPlan} sin plan</span>}
+                  {sinPlan > 0 && porConfirmar > 0 && " · "}
+                  {porConfirmar > 0 && (
+                    <span className="text-amber-500">{porConfirmar} por confirmar</span>
+                  )}
+                </>
               ) : (
                 "prioridad alta"
               )}
@@ -325,7 +364,7 @@ export default function StrategicPlanning() {
               {alerts.map((a, i) => (
                 <li key={i}>
                   <Link
-                    to={createPageUrl(a.href)}
+                    to={createPageUrl(a.href) + (a.hash || "")}
                     className="flex items-center justify-between gap-2 p-2.5 glass rounded-lg text-sm hover:border-accent transition-all"
                   >
                     <span>{a.label}</span>
@@ -337,7 +376,7 @@ export default function StrategicPlanning() {
           </CardContent>
         </Card>
       ) : (
-        d && d.dCount > 0 && (
+        d && (d.dCount > 0 || riskObjectives.length > 0) && (
           <div className="flex items-center gap-3 rounded-2xl border border-green-500/40 bg-green-500/10 px-5 py-3.5">
             <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-500 flex-shrink-0" />
             <p className="text-sm">Sin pendientes urgentes. Tu plan está al día.</p>
@@ -346,7 +385,7 @@ export default function StrategicPlanning() {
       )}
 
       {/* Tu foco ahora */}
-      {d && d.alta.length > 0 && (
+      {d && focus.items.length > 0 && (
         <Card className="glass">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
@@ -361,33 +400,30 @@ export default function StrategicPlanning() {
               </Link>
             </div>
             <ul className="space-y-2">
-              {d.alta.slice(0, 5).map((w, i) => (
-                <li key={w.id}>
+              {focus.items.map((item, i) => (
+                <li key={item.id}>
                   <Link
-                    to={createPageUrl("StrategicInitiatives")}
-                    className="flex items-center gap-3 p-3 glass rounded-xl text-sm hover:border-accent transition-all"
+                    to={
+                      item.kind === "risk"
+                        ? createPageUrl("StrategicInitiatives") + "#risk-" + item.riskId
+                        : createPageUrl("StrategicInitiatives")
+                    }
+                    className="flex flex-wrap items-center gap-3 p-3 glass rounded-xl text-sm hover:border-accent transition-all"
                   >
                     <span className="w-6 h-6 rounded-full bg-accent/15 text-accent flex items-center justify-center text-xs font-subtitle flex-shrink-0">
                       {i + 1}
                     </span>
-                    <span className="flex-grow">{w.label}</span>
-                    {w.initiativeCount > 0 ? (
-                      <span className="text-xs text-muted flex-shrink-0">
-                        {w.initiativeCount} iniciativa(s)
-                      </span>
-                    ) : (
-                      <span className="text-xs text-orange-500 font-subtitle flex-shrink-0">
-                        Sin plan ⚠
-                      </span>
-                    )}
+                    {item.kind === "risk" && <RiskLevelChip levelKey={item.level} />}
+                    <span className="flex-grow">{item.label}</span>
+                    {focusStatusFor(item)}
                     <ChevronRight className="w-4 h-4 text-muted flex-shrink-0" />
                   </Link>
                 </li>
               ))}
             </ul>
-            {d.alta.length > 5 && (
+            {focus.hidden > 0 && (
               <p className="text-xs text-muted mt-2">
-                +{d.alta.length - 5} más en el mapa calibrado.
+                +{focus.hidden} más en el mapa calibrado.
               </p>
             )}
           </CardContent>
@@ -418,7 +454,12 @@ export default function StrategicPlanning() {
                     <q.icon className={`w-4 h-4 ${q.cls}`} />
                     <span className="text-xs text-muted">{q.title}</span>
                   </div>
-                  <span className={`text-2xl font-title ${q.cls}`}>{q.count}</span>
+                  <div className="flex flex-col">
+                    <span className={`text-2xl font-title ${q.cls}`}>{q.count}</span>
+                    {q.risks > 0 && (
+                      <span className="text-[10px] text-muted">incl. {q.risks} riesgo(s)</span>
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>

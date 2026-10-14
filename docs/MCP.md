@@ -116,6 +116,9 @@ Las herramientas se ofrecen **según los módulos a los que el usuario tiene acc
 | `balance_general` | Totales del balance y si cuadra (opción `detalle` para todas las cuentas) |
 | `flujo_efectivo` | Estado de cambios (indirecto) y flujo directo |
 
+> **Nota (Fase 2 de perspectivas — riesgos críticos en el plan):** las funciones nuevas de `src/config/strategicCalc.js` (`riskObjectivesFrom`, `riskInitiativeWarnings`, `focusItems`, `mergeFodaWithRisks`, plantillas de `strategicCatalog.js`, etc.) ya están **sincronizadas** a `supabase/functions/_shared/app/` con `npm run mcp:sync`, pero el servidor **aún no las expone**: `resumen_plan`, `prioridades`, `foda` e `iniciativas` siguen respondiendo solo con debilidades y no incluyen los riesgos críticos que la app ya muestra como objetivos de prioridad alta. Incorporarlos a las herramientas estratégicas (y a `resumen_general`) queda para una fase posterior; `index.ts` no cambió y la función no se redesplegó por esta fase.
+
+
 Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen neto entre 2024 y 2025?"*.
 
 ## Nota técnica: verificación del token (llaves HS256)

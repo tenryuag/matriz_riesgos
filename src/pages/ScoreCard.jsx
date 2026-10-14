@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useMemo } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { StrategicPlan, Initiative } from "@/api/entities";
 import {
   ArrowLeft,
   Trophy,
@@ -10,20 +10,26 @@ import {
   Target,
   Gem,
   Printer,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-} from "./StrategicSummary";
+import { collectStrategies } from "./StrategicSummary";
 import { perspectiveFor, LANES } from "./StrategicMap";
+import { useStrategyInputs } from "@/hooks/useStrategyInputs";
+import {
+  riskObjectivesFrom,
+  objectivesById,
+  isRiskObjectiveId,
+  riskInitiativesOf,
+} from "@/config/strategicCalc";
 
 // ============================================================
 // Score Card ejecutivo: el resumen final del plan estratégico.
 // Misión/visión/valores + todas las iniciativas por perspectiva y objetivo,
 // con suma de días comprometidos y presupuesto. Solo lectura: se llena solo.
+// Las iniciativas de riesgos críticos (Fase 2) se agrupan por la perspectiva
+// del riesgo; las que no tienen perspectiva van al grupo "Sin perspectiva".
 // ============================================================
 
 const money = new Intl.NumberFormat("es-MX", {
@@ -32,54 +38,89 @@ const money = new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 0,
 });
 
+const NO_INITIATIVES = [];
+
 const daysBetween = (start, end) => {
   if (!start || !end) return null;
   const d = Math.round((new Date(end) - new Date(start)) / 86400000);
   return d >= 0 ? d : null;
 };
 
+// Chip "Riesgo" (mismo estilo rojo que "Riesgo crítico" en el resto del módulo).
+const RISK_CHIP =
+  "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-subtitle border flex-shrink-0 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 mr-1.5";
+
+function InitiativeRow({ row: r }) {
+  return (
+    <tr className="border-b border-[var(--card-border)] hover:bg-[var(--table-row-hover)]">
+      <td className="py-2.5 px-3 max-w-[220px]">
+        {r.isRisk && <span className={RISK_CHIP}>Riesgo</span>}
+        {r.objective}
+      </td>
+      <td className="py-2.5 px-3 max-w-[220px] font-subtitle">
+        {r.title || <span className="text-muted italic">Sin nombre</span>}
+      </td>
+      <td className="py-2.5 px-3">{r.area || "—"}</td>
+      <td className="py-2.5 px-3">{r.owner || "—"}</td>
+      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+        {r.days != null ? `${r.days} días` : "—"}
+      </td>
+      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+        {r.budget != null && r.budget !== "" ? money.format(Number(r.budget)) : "—"}
+      </td>
+    </tr>
+  );
+}
+
+InitiativeRow.propTypes = {
+  row: PropTypes.shape({
+    id: PropTypes.string,
+    objective: PropTypes.string,
+    title: PropTypes.string,
+    area: PropTypes.string,
+    owner: PropTypes.string,
+    days: PropTypes.number,
+    budget: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    isRisk: PropTypes.bool,
+  }).isRequired,
+};
+
 export default function ScoreCard() {
-  const [plan, setPlan] = useState(null);
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { inputs, loading, error } = useStrategyInputs();
+  const plan = inputs?.plan || null;
+  const initiatives = inputs?.initiatives || NO_INITIATIVES;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const p = await StrategicPlan.getOrCreate();
-      const [sections, initiatives] = await Promise.all([
-        StrategicPlan.getAnswersForSections(p.id, [
-          ...SUMMARY_SOURCE_SECTIONS,
-          RATING_SECTION,
-        ]),
-        Initiative.list(p.id),
-      ]);
-      const { weaknesses } = collectStrategies(sections);
-      const byId = {};
-      weaknesses.forEach((w) => (byId[w.id] = w));
-      const built = initiatives.map((it) => {
-        const strategy = byId[it.strategy_id];
-        return {
-          ...it,
-          objective: strategy?.label || it.strategy_id,
-          perspective: strategy ? perspectiveFor(strategy) : "cliente",
-          days: daysBetween(it.start_date, it.end_date),
-        };
-      });
-      setPlan(p);
-      setRows(built);
-    } catch (err) {
-      console.error("Error al cargar el score card:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const rows = useMemo(() => {
+    if (!inputs) return [];
+    const { weaknesses } = collectStrategies(inputs.sections || {});
+    const byId = { ...objectivesById(weaknesses), ...objectivesById(riskObjectives) };
+    return initiatives.map((it) => {
+      const strategy = byId[it.strategy_id];
+      const isRisk = isRiskObjectiveId(it.strategy_id);
+      return {
+        ...it,
+        objective:
+          strategy?.label || (isRisk ? it.strategy_label || "Riesgo que ya no es crítico" : it.strategy_id),
+        // Comportamiento actual intacto para las iniciativas que no son de riesgo.
+        perspective: strategy ? perspectiveFor(strategy) : isRisk ? null : "cliente",
+        isRisk,
+        days: daysBetween(it.start_date, it.end_date),
+      };
+    });
+  }, [inputs, initiatives, riskObjectives]);
+
+  // Riesgos críticos que aún no tienen ninguna iniciativa: el score card solo
+  // lista iniciativas, así que se avisa aquí para que no desaparezcan. Los
+  // aceptados ya confirmados ("Lo tengo controlado") no cuentan: confirmado =
+  // sin avisos (RC7), igual que en el Inicio.
+  const riskNoInitiative = riskObjectives.filter(
+    (o) => !(o.accepted && o.acknowledged) && riskInitiativesOf(o.id, initiatives).length === 0
+  ).length;
 
   if (loading) {
     return (
@@ -94,6 +135,7 @@ export default function ScoreCard() {
 
   const totalBudget = rows.reduce((s, r) => s + (Number(r.budget) || 0), 0);
   const totalDays = rows.reduce((s, r) => s + (r.days || 0), 0);
+  const unassignedRows = rows.filter((r) => r.perspective == null);
 
   const identity = [
     { icon: Target, title: "Misión", value: plan?.mission },
@@ -104,25 +146,26 @@ export default function ScoreCard() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 print:hidden">
+      <div className="flex flex-wrap items-center gap-4 print:hidden">
         <Link to={createPageUrl("StrategicPlanning")}>
           <Button variant="ghost" size="icon" className="glass">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3 flex-grow">
+        <div className="flex items-center gap-3 flex-grow min-w-0">
           <div className="w-12 h-12 bg-accent/15 rounded-2xl flex items-center justify-center flex-shrink-0">
             <Trophy className="w-6 h-6 text-accent" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-3xl font-title">Score Card ejecutivo</h1>
             <p className="text-muted">El resumen de tu plan, listo para presentar.</p>
           </div>
         </div>
+        {/* En móvil pasa a su propia línea (la fila envuelve) para no desbordar la página. */}
         <Button
           onClick={() => window.print()}
           variant="outline"
-          className="glass hover:border-accent font-subtitle flex-shrink-0"
+          className="glass hover:border-accent font-subtitle flex-shrink-0 w-full sm:w-auto"
         >
           <Printer className="w-4 h-4 mr-2" /> Imprimir / PDF
         </Button>
@@ -181,6 +224,15 @@ export default function ScoreCard() {
         <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm">
           Presupuesto: <span className="font-subtitle text-accent">{money.format(totalBudget)}</span>
         </span>
+        {riskNoInitiative > 0 && (
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs border border-amber-400/40 bg-amber-400/10 text-amber-700 dark:text-amber-400 print:hidden">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{riskNoInitiative} riesgo(s) crítico(s) sin iniciativa</span>
+            <Link to={createPageUrl("StrategicInitiatives")} className="font-subtitle text-accent hover:underline">
+              Planear →
+            </Link>
+          </span>
+        )}
       </div>
 
       {/* Tabla por perspectiva */}
@@ -222,24 +274,23 @@ export default function ScoreCard() {
                           </td>
                         </tr>
                         {list.map((r) => (
-                          <tr key={r.id} className="border-b border-[var(--card-border)] hover:bg-[var(--table-row-hover)]">
-                            <td className="py-2.5 px-3 max-w-[220px]">{r.objective}</td>
-                            <td className="py-2.5 px-3 max-w-[220px] font-subtitle">
-                              {r.title || <span className="text-muted italic">Sin nombre</span>}
-                            </td>
-                            <td className="py-2.5 px-3">{r.area || "—"}</td>
-                            <td className="py-2.5 px-3">{r.owner || "—"}</td>
-                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                              {r.days != null ? `${r.days} días` : "—"}
-                            </td>
-                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                              {r.budget != null && r.budget !== "" ? money.format(Number(r.budget)) : "—"}
-                            </td>
-                          </tr>
+                          <InitiativeRow key={r.id} row={r} />
                         ))}
                       </React.Fragment>
                     );
                   })}
+                  {unassignedRows.length > 0 && (
+                    <React.Fragment key="sin-perspectiva">
+                      <tr>
+                        <td colSpan={6} className="py-2 px-3 font-subtitle text-xs uppercase tracking-wider glass text-muted rounded-lg">
+                          Sin perspectiva
+                        </td>
+                      </tr>
+                      {unassignedRows.map((r) => (
+                        <InitiativeRow key={r.id} row={r} />
+                      ))}
+                    </React.Fragment>
+                  )}
                   <tr className="font-subtitle">
                     <td colSpan={4} className="py-3 px-3 text-right">Totales:</td>
                     <td className="py-3 px-3 text-right whitespace-nowrap">{totalDays} días</td>
