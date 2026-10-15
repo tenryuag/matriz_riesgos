@@ -22,7 +22,7 @@ export const SECTION = "opportunity-conclusions";
 // Regla del Excel: Sí → fortaleza (F) · No → debilidad (D).
 // Lógica compartida con el servidor MCP (misma regla Sí→F / No→D).
 export { deriveFromAnswer, effectiveConclusions } from "@/config/strategicCalc";
-import { effectiveConclusions } from "@/config/strategicCalc";
+import { deriveFromAnswer, effectiveConclusions } from "@/config/strategicCalc";
 
 export default function OpportunityConclusions() {
   const [planId, setPlanId] = useState(null);
