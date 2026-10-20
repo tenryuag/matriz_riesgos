@@ -1,4 +1,4 @@
-// Selector de las 4 perspectivas. value: clave o null. onChange(key).
+// Selector de las 5 perspectivas. value: clave o null. onChange(key).
 // variant "cards" (formulario) o "chips" (asistente, tablas).
 import { useState } from "react";
 import PropTypes from "prop-types";
@@ -22,6 +22,10 @@ export default function PerspectivePicker({
     if (disabled || key === value) return;
     onChange?.(key);
   };
+
+  // Variante "cards": con un total impar (hoy 5) la última tarjeta ocupa
+  // las dos columnas en sm+ para no dejar un hueco.
+  const isLastOdd = (i) => PERSPECTIVES.length % 2 === 1 && i === PERSPECTIVES.length - 1;
 
   if (variant === "chips") {
     return (
@@ -52,7 +56,7 @@ export default function PerspectivePicker({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {PERSPECTIVES.map((p) => {
+        {PERSPECTIVES.map((p, i) => {
           const selected = value === p.key;
           const Icon = iconForPerspective(p.key);
           return (
@@ -63,6 +67,8 @@ export default function PerspectivePicker({
               disabled={disabled}
               onClick={() => select(p.key)}
               className={`rounded-2xl p-4 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isLastOdd(i) ? "sm:col-span-2" : ""
+              } ${
                 selected
                   ? `border-2 ${p.colorClasses.border} ${p.colorClasses.bg} ring-2 ring-accent/40`
                   : "glass hover:border-accent"

@@ -281,7 +281,7 @@ const translations = {
     // Perspectivas (Fase 1)
     perspectives: "Perspectivas",
     perspTitle: "Perspectivas",
-    perspSubtitle: "Tus riesgos, organizados en las 4 áreas que mueven tu negocio.",
+    perspSubtitle: "Tus riesgos, organizados en las 5 áreas que mueven tu negocio.",
     perspLabel: "Perspectiva",
     perspLabelRequired: "Perspectiva *",
     perspUnassigned: "Sin asignar",
@@ -957,7 +957,7 @@ const translations = {
     // Perspectivas (Fase 1)
     perspectives: "Perspectives",
     perspTitle: "Perspectives",
-    perspSubtitle: "Your risks, organized into the 4 areas that drive your business.",
+    perspSubtitle: "Your risks, organized into the 5 areas that drive your business.",
     perspLabel: "Perspective",
     perspLabelRequired: "Perspective *",
     perspUnassigned: "Unassigned",

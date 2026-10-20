@@ -1,6 +1,6 @@
 // ============================================================
 // Riesgos de UNA perspectiva (equivalente a DepartmentRisks por perspectiva).
-// Ruta: /perspectiverisks?key=<financiera|cliente|competitiva|equipo>.
+// Ruta: /perspectiverisks?key=<financiera|cliente|competitiva|procesos|equipo>.
 // Clave inválida o ausente → redirige a Perspectivas.
 // Datos: Risk.filter({ perspective_key }) + Department.list() (nombre del
 // departamento). Orden en cliente con sortRisks ("Sin puntaje" al final).

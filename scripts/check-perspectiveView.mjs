@@ -79,7 +79,9 @@ check("equipo {1,0,1}", conteo.equipo, { total: 1, critical: 0, unscored: 1 });
 check("unassigned {1,0,0}", conteo[UNASSIGNED], { total: 1, critical: 0, unscored: 0 });
 check("financiera {0,0,0}", conteo.financiera, { total: 0, critical: 0, unscored: 0 });
 check("competitiva {0,0,0}", conteo.competitiva, { total: 0, critical: 0, unscored: 0 });
-check("Claves del conteo = 4 perspectivas + unassigned", Object.keys(conteo), [...PERSPECTIVE_KEYS, UNASSIGNED]);
+check("procesos {0,0,0}", conteo.procesos, { total: 0, critical: 0, unscored: 0 });
+check("Claves del conteo = 5 perspectivas + unassigned", Object.keys(conteo), [...PERSPECTIVE_KEYS, UNASSIGNED]);
+check("5 claves de perspectiva", PERSPECTIVE_KEYS.length, 5);
 check("Lista vacía → todo en cero", countByPerspective([]).cliente, { total: 0, critical: 0, unscored: 0 });
 check("Lista null → no truena", countByPerspective(null)[UNASSIGNED], { total: 0, critical: 0, unscored: 0 });
 

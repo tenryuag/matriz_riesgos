@@ -10,6 +10,7 @@ import {
   Users,
   Banknote,
   Rocket,
+  Cog,
   HeartHandshake,
   Sparkles,
   ChevronUp,
@@ -23,8 +24,9 @@ import UnassignedRisksNote from "@/components/strategy/UnassignedRisksNote";
 
 // ============================================================
 // Mapa estratégico (y su versión calibrada), estilo Balanced Scorecard:
-// carriles horizontales por perspectiva con las estrategias como burbujas,
-// leídos de abajo hacia arriba (cada nivel impulsa al de arriba).
+// 5 carriles horizontales (uno por perspectiva: Finanzas, Clientes,
+// Competitividad, Procesos, Equipo y talento) con las estrategias como
+// burbujas, leídos de abajo hacia arriba (cada nivel impulsa al de arriba).
 // El mapa calibrado muestra solo las de prioridad ALTA (el foco real).
 // Los riesgos críticos de la matriz entran solos como burbujas con escudo
 // en el carril de su perspectiva (Fase 2).
@@ -42,7 +44,7 @@ import { LANES as PERSPECTIVE_LANES } from "@/config/perspectives";
 // el mismo que usa la Matriz de Riesgos: nombres, colores y orden se
 // definen allá. Aquí solo se cambia el nombre del icono por el componente
 // de lucide (los componentes React no pueden vivir en el catálogo puro).
-const LANE_ICONS = { Banknote, Users, Rocket, HeartHandshake };
+const LANE_ICONS = { Banknote, Users, Rocket, Cog, HeartHandshake };
 export const LANES = PERSPECTIVE_LANES.map((lane) => ({
   ...lane,
   icon: LANE_ICONS[lane.iconName] || Map,
@@ -179,9 +181,9 @@ export function StrategicMapBase({ calibrated = false }) {
             </p>
             <p>
               Se lee <span className="text-foreground font-subtitle">de abajo hacia arriba</span>:
-              trabajar en tu equipo impulsa tu competitividad, eso mejora la experiencia de tu
-              cliente, y el cliente impulsa tus resultados financieros. El punto de cada burbuja
-              es su prioridad:{" "}
+              trabajar en tu equipo impulsa tus procesos, los procesos te hacen más competitivo,
+              eso mejora la experiencia de tu cliente, y el cliente impulsa tus resultados
+              financieros. El punto de cada burbuja es su prioridad:{" "}
               <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> alta</span>{" · "}
               <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> media</span>{" · "}
               <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block" /> baja</span>.
@@ -238,7 +240,7 @@ export function StrategicMapBase({ calibrated = false }) {
                   <div className="glass rounded-2xl flex flex-col sm:flex-row overflow-hidden">
                     {/* Banda lateral con la perspectiva */}
                     <div
-                      className={`sm:w-40 flex sm:flex-col items-center justify-center gap-2 px-4 py-3 sm:py-6 border-b sm:border-b-0 sm:border-r ${lane.label}`}
+                      className={`sm:w-40 sm:shrink-0 flex sm:flex-col items-center justify-center gap-2 px-4 py-3 sm:py-6 border-b sm:border-b-0 sm:border-r ${lane.label}`}
                     >
                       <LIcon className="w-5 h-5" />
                       <span className="font-subtitle text-xs uppercase tracking-wider text-center leading-tight">

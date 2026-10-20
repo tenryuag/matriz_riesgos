@@ -55,6 +55,11 @@ export default function Perspectives() {
 
   const toggle = (setter, key) => setter((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  // Con un número impar de perspectivas (hoy 5) la última tarjeta ocupa las
+  // dos columnas en md+ y sus ejemplos van en 3 columnas para no dejar un
+  // bloque alto y vacío al lado.
+  const isLastOdd = (i) => PERSPECTIVES.length % 2 === 1 && i === PERSPECTIVES.length - 1;
+
   return (
     <div className="space-y-8">
       {/* Encabezado */}
@@ -91,23 +96,27 @@ export default function Perspectives() {
           se muestra el Alert de arriba (no tarjetas en cero que lo contradigan) */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {PERSPECTIVES.map((p) => (
-            <div key={p.key} className="glass rounded-3xl p-6 animate-pulse h-64" />
+          {PERSPECTIVES.map((p, i) => (
+            <div key={p.key} className={`glass rounded-3xl p-6 animate-pulse h-64 ${isLastOdd(i) ? "md:col-span-2" : ""}`} />
           ))}
         </div>
       ) : !loadFailed && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {PERSPECTIVES.map((p) => {
+          {PERSPECTIVES.map((p, i) => {
             const Icon = iconForPerspective(p.key);
             const { total, critical, unscored } = counts[p.key];
             const isHelpOpen = !!helpOpen[p.key];
+            const wide = isLastOdd(i);
             // En móvil, con riesgos ya capturados, los ejemplos se pliegan
             // para no alargar la pantalla; en escritorio siempre se ven.
             const examplesCollapsible = isMobile && total > 0;
             const showExamples = !examplesCollapsible || !!examplesOpen[p.key];
 
             return (
-              <Card key={p.key} className={`glass border-l-4 ${p.colorClasses.border} transition-all duration-300`}>
+              <Card
+                key={p.key}
+                className={`glass border-l-4 ${p.colorClasses.border} transition-all duration-300 ${wide ? "md:col-span-2" : ""}`}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${p.colorClasses.bg}`}>
@@ -181,17 +190,20 @@ export default function Perspectives() {
                         {t("perspExamplesTitle")}
                       </h3>
                     )}
-                    {showExamples &&
-                      p.examples.map((ex, i) => (
-                        <div key={i} className="glass rounded-xl p-3 flex items-start justify-between gap-3">
-                          <p className="text-sm">{ex.description}</p>
-                          <Link to={createPageUrl(`AddRisk?perspective=${p.key}&example=${i}`)} className="flex-shrink-0">
-                            <Button variant="ghost" size="sm" className="text-accent">
-                              {t("perspTakeExample")}
-                            </Button>
-                          </Link>
-                        </div>
-                      ))}
+                    {showExamples && (
+                      <div className={wide ? "grid grid-cols-1 md:grid-cols-3 gap-2" : "space-y-2"}>
+                        {p.examples.map((ex, j) => (
+                          <div key={j} className={`glass rounded-xl p-3 flex gap-3 ${wide ? "flex-col items-start" : "items-start justify-between"}`}>
+                            <p className="text-sm">{ex.description}</p>
+                            <Link to={createPageUrl(`AddRisk?perspective=${p.key}&example=${j}`)} className={wide ? "" : "flex-shrink-0"}>
+                              <Button variant="ghost" size="sm" className="text-accent">
+                                {t("perspTakeExample")}
+                              </Button>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Pie de tarjeta */}

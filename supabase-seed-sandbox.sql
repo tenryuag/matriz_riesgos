@@ -12,11 +12,14 @@
 --      módulo esté terminado.)
 --
 -- MODELO DE LA MATRIZ (perspectivas):
---   La Matriz de Riesgos se organiza por 4 PERSPECTIVAS fijas, con las
---   mismas claves que los carriles del mapa estratégico:
+--   La Matriz de Riesgos se organiza por 5 PERSPECTIVAS fijas, con las
+--   mismas claves que los carriles del mapa estratégico (catálogo en
+--   src/config/perspectives.js; CHECK en supabase-perspectivas.sql o, en
+--   bases ya migradas, supabase-perspectivas-5.sql):
 --     financiera  → Finanzas
 --     cliente     → Clientes
---     competitiva → Procesos y competitividad
+--     competitiva → Competitividad
+--     procesos    → Procesos
 --     equipo      → Equipo y talento
 --   Cada riesgo demo lleva su perspective_key. Los DEPARTAMENTOS demo ya no
 --   son la organización principal: se siembran (con su perspectiva
@@ -30,8 +33,11 @@
 --     - (Fase 2) un riesgo Alto ACEPTADO sin mitigantes en la perspectiva
 --       Equipo y talento y un riesgo Alto SIN perspectiva ni mitigantes,
 --       para probar la integración riesgos → plan (aviso "aceptado sin
---       confirmar" y lista "Riesgos críticos sin perspectiva").
---   Total: 9 riesgos demo, 7 críticos (3 Intolerable, 4 Alto).
+--       confirmar" y lista "Riesgos críticos sin perspectiva"),
+--     - (5 perspectivas) un riesgo Alto de Competitividad ligado a
+--       Operaciones, con un mitigante débil, para que la perspectiva nueva
+--       no quede vacía.
+--   Total: 11 riesgos demo, 8 críticos (3 Intolerable, 5 Alto).
 --   Hasta la Fase 1, los riesgos sin departamento solo se ven en el
 --   Dashboard y en "Todos los riesgos" (no en la vista por departamento) y
 --   no se editan desde el formulario actual.
@@ -51,8 +57,9 @@
 --     detrás; nadie más lo ve de todos modos). Al correr
 --     supabase-seed-cleanup.sql vuelves a ver tu plan propio.
 --   - En Matriz de Riesgos verás los riesgos demo MEZCLADOS con los tuyos,
---     repartidos en las perspectivas Clientes, Procesos y competitividad y
---     Finanzas (la matriz ya es por usuario vía created_by_id).
+--     repartidos en las perspectivas Clientes, Competitividad, Procesos,
+--     Finanzas y Equipo y talento (la matriz ya es por usuario vía
+--     created_by_id).
 --   - Lo que captures NUEVO desde la app (ej. un riesgo nuevo) NO es
 --     sandbox: queda como dato real tuyo y el cleanup no lo borra.
 --
@@ -135,10 +142,10 @@ BEGIN
     VALUES ('Ventas (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'cliente', v_uid, v_uid)
     RETURNING id INTO v_dep_ventas;
   INSERT INTO departments (name, description, perspective_key, created_by_id, sandbox_owner_id)
-    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'competitiva', v_uid, v_uid)
+    VALUES ('Operaciones (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'procesos', v_uid, v_uid)
     RETURNING id INTO v_dep_ops;
   INSERT INTO departments (name, description, perspective_key, created_by_id, sandbox_owner_id)
-    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'competitiva', v_uid, v_uid)
+    VALUES ('Tecnología (demo)', 'Departamento de prueba — solo visible para tu cuenta', 'procesos', v_uid, v_uid)
     RETURNING id INTO v_dep_ti;
 
   -- Riesgos demo. inherent_score e *_level_key NO se escriben aquí: los
@@ -166,34 +173,42 @@ BEGIN
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Crítico', 'Bajo',
    v_uid, v_uid),
-  -- Procesos y competitividad · Operaciones: alto → alto (NO mitigado,
-  -- dispara alertas del dashboard)
-  (v_dep_ops, 'competitiva', 'Externa', 'Interrupción de la cadena de suministro por dependencia de un solo proveedor',
+  -- Procesos · Operaciones: alto → alto (NO mitigado, dispara alertas del
+  -- dashboard)
+  (v_dep_ops, 'procesos', 'Externa', 'Interrupción de la cadena de suministro por dependencia de un solo proveedor',
    'Probable (61-80%)', 'Mayor', 'Alto',
    'Reducir', 'Búsqueda de proveedores alternos (en proceso)', 'Mitiga la probabilidad',
    'Control Correctivo', 'No', 'Manual', 'No', 'Sí', 'No', 'Débil',
    'Probable (61-80%)', 'Mayor', 'Alto',
    v_uid, v_uid),
-  -- Procesos y competitividad · Operaciones: medio → tolerable
-  (v_dep_ops, 'competitiva', 'Interna', 'Retrasos en entregas por falta de planeación de rutas',
+  -- Procesos · Operaciones: medio → tolerable
+  (v_dep_ops, 'procesos', 'Interna', 'Retrasos en entregas por falta de planeación de rutas',
    'Ocasional (41-60%)', 'Crítico', 'Medio',
    'Reducir', 'Software de optimización de rutas y monitoreo diario', 'Mitiga la probabilidad',
    'Control Detectivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Medio',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
    v_uid, v_uid),
-  -- Procesos y competitividad · TI: intolerable → bajo
-  (v_dep_ti, 'competitiva', 'Externa', 'Ataque de ransomware que detenga la operación',
+  -- Procesos · TI: intolerable → bajo
+  (v_dep_ti, 'procesos', 'Externa', 'Ataque de ransomware que detenga la operación',
    'Probable (61-80%)', 'Catastrófico', 'Intolerable',
    'Transferir', 'Respaldo diario cifrado, antivirus corporativo y póliza de ciberseguridad', 'Mitiga el impacto',
    'Control Preventivo', 'Sí', 'Automatizado', 'Sí', 'Sí', 'Sí', 'Fuerte',
    'Improbable (21-40%)', 'Mayor', 'Bajo',
    v_uid, v_uid),
-  -- Procesos y competitividad · TI: tolerable (aceptado, sin mitigante)
-  (v_dep_ti, 'competitiva', 'Interna', 'Indisponibilidad breve del sitio web por mantenimientos',
+  -- Procesos · TI: tolerable (aceptado, sin mitigante)
+  (v_dep_ti, 'procesos', 'Interna', 'Indisponibilidad breve del sitio web por mantenimientos',
    'Improbable (21-40%)', 'Menor', 'Tolerable',
    'Aceptar', NULL, NULL,
    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
    'Improbable (21-40%)', 'Menor', 'Tolerable',
+   v_uid, v_uid),
+  -- Competitividad · Operaciones: alto → medio. (Grado de control: 0.30 +
+  -- 0.10 + 0.10 + 0.01 + 0.10 + 0.01 = 0.62 → Débil.)
+  (v_dep_ops, 'competitiva', 'Externa', 'Un competidor con mejor tecnología nos quita a dos clientes grandes',
+   'Probable (61-80%)', 'Mayor', 'Alto',
+   'Reducir', 'Plan de actualización tecnológica a dos años', 'Mitiga la probabilidad',
+   'Control Preventivo', 'Sí', 'Manual', 'No', 'Sí', 'No', 'Débil',
+   'Ocasional (41-60%)', 'Mayor', 'Medio',
    v_uid, v_uid),
   -- Finanzas · sin departamento: intolerable SIN mitigantes ni residual.
   -- Candidato a entrar solo a Planeación Estratégica como objetivo de

@@ -2,7 +2,7 @@
 -- PERSPECTIVAS — Fase 0: cimientos en la base de datos
 -- ============================================================
 -- Proyecto "Perspectivas" (aprobado): la Matriz de Riesgos se organizará
--- por 4 PERSPECTIVAS fijas (Balanced Scorecard) en lugar de departamentos
+-- por 5 PERSPECTIVAS fijas (Balanced Scorecard) en lugar de departamentos
 -- libres; todo riesgo con nivel INHERENTE Alto/Intolerable (puntaje
 -- probabilidad × impacto >= 13) entrará a la Planeación Estratégica como
 -- objetivo de prioridad alta con sus mitigantes; y el módulo financiero
@@ -22,11 +22,18 @@
 --   §6  Verificación final.
 --
 -- Catálogo de perspectivas (mismas claves que los carriles LANES del mapa
--- estratégico en src/pages/StrategicMap.jsx). Orden Balanced Scorecard:
+-- estratégico; la fuente de verdad es src/config/perspectives.js). Orden
+-- Balanced Scorecard (5 perspectivas desde el 20-oct-2026):
 --   financiera  → Finanzas
 --   cliente     → Clientes
---   competitiva → Procesos y competitividad
+--   competitiva → Competitividad
+--   procesos    → Procesos
 --   equipo      → Equipo y talento
+--
+-- NOTA (20-oct-2026): este script ya lista las 5 claves en los CHECK de §1
+-- y §2. Una base que corrió la versión anterior (4 claves: 'competitiva'
+-- era "Procesos y competitividad") se actualiza con
+-- supabase-perspectivas-5.sql, que solo recrea esas dos restricciones.
 --
 -- ⚠️ PRERREQUISITOS Y ORDEN
 --   - Staging y producción comparten la MISMA base: esto se corre UNA sola
@@ -268,8 +275,9 @@ ORDER BY r.created_by_id, r.id;
 --    la Fase 1 propondrá al usuario (él confirma; aquí NO se aplica nada):
 --      ventas / comercial / marketing / atención (a clientes)   → cliente
 --      finanzas / contabilidad / tesorería / cobranza           → financiera
+--      innovación / I+D / estrategia / alianzas / certificaciones → competitiva
 --      operaciones / producción / TI / tecnología / sistemas /
---      calidad / compras / logística / legal                    → competitiva
+--      calidad / compras / logística / legal                    → procesos
 --      RH / recursos humanos / capital humano / talento         → equipo
 --      cualquier otro                                           → NULL
 --    Resumen por perspectiva sugerida:
@@ -278,7 +286,8 @@ WITH mapa AS (
     CASE
       WHEN lower(d.name) ~ '(venta|comercial|marketing|mercadotecnia|atenci|cliente)'                        THEN 'cliente'
       WHEN lower(d.name) ~ '(finan|contab|tesorer|cobranza)'                                                 THEN 'financiera'
-      WHEN lower(d.name) ~ '(operaci|producci|\mti\M|tecnolog|sistemas|calidad|compras|log[ií]stica|legal)'  THEN 'competitiva'
+      WHEN lower(d.name) ~ '(innovaci|investigaci|\mi\+d\M|estrateg|competitiv|alianza|certificaci)'          THEN 'competitiva'
+      WHEN lower(d.name) ~ '(operaci|producci|\mti\M|tecnolog|sistemas|calidad|compras|log[ií]stica|legal)'  THEN 'procesos'
       WHEN lower(d.name) ~ '(recursos humanos|capital humano|talento|\mrh\M|\mrrhh\M)'                       THEN 'equipo'
     END AS perspectiva_sugerida
   FROM public.departments d
@@ -298,7 +307,8 @@ WITH mapa AS (
     CASE
       WHEN lower(d.name) ~ '(venta|comercial|marketing|mercadotecnia|atenci|cliente)'                        THEN 'cliente'
       WHEN lower(d.name) ~ '(finan|contab|tesorer|cobranza)'                                                 THEN 'financiera'
-      WHEN lower(d.name) ~ '(operaci|producci|\mti\M|tecnolog|sistemas|calidad|compras|log[ií]stica|legal)'  THEN 'competitiva'
+      WHEN lower(d.name) ~ '(innovaci|investigaci|\mi\+d\M|estrateg|competitiv|alianza|certificaci)'          THEN 'competitiva'
+      WHEN lower(d.name) ~ '(operaci|producci|\mti\M|tecnolog|sistemas|calidad|compras|log[ií]stica|legal)'  THEN 'procesos'
       WHEN lower(d.name) ~ '(recursos humanos|capital humano|talento|\mrh\M|\mrrhh\M)'                       THEN 'equipo'
     END AS perspectiva_sugerida
   FROM public.departments d
@@ -360,14 +370,14 @@ SELECT (SELECT count(*) FROM backup.risks_20261005)                 AS risks_res
 -- proponer valores.
 --
 -- El CHECK se recrea con DROP IF EXISTS + ADD para que correr dos veces
--- sea seguro. Admite NULL o una de las 4 claves del catálogo.
+-- sea seguro. Admite NULL o una de las claves del catálogo (5 hoy).
 
 ALTER TABLE public.risks ADD COLUMN IF NOT EXISTS perspective_key TEXT;
 
 ALTER TABLE public.risks DROP CONSTRAINT IF EXISTS risks_perspective_key_check;
 ALTER TABLE public.risks ADD CONSTRAINT risks_perspective_key_check
   CHECK (perspective_key IS NULL
-         OR perspective_key IN ('financiera', 'cliente', 'competitiva', 'equipo'));
+         OR perspective_key IN ('financiera', 'cliente', 'competitiva', 'procesos', 'equipo'));
 
 -- Las pantallas listan "mis riesgos por perspectiva" (RLS filtra por dueño).
 CREATE INDEX IF NOT EXISTS risks_owner_perspective_idx
@@ -387,7 +397,7 @@ ALTER TABLE public.departments ADD COLUMN IF NOT EXISTS perspective_key TEXT;
 ALTER TABLE public.departments DROP CONSTRAINT IF EXISTS departments_perspective_key_check;
 ALTER TABLE public.departments ADD CONSTRAINT departments_perspective_key_check
   CHECK (perspective_key IS NULL
-         OR perspective_key IN ('financiera', 'cliente', 'competitiva', 'equipo'));
+         OR perspective_key IN ('financiera', 'cliente', 'competitiva', 'procesos', 'equipo'));
 
 
 

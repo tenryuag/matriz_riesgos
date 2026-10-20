@@ -104,6 +104,18 @@ export function priorityFor(score) {
 const OPP_GROUP_BY_KEY = {};
 OPP_GROUPS.forEach((g) => g.questions.forEach((q) => { OPP_GROUP_BY_KEY[q.key] = g.title || g.key || ""; }));
 
+// Reparto explícito por clave de las estrategias de oportunidades que antes
+// caían juntas en "Procesos y competitividad" (hoy dos carriles distintos).
+// Competitividad: capital social completo, info del mercado y de la
+// competencia, patentes y el ciclo comercial. Procesos: información interna,
+// software, IA y mejora continua. Lo que no está aquí sigue el fallback.
+const OPP_COMPETITIVA = new Set([
+  "alianzas", "clientes_clave", "comunidad", "socios_estrategicos", "proveedores_clave",
+  "info_mercado", "info_competencia", "patentes",
+  "ciclo_comercial",
+]);
+const OPP_PROCESOS = new Set(["info_interna", "software", "ia", "mejora_continua"]);
+
 export function perspectiveFor(item) {
   const [src, key] = String(item?.id || "").split(":");
   // Riesgos críticos de la matriz ('risk:<id>'): traen su perspectiva
@@ -113,6 +125,8 @@ export function perspectiveFor(item) {
   if (src === "mkt") return "cliente";
   if (src === "fin") return key === "ventas_area_comercial" ? "competitiva" : "financiera";
   if (src !== "opp") return "cliente";
+  if (OPP_COMPETITIVA.has(key)) return "competitiva";
+  if (OPP_PROCESOS.has(key)) return "procesos";
   const group = (OPP_GROUP_BY_KEY[key] || "").toLowerCase();
   if (key === "costos_entrega") return "financiera";
   if (group.includes("financiero")) return "financiera";

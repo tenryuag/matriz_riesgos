@@ -8,10 +8,16 @@
 // Módulo PURO: sin React, sin alias "@/", imports relativos con .js.
 // Se copia al servidor MCP con `npm run mcp:sync`.
 //
+// Son 5 perspectivas en orden Balanced Scorecard (arriba → abajo en el mapa):
+// financiera · cliente · competitiva · procesos · equipo. Lectura causal de
+// abajo hacia arriba: trabajar en tu equipo impulsa tus procesos, los
+// procesos te hacen más competitivo, eso mejora la experiencia de tu cliente
+// y el cliente impulsa tus resultados financieros.
+//
 // Las claves (key) son las mismas que los carriles LANES del mapa
 // estratégico y las que guarda strategicCalc.perspectiveFor; NO cambiarlas.
-// Las clases Tailwind (colorClasses) son las que ya usaba el mapa:
-// financiera dorado (accent) · cliente rosa · competitiva azul · equipo verde.
+// Las clases Tailwind (colorClasses): financiera dorado (accent) · cliente
+// rosa · competitiva azul · procesos cyan · equipo verde.
 // Los iconos de lucide son componentes React, por eso aquí solo va el
 // nombre (iconName) y la pantalla resuelve el componente.
 // ============================================================
@@ -104,13 +110,49 @@ export const PERSPECTIVES = [
   },
   {
     key: "competitiva",
-    label: "Procesos y competitividad",
+    label: "Competitividad",
     lane: "competitiva",
     iconName: "Rocket",
-    short: "Cómo haces las cosas por dentro y qué te hace mejor o peor que la competencia.",
+    short: "Lo que te hace mejor o peor que la competencia.",
     help:
-      "Cómo haces las cosas por dentro y lo que te hace mejor o peor que la competencia: " +
-      "proveedores, maquinaria, sistemas, inventarios, permisos. " +
+      "Lo que te hace mejor o peor que la competencia: innovación, tecnología frente al " +
+      "mercado, certificaciones, alianzas, información del mercado y de tus competidores, " +
+      "propuesta de valor. Pregúntate: ¿qué podría hacer que la competencia me gane?",
+    examples: [
+      {
+        description: "Un competidor lanza un producto más barato o mejor y nos quita mercado.",
+        threat_type: "Externa",
+      },
+      {
+        description: "Perdemos una certificación o permiso que los clientes grandes exigen.",
+        threat_type: "Interna",
+      },
+      {
+        description: "Nuestra tecnología se queda atrás frente a competidores que automatizan.",
+        threat_type: "Externa",
+      },
+    ],
+    // Gastos: innovacion, marketing. "marketing" también está en cliente a propósito
+    // (atrae clientes y es palanca competitiva); si algún consumidor necesita una sola
+    // perspectiva por concepto, deberá definir la regla de desempate.
+    finConcepts: ["innovacion", "marketing"],
+    colorClasses: {
+      label: "bg-blue-500/20 text-blue-500 dark:text-blue-400 border-blue-500/40",
+      bubble: "bg-blue-500/15 border-blue-500/45 hover:border-blue-500",
+      text: "text-blue-500 dark:text-blue-400",
+      bg: "bg-blue-500/15",
+      border: "border-blue-500/40",
+    },
+  },
+  {
+    key: "procesos",
+    label: "Procesos",
+    lane: "procesos",
+    iconName: "Cog",
+    short: "Cómo haces las cosas por dentro: proveedores, máquinas, sistemas.",
+    help:
+      "Cómo haces las cosas por dentro: proveedores, maquinaria, sistemas, inventarios, " +
+      "calidad, logística, permisos. " +
       "Pregúntate: ¿qué podría detener, retrasar o encarecer mi operación?",
     examples: [
       {
@@ -128,7 +170,7 @@ export const PERSPECTIVES = [
     ],
     // Costo de ventas: materia_prima, indirectos, fletes, subcontratados ·
     // Balance: inventarios, proveedores, activos_fijos · Gastos: tecnologia,
-    // mantenimiento, suministros, innovacion, logistica.
+    // mantenimiento, suministros, logistica.
     finConcepts: [
       "materia_prima",
       "indirectos",
@@ -140,15 +182,14 @@ export const PERSPECTIVES = [
       "tecnologia",
       "mantenimiento",
       "suministros",
-      "innovacion",
       "logistica",
     ],
     colorClasses: {
-      label: "bg-blue-500/20 text-blue-500 border-blue-500/40",
-      bubble: "bg-blue-500/15 border-blue-500/45 hover:border-blue-500",
-      text: "text-blue-500",
-      bg: "bg-blue-500/15",
-      border: "border-blue-500/40",
+      label: "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40",
+      bubble: "bg-cyan-500/15 border-cyan-500/45 hover:border-cyan-500",
+      text: "text-cyan-600 dark:text-cyan-400",
+      bg: "bg-cyan-500/15",
+      border: "border-cyan-500/40",
     },
   },
   {
@@ -235,8 +276,9 @@ const normalizeText = (s) =>
     .trim();
 
 // Cada entrada: { key, stems, words }. `stems` se comparan por prefijo de
-// palabra (venta → ventas); `words` deben coincidir completas (ti, rh) o,
-// si llevan espacio, aparecer como frase dentro del nombre.
+// palabra (venta → ventas); `words` deben coincidir completas (ti, rh), o,
+// si llevan espacio, aparecer como frase dentro del nombre, o, si llevan
+// símbolos (i+d), aparecer delimitadas por no-alfanuméricos.
 // El orden importa: se devuelve la primera perspectiva que coincide.
 const DEPARTMENT_HINTS = [
   {
@@ -251,10 +293,21 @@ const DEPARTMENT_HINTS = [
   },
   {
     key: "competitiva",
+    stems: ["innovac", "investig", "estrateg", "competitiv", "alianza", "certificac"],
+    words: [
+      "i+d", "id+i", "desarrollo de negocio", "desarrollo de negocios", "nuevos negocios",
+      "inteligencia de mercado", "mejora continua",
+    ],
+  },
+  {
+    key: "procesos",
+    // "desarrollo" solo no entra: es ambiguo (de negocio → competitiva;
+    // de software → procesos). "Administración", "Dirección General" y
+    // "Gerencia" no coinciden con nada → null (el usuario decide).
     stems: [
       "operac", "operativ", "produc", "manufactur", "planta", "tecnolog", "sistema", "informatic",
       "calidad", "compra", "abastec", "logist", "almacen", "inventario", "mantenim", "legal",
-      "juridic", "ingenier", "proyecto", "desarrollo",
+      "juridic", "ingenier", "proyecto",
     ],
     words: ["ti", "it", "tics", "tic"],
   },
@@ -265,15 +318,20 @@ const DEPARTMENT_HINTS = [
   },
 ];
 
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const matchesWord = (w, text, tokens) => {
+  if (/^[a-z0-9]+$/.test(w)) return tokens.includes(w);
+  if (w.includes(" ")) return text.includes(w);
+  return new RegExp(`(^|[^a-z0-9])${escapeRegExp(w)}($|[^a-z0-9])`).test(text);
+};
+
 export function suggestPerspectiveForDepartment(name) {
   const text = normalizeText(name);
   if (!text) return null;
   const tokens = text.split(/[^a-z0-9]+/).filter(Boolean);
   for (const hint of DEPARTMENT_HINTS) {
     const byStem = hint.stems.some((stem) => tokens.some((tk) => tk.startsWith(stem)));
-    const byWord = hint.words.some((w) =>
-      w.includes(" ") ? text.includes(w) : tokens.includes(w)
-    );
+    const byWord = hint.words.some((w) => matchesWord(w, text, tokens));
     if (byStem || byWord) return hint.key;
   }
   return null;

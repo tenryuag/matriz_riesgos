@@ -70,8 +70,8 @@ export const Department = {
   },
 
   // 🔹 Perspectiva por defecto del departamento (Proyecto Perspectivas, Fase 0).
-  // `key` es una de las 4 claves del catálogo (financiera, cliente,
-  // competitiva, equipo) o null para quitarla. La BD valida la clave con un
+  // `key` es una de las 5 claves del catálogo (financiera, cliente,
+  // competitiva, procesos, equipo) o null para quitarla. La BD valida la clave con un
   // CHECK; si no existe, handleQueryError traduce el error 23514.
   async setPerspective(id, key) {
     const { error } = await supabase
