@@ -21,7 +21,7 @@
 
 -- ---------- departments ----------
 -- Con el modelo de perspectivas, cada departamento lleva una perspective_key
--- sugerida (financiera | cliente | competitiva | equipo) que usa el
+-- sugerida (financiera | cliente | competitiva | procesos | equipo) que usa el
 -- asistente de migración departamento → perspectiva. No afecta las políticas.
 DROP POLICY IF EXISTS "Enable insert for users based on user_id" ON departments;
 CREATE POLICY "Enable insert for users based on user_id" ON departments
@@ -50,7 +50,7 @@ CREATE POLICY "delete" ON departments
 
 -- ---------- risks ----------
 -- Columnas del modelo de perspectivas (supabase-perspectivas.sql):
---   perspective_key   TEXT   financiera | cliente | competitiva | equipo.
+--   perspective_key   TEXT   financiera | cliente | competitiva | procesos | equipo.
 --                            Organiza la matriz; department_id pasa a ser
 --                            opcional (los riesgos viejos lo conservan).
 --   inherent_score, inherent_level_key, residual_level_key

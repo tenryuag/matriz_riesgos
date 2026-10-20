@@ -287,7 +287,7 @@ export default function Dashboard() {
             <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0 animate-pulse">
               <ShieldAlert className="w-7 h-7 text-red-500" />
             </div>
-            <div className="flex-grow">
+            <div className="flex-grow min-w-0">
               <h3 className="font-title text-lg text-red-500 mb-1">
                 {t('dashAlertTitle')}
               </h3>
@@ -525,7 +525,9 @@ export default function Dashboard() {
               <p className="text-xs text-muted">{t('perspCriticalHint')}</p>
             </CardHeader>
             <CardContent>
-              <div className="h-72">
+              {/* Altura para 5 perspectivas + "Sin asignar" (hasta 6 filas, dos
+                  barras cada una) sin que se encimen. */}
+              <div className="h-[22rem]">
                 <ResponsiveContainer width="100%" height="100%">
                   {/* Barras horizontales: los nombres de las perspectivas son largos
                       y en el eje X se encimaban (sobre todo en celular). */}
@@ -541,7 +543,7 @@ export default function Dashboard() {
                     <YAxis
                       type="category"
                       dataKey="name"
-                      width={104}
+                      width={112}
                       interval={0}
                       tick={<CategoryTick />}
                       axisLine={{ stroke: 'var(--card-border)' }}

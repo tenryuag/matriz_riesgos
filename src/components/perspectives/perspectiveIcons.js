@@ -1,12 +1,12 @@
 // ============================================================
-// Iconos de las 4 perspectivas (lucide-react 0.475.0).
+// Iconos de las 5 perspectivas (lucide-react 0.475.0).
 // El catálogo (src/config/perspectives.js, puro y sincronizado al MCP) solo
 // guarda el nombre del icono (iconName); aquí se resuelve el componente.
 // ============================================================
-import { Banknote, Users, Rocket, HeartHandshake, Layers } from "lucide-react";
+import { Banknote, Users, Rocket, Cog, HeartHandshake, Layers } from "lucide-react";
 import { PERSPECTIVE_BY_KEY } from "@/config/perspectives";
 
-export const PERSPECTIVE_ICONS = { Banknote, Users, Rocket, HeartHandshake };
+export const PERSPECTIVE_ICONS = { Banknote, Users, Rocket, Cog, HeartHandshake };
 
 // Clave desconocida o sin icono → Layers (genérico).
 export function iconForPerspective(key) {

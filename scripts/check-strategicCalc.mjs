@@ -83,12 +83,12 @@ const S2 = risk("s2", "Errores en cotizaciones que generan pérdidas", P.probabl
   residual_probability: P.improbable, residual_impact: I.critico, // 6 → Bajo
 });
 const S3 = risk("s3", "Interrupción de la cadena de suministro", P.probable, I.mayor, {
-  inherent_score: 16, perspective_key: "competitiva", threat_type: "Externa", risk_strategy: "Reducir",
+  inherent_score: 16, perspective_key: "procesos", threat_type: "Externa", risk_strategy: "Reducir",
   mitigant_1: "Inventario de seguridad", mitigant_impact_1: "Mitiga el impacto", control_grade_1: "Débil",
   residual_level: "Alto",
 });
 const S4 = risk("s4", "Ataque de ransomware", P.probable, I.catastrofico, {
-  inherent_score: 20, perspective_key: "competitiva", threat_type: "Externa", risk_strategy: "Transferir",
+  inherent_score: 20, perspective_key: "procesos", threat_type: "Externa", risk_strategy: "Transferir",
   mitigant_1: "Póliza de ciberseguridad y respaldos", mitigant_impact_1: "Mitiga el impacto",
   residual_probability: P.improbable, residual_impact: I.critico, // 6 → Bajo
   residual_level_key: "LOW",
@@ -182,6 +182,13 @@ check("Aceptar valor 'x' → false", acc({ objectives: { ra: "x" } }).acknowledg
 check("decisions undefined → false", acc(undefined).acknowledged, false);
 const s4o = riskObjectivesFrom([S4])[0];
 check("residual Bajo con inherente INTOLERABLE entra", [s4o.level, s4o.residual, s4o.residualLabel], ["INTOLERABLE", "LOW", "Bajo"]);
+check("perspective_key 'procesos' → Procesos", [s4o.perspective, s4o.perspectiveLabel], ["procesos", "Procesos"]);
+const compObj = riskObjectivesFrom([risk("rc", "Un competidor certificado nos desplaza", P.probable, I.mayor, { perspective_key: "competitiva", threat_type: "Externa" })])[0];
+check("perspective_key 'competitiva' → Competitividad", [compObj.perspective, compObj.perspectiveLabel], ["competitiva", "Competitividad"]);
+check("iniciativa de riesgo Competitividad → area 'Competitividad'", initiativeFromTemplate(compObj, templatesFor(compObj)[0], TODAY).area, "Competitividad");
+check("iniciativa de riesgo Procesos → area 'Procesos'", initiativeFromControl(s4o, s4o.controls[0], TODAY).area, "Procesos");
+check("objectivesById con ambas claves", Object.keys(objectivesById([compObj, s4o])), ["risk:rc", "risk:s4"]);
+check("mergeFodaWithRisks: Competitividad externa → amenazas, Procesos externa → amenazas", mergeFodaWithRisks({}, [compObj, s4o]).amenazas.map((a) => a.riskId), ["rc", "s4"]);
 check("S5 sin residual → null/null", [riskObjectivesFrom([S5])[0].residual, riskObjectivesFrom([S5])[0].residualLabel], [null, null]);
 const orden = riskObjectivesFrom([
   risk("h16", "a", P.probable, I.mayor, { inherent_score: 16 }),

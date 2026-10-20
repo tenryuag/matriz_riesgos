@@ -129,9 +129,9 @@ const tEn = (k) => ({ tolerable: "Tolerable", low: "Low", medium: "Medium", high
 check("Con t() en inglés", labelForLevelKey("HIGH", tEn), "High");
 
 console.log("\n== Perspectivas ==");
-check("Orden Balanced Scorecard", PERSPECTIVE_KEYS, ["financiera", "cliente", "competitiva", "equipo"]);
+check("Orden Balanced Scorecard", PERSPECTIVE_KEYS, ["financiera", "cliente", "competitiva", "procesos", "equipo"]);
 check("Etiquetas unificadas", PERSPECTIVES.map((p) => p.label),
-  ["Finanzas", "Clientes", "Procesos y competitividad", "Equipo y talento"]);
+  ["Finanzas", "Clientes", "Competitividad", "Procesos", "Equipo y talento"]);
 check("lane = key", PERSPECTIVES.every((p) => p.lane === p.key), true);
 check("3 ejemplos con threat_type válido", PERSPECTIVES.every((p) =>
   p.examples.length === 3 && p.examples.every((e) => e.description && ["Interna", "Externa"].includes(e.threat_type))), true);
@@ -139,16 +139,20 @@ check("isPerspectiveKey", [isPerspectiveKey("cliente"), isPerspectiveKey("ventas
 check("PERSPECTIVE_BY_KEY.equipo.label", PERSPECTIVE_BY_KEY.equipo.label, "Equipo y talento");
 check("LANES mantiene la forma (key,title,desc,iconName,label,bubble)",
   LANES.every((l) => ["key", "title", "desc", "iconName", "label", "bubble"].every((f) => typeof l[f] === "string" && l[f])), true);
-// Las clases de color deben ser las que usaba StrategicMap antes del cambio.
+// Las clases de color de los 4 carriles originales deben seguir siendo las
+// que usaba StrategicMap; el carril nuevo (procesos) es cyan.
 const OLD_LANE_CLASSES = {
   financiera: ["bg-accent/20 text-accent border-accent/40", "bg-accent/15 border-accent/45 hover:border-accent"],
   cliente: ["bg-rose-500/20 text-rose-500 border-rose-500/40", "bg-rose-500/15 border-rose-500/45 hover:border-rose-500"],
-  competitiva: ["bg-blue-500/20 text-blue-500 border-blue-500/40", "bg-blue-500/15 border-blue-500/45 hover:border-blue-500"],
+  competitiva: ["bg-blue-500/20 text-blue-500 dark:text-blue-400 border-blue-500/40", "bg-blue-500/15 border-blue-500/45 hover:border-blue-500"],
+  procesos: ["bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40", "bg-cyan-500/15 border-cyan-500/45 hover:border-cyan-500"],
   equipo: ["bg-green-500/20 text-green-600 dark:text-green-500 border-green-500/40", "bg-green-500/15 border-green-500/45 hover:border-green-500"],
 };
-check("Clases Tailwind idénticas a las del mapa anterior",
+check("Clases Tailwind por carril (4 originales + procesos cyan)",
   LANES.map((l) => [l.label, l.bubble]), PERSPECTIVE_KEYS.map((k) => OLD_LANE_CLASSES[k]));
-check("Iconos lucide esperados", LANES.map((l) => l.iconName), ["Banknote", "Users", "Rocket", "HeartHandshake"]);
+check("Iconos lucide esperados", LANES.map((l) => l.iconName), ["Banknote", "Users", "Rocket", "Cog", "HeartHandshake"]);
+check("Colores de procesos (text, bg, border)", [PERSPECTIVE_BY_KEY.procesos.colorClasses.text, PERSPECTIVE_BY_KEY.procesos.colorClasses.bg, PERSPECTIVE_BY_KEY.procesos.colorClasses.border],
+  ["text-cyan-600 dark:text-cyan-400", "bg-cyan-500/15", "border-cyan-500/40"]);
 
 // finConcepts: cada clave debe existir en algún catálogo del módulo financiero.
 const FIN_KEYS = new Set([
@@ -168,10 +172,13 @@ console.log("\n== Sugerencia por nombre de departamento ==");
 const cases = [
   ["Ventas", "cliente"], ["Área Comercial", "cliente"], ["Marketing y Publicidad", "cliente"], ["Atención a Clientes", "cliente"],
   ["Finanzas", "financiera"], ["Contabilidad", "financiera"], ["Tesorería", "financiera"], ["Cobranza", "financiera"],
-  ["Operaciones", "competitiva"], ["Producción", "competitiva"], ["TI", "competitiva"], ["Tecnología", "competitiva"],
-  ["Sistemas", "competitiva"], ["Calidad", "competitiva"], ["Compras", "competitiva"], ["Logística", "competitiva"], ["Legal", "competitiva"],
+  ["Innovación", "competitiva"], ["Investigación y desarrollo", "competitiva"], ["I+D", "competitiva"],
+  ["Desarrollo de negocios", "competitiva"], ["Mejora continua", "competitiva"], ["Certificaciones", "competitiva"],
+  ["Operaciones", "procesos"], ["Producción", "procesos"], ["TI", "procesos"], ["Tecnología", "procesos"],
+  ["Sistemas", "procesos"], ["Calidad", "procesos"], ["Compras", "procesos"], ["Logística", "procesos"], ["Legal", "procesos"],
+  ["Desarrollo", null],
   ["RH", "equipo"], ["Recursos Humanos", "equipo"], ["Capital Humano", "equipo"], ["Talento", "equipo"],
-  ["Dirección General", null], ["Gestión", null], ["", null], [null, null],
+  ["Dirección General", null], ["Administración", null], ["Gerencia", null], ["Gestión", null], ["", null], [null, null],
 ];
 check("Heurística de departamentos", cases.map(([n]) => suggestPerspectiveForDepartment(n)), cases.map(([, k]) => k));
 
@@ -183,6 +190,23 @@ check("mkt sigue → cliente", perspectiveFor({ id: "mkt:precio" }), "cliente");
 check("fin sigue → financiera", perspectiveFor({ id: "fin:liquidez" }), "financiera");
 check("fin ventas_area_comercial → competitiva", perspectiveFor({ id: "fin:ventas_area_comercial" }), "competitiva");
 check("opp costos_entrega → financiera", perspectiveFor({ id: "opp:costos_entrega" }), "financiera");
+check("opp alianzas → competitiva", perspectiveFor({ id: "opp:alianzas" }), "competitiva");
+check("opp proveedores_clave → competitiva", perspectiveFor({ id: "opp:proveedores_clave" }), "competitiva");
+check("opp info_mercado → competitiva", perspectiveFor({ id: "opp:info_mercado" }), "competitiva");
+check("opp info_competencia → competitiva", perspectiveFor({ id: "opp:info_competencia" }), "competitiva");
+check("opp patentes → competitiva", perspectiveFor({ id: "opp:patentes" }), "competitiva");
+check("opp ciclo_comercial → competitiva", perspectiveFor({ id: "opp:ciclo_comercial" }), "competitiva");
+check("opp info_interna → procesos", perspectiveFor({ id: "opp:info_interna" }), "procesos");
+check("opp software → procesos", perspectiveFor({ id: "opp:software" }), "procesos");
+check("opp ia → procesos", perspectiveFor({ id: "opp:ia" }), "procesos");
+check("opp mejora_continua → procesos", perspectiveFor({ id: "opp:mejora_continua" }), "procesos");
+check("opp liquidez → financiera (sin cambio)", perspectiveFor({ id: "opp:liquidez" }), "financiera");
+check("opp talento → equipo (sin cambio)", perspectiveFor({ id: "opp:talento" }), "equipo");
+check("opp precios → cliente (sin cambio)", perspectiveFor({ id: "opp:precios" }), "cliente");
+check("Toda perspectiva devuelta por perspectiveFor existe en el catálogo", (() => {
+  const ids = ["mkt:precio_valor", "fin:liquidez", "fin:ventas_area_comercial"];
+  return ids.every((id) => isPerspectiveKey(perspectiveFor({ id })));
+})(), true);
 check("id vacío → cliente (como antes)", perspectiveFor({}), "cliente");
 
 console.log(`\n${failures === 0 ? "TODO OK" : `${failures} FALLA(S)`}`);
