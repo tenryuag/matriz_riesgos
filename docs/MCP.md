@@ -96,11 +96,11 @@ Las herramientas se ofrecen **según los módulos a los que el usuario tiene acc
 | (siempre) | `resumen_general` |
 | Gestión del Riesgo (`risk`) | `listar_departamentos`, `listar_riesgos`, `obtener_riesgo`, `resumen_riesgos` |
 | Planeación Estratégica (`strategic`) | `resumen_plan`, `prioridades`, `foda`, `iniciativas`, `analisis_cliente`, `competidores` |
-| Análisis Financiero (`fin-analysis`) | `empresa_financiera`, `estado_resultados`, `balance_general`, `flujo_efectivo` |
+| Análisis Financiero (`fin-analysis`) | `empresa_financiera`, `estado_resultados`, `balance_general`, `flujo_efectivo`, `razones_financieras` |
 
 | Herramienta | Qué devuelve |
 |---|---|
-| `resumen_general` | Vista rápida de los tres módulos: riesgos críticos, prioridades, iniciativas vencidas, últimas cifras |
+| `resumen_general` | Vista rápida de los tres módulos: riesgos críticos, prioridades, iniciativas vencidas, últimas cifras (incluye `liquidez` y `semaforo_razones` del último periodo) |
 | `listar_departamentos` | Departamentos con conteo de riesgos |
 | `listar_riesgos` | Riesgos (compactos) con filtros por nivel inherente/residual, tipo de amenaza, departamento y texto |
 | `obtener_riesgo` | Detalle completo de un riesgo: calificación, estrategia, controles con su evaluación, residual |
@@ -115,11 +115,12 @@ Las herramientas se ofrecen **según los módulos a los que el usuario tiene acc
 | `estado_resultados` | Estado de resultados por año con márgenes y variaciones |
 | `balance_general` | Totales del balance y si cuadra (opción `detalle` para todas las cuentas) |
 | `flujo_efectivo` | Estado de cambios (indirecto) y flujo directo |
+| `razones_financieras` | Las 18 razones financieras por año con semáforo, etiqueta y motivo cuando no aplica |
 
 > **Nota (Fase 2 de perspectivas — riesgos críticos en el plan):** las funciones nuevas de `src/config/strategicCalc.js` (`riskObjectivesFrom`, `riskInitiativeWarnings`, `focusItems`, `mergeFodaWithRisks`, plantillas de `strategicCatalog.js`, etc.) ya están **sincronizadas** a `supabase/functions/_shared/app/` con `npm run mcp:sync`, pero el servidor **aún no las expone**: `resumen_plan`, `prioridades`, `foda` e `iniciativas` siguen respondiendo solo con debilidades y no incluyen los riesgos críticos que la app ya muestra como objetivos de prioridad alta. Incorporarlos a las herramientas estratégicas (y a `resumen_general`) queda para una fase posterior; `index.ts` no cambió y la función no se redesplegó por esta fase.
 
 
-Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen neto entre 2024 y 2025?"*.
+Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen neto entre 2024 y 2025?"*, *"¿Qué razones financieras tengo en rojo y qué significan?"*.
 
 ## Nota técnica: verificación del token (llaves HS256)
 
@@ -140,4 +141,4 @@ Para probar sin pasar por Claude: crear un usuario de prueba con `POST /auth/v1/
 
 - Herramientas de escritura con confirmación (crear riesgo como borrador, agregar iniciativa, marcar control como implementado).
 - Perspectivas en lugar de departamentos cuando se apruebe esa propuesta (la herramienta `listar_departamentos` pasará a `listar_perspectivas`).
-- Razones financieras cuando exista esa pantalla.
+- **Redesplegar la función** (`npm run mcp:sync` y `npx supabase functions deploy mcp --no-verify-jwt`) para que la herramienta `razones_financieras` y los campos `liquidez` / `semaforo_razones` de `resumen_general` existan en producción: el código ya está en `index.ts` y en `_shared/app/`, pero la función no se redesplegó al cerrar el módulo de Análisis Financiero.

@@ -243,5 +243,63 @@ Decisiones tomadas al implementar la Fase 2 que **el dueño del producto debe co
 
 ---
 
+## 7. Análisis Financiero — razones financieras
+
+La pantalla **Razones financieras** (`FinAnalysisRatios`) y el tablero del Inicio del módulo (`FinAnalysisHome`) calculan 18 indicadores con semáforo a partir del Estado de Resultados y del Balance General, sin captura adicional. Esta sección es la **única fuente** de esas reglas. Los cálculos viven en `src/config/finCalc.js` (`computeRatios`, `ratioStatus`, `ratioTrend`, `summarizeRatios`, `DAYS_BASE`; funciones puras probadas con `node scripts/check-finCalc.mjs`) y el catálogo en `src/config/finConfig.js` (`RATIO_GROUPS`, `RATIO_DEFS`, `RATIO_BY_KEY`, `RATIO_STATUS_LABEL`, `formatRatio`). El servidor MCP usa los mismos módulos (herramienta `razones_financieras`). La fuente de las fórmulas es la hoja "Razones Financieras" del Excel del cliente (`docs/Modelo_Simplificado_con_Tableros_Estrategicos.xlsx`), con los desvíos anotados al final.
+
+Notación: `AC` activo circulante, `PC` pasivo circulante, `TA` total activo, `TP` total pasivo, `TC` total capital contable (de `computeBalance`); `Inv` inventarios, `Cli` clientes, `Prov` proveedores, `Caja` (clave `caja`); `Ventas`, `Costo`, `UB` utilidad bruta, `RO` resultado de operación, `EBITDA`, `GastosFin`, `UN` utilidad neta (de `computeIncome`).
+
+| #   | Regla |
+| --- | ----- |
+| F1  | **Alcance.** 18 indicadores en 5 grupos: liquidez, eficiencia, apalancamiento, cobertura y rentabilidad (`RATIO_GROUPS`, cada uno con una pregunta en lenguaje llano). Las dos rotaciones del Excel (`rotacion_inventarios = Costo ÷ InvProm`, `rotacion_proveedores = Costo ÷ ProvProm`) son intermedias: se devuelven en `aux`, no son indicadores ni tienen semáforo. El orden del catálogo `RATIO_DEFS` es el orden de la tabla F13–F30 y manda en pantalla, en el MCP y en `atencion`. |
+| F2  | **Fuente de las cifras.** Los flujos salen de `computeIncome` (`ventas`, `costo`, `utilidadBruta`, `resultadoOp`, `ebitda`, `gastosFin`, `utilidadNeta`); los totales del Balance de `computeBalance` (AC, PC, TA, TP, TC) y los saldos sueltos de `sections.balance` (`inventarios`, `clientes`, `proveedores`, `caja`, `bancario_cp`, `porcion_circulante_lp`, `bancario_lp`). `computeRatios` reutiliza esas funciones y `annualizeFactor`; no duplica fórmulas. |
+| F3  | **Anualización.** En un año parcial (`months < 12`) los flujos (Ventas, Costo, UB, RO, EBITDA, GastosFin, UN) se multiplican por `factor = 12 / months` (`scaleIncome`) **antes** de calcular las razones; los saldos del Balance no se tocan. Los márgenes no cambian con el factor. La columna se rotula con `yearLabel` ("jun 2026") y el subtítulo "anualizado"; `computeRatios` devuelve `factor` por año. Coherente con la pantalla Estado de Resultados. |
+| F4  | **Promedios.** `InvProm` y `ProvProm` = promedio del saldo del año y del año anterior cuando existe año anterior; en el primer año, el saldo del año. `Cli` se toma al cierre, sin promediar (como el Excel). |
+| F5  | **Base de días.** `DAYS_BASE = 360` para días de inventario, clientes y proveedores. |
+| F6  | **Definiciones.** `Caja` = solo la clave `caja` (no incluye `inversiones`). `DeudaBruta = bancario_cp + porcion_circulante_lp + bancario_lp`. `EBITDA = resultado de operación + depreciación` (`computeIncome().ebitda`). Costos y gastos financieros se tratan en positivo. |
+| F7  | **No calculable (N/A).** Cuando una razón no se puede calcular, `values[key] = null` y `na[key]` lleva el motivo corto en español (columna "N/A" de la tabla F13–F30), que la pantalla muestra bajo el "—". El estatus es `null` ("No aplica", gris) salvo tres excepciones con semáforo propio: TC ≤ 0 → **rojo** en `apalancamiento`, `apalancamiento_fin` y `roe`; `deuda_neta ≤ 0` → `deuda_ebitda` **verde** ("La caja cubre toda la deuda"); EBITDA ≤ 0 con deuda neta positiva → `deuda_ebitda` **rojo** ("EBITDA negativo o cero"). Estas excepciones se aplican en `computeRatios`, no en el catálogo. `capital_trabajo` y `deuda_neta` siempre se calculan. |
+| F8  | **Semáforo.** `status[key] ∈ {'verde','ambar','rojo',null}`; etiquetas `RATIO_STATUS_LABEL`: Sano / Vigilar / Atender / No aplica. Las bandas viven en el catálogo (fracciones para los porcentajes: 0.05, no 5) y `ratioStatus(def, value)` las evalúa de forma genérica: `better:'higher'` → verde si ≥ `greenMin`, ámbar si ≥ `amberMin`, si no rojo; `better:'lower'` → verde si ≤ `greenMax`, ámbar si ≤ `amberMax`, si no rojo; `better:'range'` → verde dentro de `green:[min,max]`, ámbar dentro de `amber:[min,max]`, si no rojo. Son **umbrales de referencia general para PyMEs mexicanas**, propuesta que el dueño del producto debe confirmar; se ajustan en un solo lugar. La pantalla lo dice explícitamente (card de introducción y nota al pie): cada industria tiene rangos normales distintos; la `nota` de la herramienta MCP `razones_financieras` solo los califica como "umbrales de referencia general para PyMEs". |
+| F9  | **Herencia de estatus.** `statusFrom: '<key>'` copia el semáforo de otro indicador porque es la misma información en pesos: `capital_trabajo` hereda de `liquidez`; `deuda_neta` hereda de `deuda_ebitda`. Los herederos no tienen bandas propias. |
+| F10 | **Tendencia.** `ratioTrend(def, curr, prev)` → `'mejora' | 'empeora' | 'igual' | null`: `null` si alguno es `null` o `better === 'range'`; `igual` si `|curr − prev| < 1e-9`; con `'higher'` mejora si sube, con `'lower'` mejora si baja. Los herederos usan su propio `better` (`capital_trabajo` higher, `deuda_neta` lower). Se compara el último periodo contra el anterior y solo se muestra con ≥ 2 años. La pantalla, además, muestra "=" ("Sin cambio apreciable") cuando `formatRatio` da el mismo texto para ambos periodos aunque el motor diga `mejora`/`empeora` (6.64 % → 6.58 % se ve como 6.6 % → 6.6 %). Los nombres en pantalla (`label`) son los de la hoja "Razones Financieras" del Excel del cliente (Índice de liquidez, Días de clientes, Ciclo económico, Índice de apalancamiento, Deuda / EBITDA, ROA, ROE…) para que quien conoce el modelo los reconozca. |
+| F11 | **Resumen.** `summarizeRatios(yearRatios)` → `{ verde, ambar, rojo, na, atencion }`: cuenta por color (los N/A con semáforo cuentan en su color; los N/A sin semáforo en `na`) y `atencion` lista primero todos los rojos y luego los ámbar, en el orden del catálogo; un N/A sin estatus no aparece. Inicio y pantalla muestran hasta 3 elementos de `atencion`. |
+| F12 | **Formato.** `formatRatio(def, value)`: `null` → "—"; `ratio` → 2 decimales + " x" ("2.31 x"); `pct` → `fmtPct` ("36.2%"); `days` → entero redondeado + " días" ("42 días"); `miles` → `fmtMiles` ("29,442"). |
+
+Indicadores (orden del catálogo). Los porcentajes de las bandas se guardan como fracciones.
+
+| #   | `key` | Grupo | Fórmula | Formato | N/A (motivo) | Verde | Ámbar | Rojo |
+| --- | ----- | ----- | ------- | ------- | ------------ | ----- | ----- | ---- |
+| F13 | `liquidez` | Liquidez | AC ÷ PC | ratio | PC ≤ 0 → "Sin pasivo circulante" | ≥ 1.5 | 1.0 – 1.49 | < 1.0 |
+| F14 | `acido` | Liquidez | (AC − Inv) ÷ PC | ratio | PC ≤ 0 → "Sin pasivo circulante" | ≥ 1.0 | 0.7 – 0.99 | < 0.7 |
+| F15 | `capital_trabajo` | Liquidez | AC − PC | miles | siempre se calcula | hereda `liquidez` (F9) | | |
+| F16 | `dias_inventario` | Eficiencia | 360 ÷ (Costo ÷ InvProm) | días | Costo ≤ 0 → "Sin costo de ventas"; InvProm ≤ 0 → "Sin inventarios" | ≤ 60 | 61 – 90 | > 90 |
+| F17 | `dias_clientes` | Eficiencia | Cli ÷ (Ventas ÷ 360) | días | Ventas ≤ 0 → "Sin ventas" | ≤ 45 | 46 – 75 | > 75 |
+| F18 | `dias_proveedores` | Eficiencia | 360 ÷ (Costo ÷ ProvProm) | días | Costo ≤ 0 → "Sin costo de ventas"; ProvProm ≤ 0 → "Sin crédito de proveedores" | 30 – 90 | 15 – 29 ó 91 – 120 | < 15 ó > 120 |
+| F19 | `ciclo` | Eficiencia | dias_inventario + dias_clientes − dias_proveedores (los N/A cuentan como 0) | días | los tres componentes N/A → "Sin ventas ni costo de ventas" | ≤ 45 | 46 – 90 | > 90 |
+| F20 | `apalancamiento` | Apalancamiento | TP ÷ TC | ratio | TC ≤ 0 → "Capital contable negativo o cero", **rojo** | ≤ 1.0 | 1.01 – 2.0 | > 2.0 |
+| F21 | `apalancamiento_fin` | Apalancamiento | GastosFin ÷ TC | pct | TC ≤ 0 → "Capital contable negativo o cero", **rojo** | ≤ 5 % | 5.01 – 10 % | > 10 % |
+| F22 | `capitalizacion` | Apalancamiento | TC ÷ TA | pct | TA ≤ 0 → "Sin activos" | ≥ 50 % | 33 – 49.9 % | < 33 % |
+| F23 | `deuda_neta` | Apalancamiento | DeudaBruta − Caja | miles | siempre se calcula | hereda `deuda_ebitda` (F9) | | |
+| F24 | `deuda_ebitda` | Apalancamiento | deuda_neta ÷ EBITDA | ratio | deuda_neta ≤ 0 → "La caja cubre toda la deuda", **verde**; EBITDA ≤ 0 → "EBITDA negativo o cero", **rojo** | ≤ 2.0 | 2.01 – 3.5 | > 3.5 |
+| F25 | `cobertura` | Cobertura | EBITDA ÷ GastosFin | ratio | GastosFin ≤ 0 → "Sin gastos financieros", sin semáforo | ≥ 3.0 | 1.5 – 2.99 | < 1.5 |
+| F26 | `margen_bruto` | Rentabilidad | UB ÷ Ventas | pct | Ventas ≤ 0 → "Sin ventas" | ≥ 30 % | 15 – 29.9 % | < 15 % |
+| F27 | `margen_operativo` | Rentabilidad | RO ÷ Ventas | pct | Ventas ≤ 0 → "Sin ventas" | ≥ 10 % | 5 – 9.9 % | < 5 % |
+| F28 | `margen_neto` | Rentabilidad | UN ÷ Ventas | pct | Ventas ≤ 0 → "Sin ventas" | ≥ 5 % | 0 – 4.9 % | < 0 |
+| F29 | `roa` | Rentabilidad | UN ÷ TA | pct | TA ≤ 0 → "Sin activos" | ≥ 5 % | 0 – 4.9 % | < 0 |
+| F30 | `roe` | Rentabilidad | UN ÷ TC | pct | TC ≤ 0 → "Capital contable negativo o cero", **rojo** | ≥ 15 % | 0 – 14.9 % | < 0 |
+
+Auxiliares que `computeRatios` devuelve en `aux` por año (no son indicadores): `rotacion_inventarios`, `rotacion_proveedores`, `ebitda`, `deuda_bruta`, `inventario_promedio`, `proveedores_promedio` y las cifras base ya anualizadas (`ventas`, `costo`, `gastos_financieros`, `utilidad_neta`, `activo_circulante`, `pasivo_circulante`, `total_activo`, `total_pasivo`, `total_capital`, `caja`, `clientes`).
+
+### Desvíos respecto al Excel
+
+Decisiones tomadas al pasar la hoja "Razones Financieras" a la app, que **el dueño del producto debe confirmar**:
+
+1. **Signos.** En el Excel los costos y los gastos financieros están capturados en positivo y las fórmulas les anteponen un signo menos, por lo que las rotaciones y los días salen negativos. Es un error de signo del Excel: aquí todo queda en positivo (días y rotaciones positivos; `ciclo` se calcula con los valores corregidos).
+2. **Fila de Inversiones.** El "Días clientes" del primer año del Excel toma la fila de Inversiones en vez de la de Clientes. Aquí siempre se usa Clientes (F17).
+3. **Definición de EBITDA.** El Excel calcula `UB − gastos − otros ingresos` (resta los otros ingresos). La app usa la definición estándar ya adoptada en el Estado de Resultados: `EBITDA = resultado de operación + depreciación` (F6). Por eso `deuda_ebitda` y `cobertura` pueden diferir ligeramente del Excel.
+4. **Umbrales del semáforo.** El Excel no tiene semáforo; las bandas de F13–F30 son una propuesta de referencia general para PyMEs mexicanas (F8).
+5. **Anualización y promedios.** El Excel no contempla años parciales; la anualización de los flujos (F3) es decisión de producto coherente con la pantalla Estado de Resultados. Los promedios de inventarios y proveedores (F4) sí siguen al Excel.
+
+---
+
 **Navegación:**
 ← [01 - Resumen General](./01-RESUMEN-GENERAL.md) | [03 - Base de Datos](./03-BASE-DE-DATOS.md) →

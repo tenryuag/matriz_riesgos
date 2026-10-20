@@ -87,6 +87,8 @@ import FinAnalysisCashflow from "./FinAnalysisCashflow";
 
 import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
 
+import FinAnalysisRatios from "./FinAnalysisRatios";
+
 import OAuthConsent from "./OAuthConsent";
 
 import ModuleLauncher from "./ModuleLauncher";
@@ -180,6 +182,8 @@ const PAGES = {
     FinAnalysisCashflow: FinAnalysisCashflow,
 
     FinAnalysisCashflowDirect: FinAnalysisCashflowDirect,
+
+    FinAnalysisRatios: FinAnalysisRatios,
 
     FinancialHistory: FinancialHistory,
 
@@ -433,6 +437,11 @@ function PagesContent() {
             <Route path="/FinAnalysisCashflowDirect" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisCashflowDirect />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisRatios" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisRatios />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={

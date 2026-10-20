@@ -263,3 +263,247 @@ export const DIRECT_GROUPS = [
 ];
 export const DIRECT_INITIAL_KEY = "saldo_inicial";
 export const ALL_DIRECT_KEYS = [DIRECT_INITIAL_KEY, ...DIRECT_GROUPS.flatMap((g) => g.items.map((i) => i.key))];
+
+// ---------- Razones financieras ----------
+// Catálogo de los 18 indicadores de la hoja "Razones Financieras" del Excel,
+// con su semáforo. Los umbrales son de referencia general para PyMEs
+// mexicanas y viven aquí para poder ajustarlos en un solo lugar. Las bandas
+// de porcentajes van en fracciones (0.05 = 5 %). Los textos están escritos
+// para un empresario sin formación financiera.
+export const RATIO_GROUPS = [
+  { key: "liquidez", title: "Liquidez", question: "¿Puedes pagar lo que debes a corto plazo?" },
+  { key: "eficiencia", title: "Eficiencia", question: "¿Qué tan rápido conviertes inventario y cobranza en efectivo?" },
+  { key: "apalancamiento", title: "Apalancamiento", question: "¿Cuánto dependes de deuda?" },
+  { key: "cobertura", title: "Cobertura", question: "¿Alcanza lo que generas para pagar los intereses?" },
+  { key: "rentabilidad", title: "Rentabilidad", question: "¿Cuánto te queda de cada peso vendido y de lo invertido?" },
+];
+
+// `better`: 'higher' (verde si ≥ greenMin, ámbar si ≥ amberMin, si no rojo),
+// 'lower' (verde si ≤ greenMax, ámbar si ≤ amberMax, si no rojo) o 'range'
+// (verde dentro de green, ámbar dentro de amber, si no rojo). `statusFrom`
+// hereda el semáforo de otro indicador (entonces no lleva bandas).
+export const RATIO_DEFS = [
+  // --- Liquidez ---
+  {
+    key: "liquidez",
+    group: "liquidez",
+    label: "Índice de liquidez",
+    format: "ratio",
+    better: "higher",
+    bands: { greenMin: 1.5, amberMin: 1.0 },
+    formula: "Activo circulante ÷ Pasivo circulante",
+    what: "Cuántos pesos tienes disponibles a corto plazo por cada peso que debes pronto.",
+    how: "Arriba de 1.5 es cómodo; entre 1 y 1.5 vigila la caja; debajo de 1 podrías no alcanzar a pagar a tiempo.",
+  },
+  {
+    key: "acido",
+    group: "liquidez",
+    label: "Prueba del ácido",
+    format: "ratio",
+    better: "higher",
+    bands: { greenMin: 1.0, amberMin: 0.7 },
+    formula: "(Activo circulante − Inventarios) ÷ Pasivo circulante",
+    what: "Lo mismo que la liquidez, pero sin contar los inventarios, que tardan en convertirse en dinero.",
+    how: "Arriba de 1 estás tranquilo; entre 0.7 y 1 dependes de vender inventario para pagar; debajo de 0.7 la caja está apretada.",
+  },
+  {
+    key: "capital_trabajo",
+    group: "liquidez",
+    label: "Capital de trabajo",
+    format: "miles",
+    better: "higher",
+    statusFrom: "liquidez",
+    formula: "Activo circulante − Pasivo circulante",
+    what: "El dinero que te sobra (o te falta) después de cubrir lo que debes a corto plazo, en miles.",
+    how: "Positivo significa que tienes colchón para operar; negativo, que las deudas de corto plazo superan lo que tienes a la mano. Su semáforo es el mismo que el de la liquidez.",
+  },
+  // --- Eficiencia ---
+  {
+    key: "dias_inventario",
+    group: "eficiencia",
+    label: "Días de inventario",
+    format: "days",
+    better: "lower",
+    bands: { greenMax: 60, amberMax: 90 },
+    formula: "360 ÷ (Costo de ventas ÷ Inventario promedio)",
+    what: "Cuántos días tarda tu inventario en venderse, en promedio.",
+    how: "Hasta 60 días es ágil; de 61 a 90 hay mercancía detenida; más de 90 el dinero está atorado en el almacén.",
+  },
+  {
+    key: "dias_clientes",
+    group: "eficiencia",
+    label: "Días de clientes (cobranza)",
+    format: "days",
+    better: "lower",
+    bands: { greenMax: 45, amberMax: 75 },
+    formula: "Clientes ÷ (Ventas ÷ 360)",
+    what: "Cuántos días tardas en cobrarle a tus clientes después de vender.",
+    how: "Hasta 45 días es sano; de 46 a 75 revisa tu cobranza; más de 75 estás financiando a tus clientes.",
+  },
+  {
+    key: "dias_proveedores",
+    group: "eficiencia",
+    label: "Días de proveedores (pago)",
+    format: "days",
+    better: "range",
+    bands: { green: [30, 90], amber: [15, 120] },
+    formula: "360 ÷ (Costo de ventas ÷ Proveedores promedio)",
+    what: "Cuántos días tardas en pagarle a tus proveedores.",
+    how: "Entre 30 y 90 días es un plazo equilibrado; de 15 a 29 o de 91 a 120 conviene revisarlo; menos de 15 pagas demasiado rápido y más de 120 podrías estar dañando la relación con tus proveedores.",
+  },
+  {
+    key: "ciclo",
+    group: "eficiencia",
+    label: "Ciclo económico",
+    format: "days",
+    better: "lower",
+    bands: { greenMax: 45, amberMax: 90 },
+    formula: "Días de inventario + Días de clientes − Días de proveedores",
+    what: "Cuántos días pasan desde que pagas la mercancía hasta que cobras la venta: el tiempo que tu dinero está atado a la operación (también llamado ciclo de conversión de efectivo).",
+    how: "Hasta 45 días es sano; de 46 a 90 necesitas más caja para operar; más de 90 tu dinero tarda demasiado en regresar. Puede ser negativo si tus proveedores te financian.",
+  },
+  // --- Apalancamiento ---
+  {
+    key: "apalancamiento",
+    group: "apalancamiento",
+    label: "Índice de apalancamiento",
+    format: "ratio",
+    better: "lower",
+    bands: { greenMax: 1.0, amberMax: 2.0 },
+    formula: "Total pasivo ÷ Capital contable",
+    what: "Cuántos pesos debes por cada peso que es realmente de los socios.",
+    how: "Hasta 1 la empresa es sobre todo de los socios; entre 1 y 2 la deuda pesa tanto o más que el capital; arriba de 2 dependes mucho de terceros.",
+  },
+  {
+    key: "apalancamiento_fin",
+    group: "apalancamiento",
+    label: "Apalancamiento financiero",
+    format: "pct",
+    better: "lower",
+    bands: { greenMax: 0.05, amberMax: 0.1 },
+    formula: "Gastos financieros ÷ Capital contable",
+    what: "Qué parte de tu capital se va cada año en intereses y comisiones bancarias (el costo financiero sobre el capital).",
+    how: "Hasta 5% es manejable; entre 5% y 10% los intereses empiezan a pesar; más de 10% la deuda se está comiendo el patrimonio.",
+  },
+  {
+    key: "capitalizacion",
+    group: "apalancamiento",
+    label: "Índice de capitalización",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.5, amberMin: 0.33 },
+    formula: "Capital contable ÷ Total activo",
+    what: "Qué porcentaje de todo lo que tiene la empresa fue aportado o ganado por los socios, y no prestado.",
+    how: "Arriba de 50% la empresa se sostiene sola; entre 33% y 50% hay equilibrio con la deuda; debajo de 33% la mayor parte de lo que tienes está financiado por terceros.",
+  },
+  {
+    key: "deuda_neta",
+    group: "apalancamiento",
+    label: "Deuda neta",
+    format: "miles",
+    better: "lower",
+    statusFrom: "deuda_ebitda",
+    formula: "(Bancario a corto plazo + Porción circulante + Bancario a largo plazo) − Caja y bancos",
+    what: "Lo que debes a los bancos después de restar el dinero que tienes en caja, en miles.",
+    how: "Si es negativa, la caja alcanza para pagar toda la deuda bancaria. Su semáforo es el mismo que el de Deuda / EBITDA.",
+  },
+  {
+    key: "deuda_ebitda",
+    group: "apalancamiento",
+    label: "Deuda / EBITDA",
+    format: "ratio",
+    better: "lower",
+    bands: { greenMax: 2.0, amberMax: 3.5 },
+    formula: "Deuda neta ÷ EBITDA",
+    what: "Cuántos años de lo que genera la operación (EBITDA: utilidad antes de intereses, impuestos y depreciación) necesitarías para pagar toda la deuda bancaria neta.",
+    how: "Hasta 2 es cómodo; entre 2 y 3.5 la deuda ya exige disciplina; más de 3.5 es difícil de pagar y los bancos lo ven con cautela. Si el EBITDA es negativo, la operación no alcanza para pagar la deuda.",
+  },
+  // --- Cobertura ---
+  {
+    key: "cobertura",
+    group: "cobertura",
+    label: "Cobertura de intereses",
+    format: "ratio",
+    better: "higher",
+    bands: { greenMin: 3.0, amberMin: 1.5 },
+    formula: "EBITDA ÷ Gastos financieros",
+    what: "Cuántas veces lo que genera la operación alcanza para pagar los intereses de la deuda.",
+    how: "Arriba de 3 veces estás tranquilo; entre 1.5 y 3 cualquier baja en ventas te complica el pago; debajo de 1.5 los intereses se llevan casi todo lo que generas.",
+  },
+  // --- Rentabilidad ---
+  {
+    key: "margen_bruto",
+    group: "rentabilidad",
+    label: "Margen bruto",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.3, amberMin: 0.15 },
+    formula: "Utilidad bruta ÷ Ventas",
+    what: "De cada peso que vendes, cuánto te queda después de pagar lo que cuesta producir o comprar lo que vendes.",
+    how: "Arriba de 30% hay espacio para gastos y utilidad; entre 15% y 30% cuida tus costos; debajo de 15% casi no queda margen para operar.",
+  },
+  {
+    key: "margen_operativo",
+    group: "rentabilidad",
+    label: "Margen operativo",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.1, amberMin: 0.05 },
+    formula: "Resultado de operación ÷ Ventas",
+    what: "De cada peso vendido, cuánto queda después de costos y gastos de operación, antes de intereses e impuestos.",
+    how: "Arriba de 10% el negocio es eficiente; entre 5% y 10% los gastos pesan; debajo de 5% la operación apenas se sostiene.",
+  },
+  {
+    key: "margen_neto",
+    group: "rentabilidad",
+    label: "Margen neto",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.05, amberMin: 0 },
+    formula: "Utilidad neta ÷ Ventas",
+    what: "De cada peso vendido, cuánto te queda al final, ya pagados intereses e impuestos.",
+    how: "Arriba de 5% es una utilidad sana; entre 0% y 5% ganas poco por cada venta; negativo significa que pierdes dinero.",
+  },
+  {
+    key: "roa",
+    group: "rentabilidad",
+    label: "ROA (rendimiento sobre activos)",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.05, amberMin: 0 },
+    formula: "Utilidad neta ÷ Total activo",
+    what: "Cuánto ganas por cada peso invertido en la empresa (ROA: rendimiento sobre los activos).",
+    how: "Arriba de 5% tus activos trabajan bien; entre 0% y 5% rinden poco; negativo significa que la empresa pierde dinero.",
+  },
+  {
+    key: "roe",
+    group: "rentabilidad",
+    label: "ROE (rendimiento sobre capital)",
+    format: "pct",
+    better: "higher",
+    bands: { greenMin: 0.15, amberMin: 0 },
+    formula: "Utilidad neta ÷ Capital contable",
+    what: "Cuánto ganan los socios por cada peso que han puesto o dejado en la empresa (ROE: rendimiento sobre el capital).",
+    how: "Arriba de 15% es atractivo para los socios; entre 0% y 15% rinde menos que otras opciones; negativo significa que pierden dinero.",
+  },
+];
+
+export const RATIO_BY_KEY = Object.fromEntries(RATIO_DEFS.map((d) => [d.key, d]));
+
+export const RATIO_STATUS_LABEL = { verde: "Sano", ambar: "Vigilar", rojo: "Atender", na: "No aplica" };
+
+// Texto de un indicador según su formato: "2.31 x", "36.2%", "42 días",
+// "29,442". Sin valor → "—".
+export function formatRatio(def, value) {
+  if (value == null || !isFinite(value)) return "—";
+  switch (def?.format) {
+    case "pct":
+      return fmtPct(value);
+    case "days":
+      return `${Math.round(value)} días`;
+    case "miles":
+      return fmtMiles.format(value);
+    default:
+      return `${value.toFixed(2)} x`;
+  }
+}

@@ -249,6 +249,11 @@ export default function FinAnalysisCashflowDirect() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Estado de cambios
           </Button>
         </Link>
+        <Link to={createPageUrl("FinAnalysisRatios")}>
+          <Button variant="outline" className="glass hover:border-accent font-subtitle">
+            Siguiente: Razones financieras →
+          </Button>
+        </Link>
       </div>
 
       <SaveStatusBar status={saveStatus} onSaveNow={flush} />
