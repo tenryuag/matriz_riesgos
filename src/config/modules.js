@@ -29,7 +29,8 @@ import {
   Receipt,
   Scale,
   Waves,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Gauge
 } from "lucide-react";
 
 // ============================================================
@@ -94,6 +95,7 @@ export const MODULES = [
       { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale },
       { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves },
       { pageKey: "FinAnalysisCashflowDirect", nameKey: "navFinAnalysisCashflowDirect", icon: ArrowLeftRight },
+      { pageKey: "FinAnalysisRatios", nameKey: "navFinAnalysisRatios", icon: Gauge },
     ],
   },
   {

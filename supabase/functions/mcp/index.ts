@@ -27,12 +27,22 @@ import { unauthorizedResponse } from 'npm:@supabase/server@1/oauth-protected-res
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@^4.3.6'
 
-import { SALES_SECTION, BALANCE_SECTION, yearLabel } from '../_shared/app/finConfig.js'
+import {
+  SALES_SECTION,
+  BALANCE_SECTION,
+  yearLabel,
+  RATIO_DEFS,
+  RATIO_BY_KEY,
+  RATIO_STATUS_LABEL,
+  formatRatio,
+} from '../_shared/app/finConfig.js'
 import {
   computeIncome,
   computeBalance,
   computeCashflow,
   computeDirectCashflow,
+  computeRatios,
+  summarizeRatios,
   pctChange,
 } from '../_shared/app/finCalc.js'
 import {
@@ -290,8 +300,11 @@ Deno.serve(
             const fin = await finContext(supabase)
             if (fin && fin.years.length) {
               const inc = computeIncome({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
+              const ratios = computeRatios({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
               const last = fin.years[fin.years.length - 1]
               const r = inc[last.id]
+              const rr = ratios[last.id]
+              const sem = summarizeRatios(rr) as Db
               out.analisis_financiero = {
                 empresa: fin.analysis.company_name || null,
                 moneda: fin.analysis.currency,
@@ -300,6 +313,8 @@ Deno.serve(
                 ventas: r.ventas,
                 utilidad_neta: r.utilidadNeta,
                 margen_neto: r.ventas ? Math.round((r.utilidadNeta / r.ventas) * 1000) / 10 : null,
+                liquidez: formatRatio(RATIO_BY_KEY.liquidez, rr.values.liquidez),
+                semaforo_razones: { verde: sem.verde, ambar: sem.ambar, rojo: sem.rojo },
               }
             } else {
               out.analisis_financiero = 'Aún no ha capturado información financiera.'
@@ -800,6 +815,56 @@ Deno.serve(
                   acumulado: d.acumulado,
                 }
               }),
+            })
+          }
+        )
+
+        server.registerTool(
+          'razones_financieras',
+          {
+            description: 'Las 18 razones financieras por año (liquidez, eficiencia, apalancamiento, cobertura y rentabilidad) con semáforo verde/ámbar/rojo, su etiqueta (Sano/Vigilar/Atender/No aplica) y el motivo cuando no se puede calcular. Resumen por periodo con los indicadores que más llaman la atención. Cifras en miles; en periodos parciales el estado de resultados se anualiza.',
+            inputSchema: z.object({}),
+            annotations: { readOnlyHint: true },
+          },
+          async () => {
+            const fin = await finContext(supabase)
+            if (!fin || !fin.years.length) return text({ mensaje: 'El usuario aún no ha capturado años en su análisis financiero.' })
+            const ratios = computeRatios({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
+            const defs = RATIO_DEFS as Db[]
+            const labelOf = (status: string | null) => (RATIO_STATUS_LABEL as Record<string, string>)[status ?? 'na']
+            const periodos = fin.years.map((y: Db) => {
+              const r = ratios[y.id]
+              const sem = summarizeRatios(r) as Db
+              return {
+                periodo: yearLabel(y),
+                parcial: y.months < 12 ? `${y.months} meses` : null,
+                indicadores: defs.map((d: Db) => {
+                  const semaforo = r.status[d.key] ?? null
+                  return {
+                    clave: d.key,
+                    nombre: d.label,
+                    grupo: d.group,
+                    valor: r.values[d.key] ?? null,
+                    valor_texto: formatRatio(d, r.values[d.key]),
+                    semaforo,
+                    etiqueta: labelOf(semaforo),
+                    motivo: r.na[d.key] ?? null,
+                  }
+                }),
+                semaforo: { verde: sem.verde, ambar: sem.ambar, rojo: sem.rojo, na: sem.na },
+                atencion: (sem.atencion as Db[]).map((a: Db) => ({
+                  clave: a.key,
+                  nombre: RATIO_BY_KEY[a.key].label,
+                  valor_texto: formatRatio(RATIO_BY_KEY[a.key], a.value),
+                  semaforo: a.status,
+                })),
+              }
+            })
+            return text({
+              moneda: fin.analysis.currency,
+              unidad: 'miles',
+              nota: 'Umbrales de referencia general para PyMEs; días base 360; en periodos parciales las cifras del estado de resultados se anualizan. EBITDA = resultado de operación + depreciación.',
+              periodos,
             })
           }
         )

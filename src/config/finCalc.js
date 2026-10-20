@@ -1,8 +1,13 @@
 // ============================================================
 // Motor de cálculo del Análisis Financiero (funciones puras).
 // Recibe las cifras cargadas con FinValue.getSections y devuelve los
-// estados financieros calculados por año. Lo usan el Estado de Resultados,
-// el Balance, los flujos, las razones y el dashboard.
+// estados financieros calculados por año: Estado de Resultados, Balance,
+// flujos de efectivo y razones financieras con semáforo (computeRatios,
+// ratioStatus, ratioTrend, summarizeRatios). Lo usan las pantallas del
+// módulo, el Inicio como tablero y el servidor MCP (copia en
+// supabase/functions/_shared/app vía `npm run mcp:sync`), por lo que NO
+// puede importar React ni APIs del navegador.
+// Verificación: `node scripts/check-finCalc.mjs`.
 // ============================================================
 import {
   COST_CONCEPTS,
@@ -14,11 +19,13 @@ import {
   BALANCE_GROUPS,
   costSection,
   toNumber,
+  annualizeFactor,
   CASHFLOW_ANNEX_SECTION,
   ANNEX_GROUPS,
   CASHFLOW_DIRECT_SECTION,
   DIRECT_GROUPS,
   DIRECT_INITIAL_KEY,
+  RATIO_DEFS,
 } from "./finConfig.js";
 
 // Valor numérico de una celda (0 si está vacía).
@@ -214,5 +221,234 @@ export function computeDirectCashflow({ sections, years }) {
     prevAcumulado = acumulado;
     out[y.id] = { groups, flujoOperacion, flujoNeto, saldoInicial, acumulado, initialIsInput: i === 0 };
   });
+  return out;
+}
+
+// ---------- Razones financieras ----------
+// Fórmulas de la hoja "Razones Financieras" del Excel del cliente, con los
+// signos corregidos (costos y gastos financieros en positivo), siempre la
+// fila de Clientes para los días de cobranza y EBITDA = resultado de
+// operación + depreciación. Los flujos de un año parcial se anualizan con
+// annualizeFactor antes de calcular; los saldos del Balance no se tocan.
+
+// Base de días para rotaciones (año comercial).
+export const DAYS_BASE = 360;
+
+// Motivos (en español, cortos) de los valores no calculables.
+const NA_REASON = {
+  pasivoCirculante: "Sin pasivo circulante",
+  costo: "Sin costo de ventas",
+  inventarios: "Sin inventarios",
+  ventas: "Sin ventas",
+  proveedores: "Sin crédito de proveedores",
+  capital: "Capital contable negativo o cero",
+  activos: "Sin activos",
+  cajaCubre: "La caja cubre toda la deuda",
+  ebitda: "EBITDA negativo o cero",
+  gastosFin: "Sin gastos financieros",
+  ciclo: "Sin ventas ni costo de ventas",
+};
+
+// Semáforo de un indicador según las bandas del catálogo. Solo bandas:
+// devuelve null si no hay valor o si el indicador hereda su estatus.
+export function ratioStatus(def, value) {
+  if (value == null || !isFinite(value) || !def?.bands) return null;
+  const b = def.bands;
+  if (def.better === "higher") {
+    return value >= b.greenMin ? "verde" : value >= b.amberMin ? "ambar" : "rojo";
+  }
+  if (def.better === "lower") {
+    return value <= b.greenMax ? "verde" : value <= b.amberMax ? "ambar" : "rojo";
+  }
+  if (def.better === "range") {
+    const inside = ([min, max]) => value >= min && value <= max;
+    return inside(b.green) ? "verde" : inside(b.amber) ? "ambar" : "rojo";
+  }
+  return null;
+}
+
+// Devuelve { [yearId]: { factor, values, status, na, aux } }:
+//   factor: 12/meses en años parciales (1 si es completo);
+//   values: { [key]: number | null } para los 18 indicadores de RATIO_DEFS;
+//   status: { [key]: 'verde' | 'ambar' | 'rojo' | null };
+//   na:     { [key]: motivo } solo para los indicadores sin valor;
+//   aux:    rotaciones, EBITDA, deuda bruta, promedios y cifras base
+//           (los flujos ya anualizados).
+export function computeRatios({ sections, years, lines }) {
+  const income = computeIncome({ sections, years, lines });
+  const balance = computeBalance({ sections, years });
+  const bal = (k, yearId) => cell(sections, BALANCE_SECTION, k, yearId);
+  const out = {};
+  years.forEach((y, i) => {
+    const factor = annualizeFactor(y);
+    const inc = scaleIncome(income[y.id], factor);
+    const prev = i > 0 ? years[i - 1] : null;
+    // Promedio del saldo del año y del anterior; el saldo del año si es el primero.
+    const promedio = (k) => (prev ? (bal(k, y.id) + bal(k, prev.id)) / 2 : bal(k, y.id));
+
+    const { ventas, costo, ebitda, gastosFin, utilidadNeta } = inc;
+    const {
+      activoCirculante: ac,
+      pasivoCirculante: pc,
+      totalActivo: ta,
+      totalPasivo: tp,
+      totalCapital: tc,
+    } = balance[y.id];
+    const inventarios = bal("inventarios", y.id);
+    const clientes = bal("clientes", y.id);
+    const caja = bal("caja", y.id);
+    const invProm = promedio("inventarios");
+    const provProm = promedio("proveedores");
+    const deudaBruta =
+      bal("bancario_cp", y.id) + bal("porcion_circulante_lp", y.id) + bal("bancario_lp", y.id);
+
+    const values = {};
+    const na = {};
+    const forced = {}; // estatus de los N/A que sí llevan semáforo
+    const skip = (key, reason, st) => {
+      values[key] = null;
+      na[key] = reason;
+      if (st) forced[key] = st;
+    };
+
+    // Liquidez
+    if (pc <= 0) {
+      skip("liquidez", NA_REASON.pasivoCirculante);
+      skip("acido", NA_REASON.pasivoCirculante);
+    } else {
+      values.liquidez = ac / pc;
+      values.acido = (ac - inventarios) / pc;
+    }
+    values.capital_trabajo = ac - pc;
+
+    // Eficiencia
+    let rotacionInventarios = null;
+    let rotacionProveedores = null;
+    if (costo <= 0) skip("dias_inventario", NA_REASON.costo);
+    else if (invProm <= 0) skip("dias_inventario", NA_REASON.inventarios);
+    else {
+      rotacionInventarios = costo / invProm;
+      values.dias_inventario = DAYS_BASE / rotacionInventarios;
+    }
+    if (ventas <= 0) skip("dias_clientes", NA_REASON.ventas);
+    else values.dias_clientes = clientes / (ventas / DAYS_BASE);
+    if (costo <= 0) skip("dias_proveedores", NA_REASON.costo);
+    else if (provProm <= 0) skip("dias_proveedores", NA_REASON.proveedores);
+    else {
+      rotacionProveedores = costo / provProm;
+      values.dias_proveedores = DAYS_BASE / rotacionProveedores;
+    }
+    // Los días no calculables cuentan como 0; si ninguno se pudo calcular
+    // no hay ciclo que mostrar.
+    const dias = [values.dias_inventario, values.dias_clientes, values.dias_proveedores];
+    if (dias.every((d) => d == null)) skip("ciclo", NA_REASON.ciclo);
+    else values.ciclo = (dias[0] ?? 0) + (dias[1] ?? 0) - (dias[2] ?? 0);
+
+    // Apalancamiento
+    if (tc <= 0) {
+      skip("apalancamiento", NA_REASON.capital, "rojo");
+      skip("apalancamiento_fin", NA_REASON.capital, "rojo");
+    } else {
+      values.apalancamiento = tp / tc;
+      values.apalancamiento_fin = gastosFin / tc;
+    }
+    if (ta <= 0) skip("capitalizacion", NA_REASON.activos);
+    else values.capitalizacion = tc / ta;
+    values.deuda_neta = deudaBruta - caja;
+    if (values.deuda_neta <= 0) skip("deuda_ebitda", NA_REASON.cajaCubre, "verde");
+    else if (ebitda <= 0) skip("deuda_ebitda", NA_REASON.ebitda, "rojo");
+    else values.deuda_ebitda = values.deuda_neta / ebitda;
+
+    // Cobertura
+    if (gastosFin <= 0) skip("cobertura", NA_REASON.gastosFin);
+    else values.cobertura = ebitda / gastosFin;
+
+    // Rentabilidad
+    if (ventas <= 0) {
+      skip("margen_bruto", NA_REASON.ventas);
+      skip("margen_operativo", NA_REASON.ventas);
+      skip("margen_neto", NA_REASON.ventas);
+    } else {
+      values.margen_bruto = inc.utilidadBruta / ventas;
+      values.margen_operativo = inc.resultadoOp / ventas;
+      values.margen_neto = utilidadNeta / ventas;
+    }
+    if (ta <= 0) skip("roa", NA_REASON.activos);
+    else values.roa = utilidadNeta / ta;
+    if (tc <= 0) skip("roe", NA_REASON.capital, "rojo");
+    else values.roe = utilidadNeta / tc;
+
+    // Semáforo: primero por bandas (o forzado en los N/A con estatus),
+    // después las herencias (`statusFrom`).
+    const status = {};
+    RATIO_DEFS.forEach((d) => {
+      if (!d.statusFrom) status[d.key] = forced[d.key] ?? ratioStatus(d, values[d.key]);
+    });
+    RATIO_DEFS.forEach((d) => {
+      if (d.statusFrom) status[d.key] = status[d.statusFrom] ?? null;
+    });
+
+    out[y.id] = {
+      factor,
+      values,
+      status,
+      na,
+      aux: {
+        rotacion_inventarios: rotacionInventarios,
+        rotacion_proveedores: rotacionProveedores,
+        ebitda,
+        deuda_bruta: deudaBruta,
+        inventario_promedio: invProm,
+        proveedores_promedio: provProm,
+        ventas,
+        costo,
+        gastos_financieros: gastosFin,
+        utilidad_neta: utilidadNeta,
+        activo_circulante: ac,
+        pasivo_circulante: pc,
+        total_activo: ta,
+        total_pasivo: tp,
+        total_capital: tc,
+        caja,
+        clientes,
+        inventarios,
+      },
+    };
+  });
+  return out;
+}
+
+// Tendencia del último periodo contra el anterior:
+// 'mejora' | 'empeora' | 'igual' | null (sin alguno de los dos valores o
+// indicador de rango, donde "más" no es mejor ni peor).
+export function ratioTrend(def, curr, prev) {
+  if (!def || curr == null || prev == null || def.better === "range") return null;
+  const diff = curr - prev;
+  if (Math.abs(diff) < 1e-9) return "igual";
+  const sube = diff > 0;
+  return (def.better === "higher") === sube ? "mejora" : "empeora";
+}
+
+// Resumen del semáforo de un periodo (una entrada de computeRatios):
+// { verde, ambar, rojo, na, atencion: [{ key, status, value }] }.
+// `atencion` lleva primero todos los rojos y luego los ámbar, en el orden
+// del catálogo; los N/A sin estatus no aparecen.
+export function summarizeRatios(yearRatios) {
+  const out = { verde: 0, ambar: 0, rojo: 0, na: 0, atencion: [] };
+  if (!yearRatios) return out;
+  const entry = (d) => ({
+    key: d.key,
+    status: yearRatios.status?.[d.key] ?? null,
+    value: yearRatios.values?.[d.key] ?? null,
+  });
+  const rows = RATIO_DEFS.map(entry);
+  rows.forEach((r) => {
+    if (r.status) out[r.status] += 1;
+    else out.na += 1;
+  });
+  out.atencion = [
+    ...rows.filter((r) => r.status === "rojo"),
+    ...rows.filter((r) => r.status === "ambar"),
+  ];
   return out;
 }
