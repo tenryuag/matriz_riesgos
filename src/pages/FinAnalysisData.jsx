@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { FinAnalysis, FinYear } from "@/api/entities";
@@ -50,6 +51,72 @@ const MONTH_OPTIONS = [
   { value: 11, label: "Parcial a noviembre" },
 ];
 
+const YEAR_MIN = 1990;
+const YEAR_MAX = 2100;
+
+// Mensaje amigable para los errores de guardado de un año.
+function yearErrorMessage(err, year) {
+  const msg = String(err?.message || err || "");
+  if (/duplicate key|23505|fin_years_analysis_id_year_key/i.test(msg)) {
+    return `Ya tienes el año ${year} en la lista. Cada año puede aparecer una sola vez.`;
+  }
+  return "No pudimos guardar el cambio del año. Intenta de nuevo.";
+}
+
+// Campo de año con borrador local: se escribe libremente y el cambio se
+// aplica al salir del campo o con Enter. Antes, cada tecla intentaba
+// guardar y, al pasar por un año ya existente (o por un valor incompleto
+// como "20"), el guardado fallaba y el campo se reiniciaba.
+function YearInput({ year, takenYears, onCommit }) {
+  const [text, setText] = useState(String(year));
+
+  useEffect(() => {
+    setText(String(year));
+  }, [year]);
+
+  const commit = () => {
+    const v = parseInt(text, 10);
+    if (v === year) {
+      setText(String(year));
+      return;
+    }
+    if (!Number.isFinite(v) || v < YEAR_MIN || v > YEAR_MAX) {
+      setText(String(year));
+      onCommit(null, `Escribe un año entre ${YEAR_MIN} y ${YEAR_MAX}.`);
+      return;
+    }
+    if (takenYears.includes(v)) {
+      setText(String(year));
+      onCommit(null, `Ya tienes el año ${v} en la lista. Cada año puede aparecer una sola vez.`);
+      return;
+    }
+    onCommit(v, "");
+  };
+
+  return (
+    <input
+      type="number"
+      value={text}
+      min={YEAR_MIN}
+      max={YEAR_MAX}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setText(String(year));
+      }}
+      className="w-24 p-2 rounded-lg glass text-foreground outline-none focus:border-accent text-center"
+      aria-label="Año"
+    />
+  );
+}
+
+YearInput.propTypes = {
+  year: PropTypes.number.isRequired,
+  takenYears: PropTypes.arrayOf(PropTypes.number).isRequired,
+  onCommit: PropTypes.func.isRequired,
+};
+
 export default function FinAnalysisData() {
   const [analysis, setAnalysis] = useState(null);
   const [form, setForm] = useState({});
@@ -92,17 +159,24 @@ export default function FinAnalysisData() {
     },
   });
 
-  const handleAddYear = async () => {
+  // Agrega un año antes del primero ("prev") o después del último ("next").
+  // Sin años, propone el año pasado.
+  const handleAddYear = async (direction = "next") => {
     if (!analysis || yearBusy) return;
     setYearBusy(true);
+    setError("");
     try {
-      // Sugiere el siguiente año después del último, o el año pasado si no hay.
-      const nextYear =
-        years.length > 0
-          ? Math.max(...years.map((y) => y.year)) + 1
-          : new Date().getFullYear() - 1;
-      const created = await FinYear.add(analysis.id, nextYear, 12);
-      if (created) setYears((prev) => [...prev, created].sort((a, b) => a.year - b.year));
+      const existing = years.map((y) => y.year);
+      let newYear = new Date().getFullYear() - 1;
+      if (existing.length > 0) {
+        newYear = direction === "prev" ? Math.min(...existing) - 1 : Math.max(...existing) + 1;
+      }
+      if (newYear < YEAR_MIN || newYear > YEAR_MAX) {
+        setError(`Solo se pueden registrar años entre ${YEAR_MIN} y ${YEAR_MAX}.`);
+      } else {
+        const created = await FinYear.add(analysis.id, newYear, 12);
+        if (created) setYears((prev) => [...prev, created].sort((a, b) => a.year - b.year));
+      }
     } catch (err) {
       console.error("Error al agregar el año:", err);
       setError("No pudimos agregar el año. Intenta de nuevo.");
@@ -110,7 +184,17 @@ export default function FinAnalysisData() {
     setYearBusy(false);
   };
 
+  // Cambia el año o los meses de un ejercicio. Si la base lo rechaza, la
+  // lista vuelve a como estaba (antes se quedaba con el cambio sin guardar).
   const handleYearChange = async (id, fields) => {
+    const previous = years;
+    const target = years.find((y) => y.id === id);
+    if (!target) return;
+    if (fields.year != null && years.some((y) => y.id !== id && y.year === fields.year)) {
+      setError(`Ya tienes el año ${fields.year} en la lista. Cada año puede aparecer una sola vez.`);
+      return;
+    }
+    setError("");
     setYears((prev) =>
       prev
         .map((y) => (y.id === id ? { ...y, ...fields } : y))
@@ -120,7 +204,8 @@ export default function FinAnalysisData() {
       await FinYear.update(id, fields);
     } catch (err) {
       console.error("Error al actualizar el año:", err);
-      setError("No pudimos guardar el cambio del año. Intenta de nuevo.");
+      setYears(previous);
+      setError(yearErrorMessage(err, fields.year ?? target.year));
     }
   };
 
@@ -256,18 +341,34 @@ export default function FinAnalysisData() {
               <CalendarRange className="w-5 h-5 text-cyan-500" />
               <h2 className="font-subtitle text-lg">Años a analizar</h2>
             </div>
-            <Button
-              onClick={handleAddYear}
-              disabled={yearBusy}
-              className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Agregar año
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {years.length > 0 && (
+                <Button
+                  onClick={() => handleAddYear("prev")}
+                  disabled={yearBusy}
+                  variant="outline"
+                  className="glass hover:border-accent font-subtitle"
+                  title="Agrega el año anterior al primero de la lista"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Año anterior
+                </Button>
+              )}
+              <Button
+                onClick={() => handleAddYear("next")}
+                disabled={yearBusy}
+                className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle"
+                title={years.length > 0 ? "Agrega el año siguiente al último de la lista" : "Agrega el primer año"}
+              >
+                <Plus className="w-4 h-4 mr-2" /> {years.length > 0 ? "Año siguiente" : "Agregar año"}
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-muted">
-            Se recomiendan de 3 a 5 años para ver tendencias. El último puede ser un{" "}
-            <strong>periodo parcial</strong> (por ejemplo, cifras a junio): en los
-            estados financieros se anualiza automáticamente para poder compararlo.
+            Se recomiendan de 3 a 5 años para ver tendencias. Agrega años hacia atrás o hacia
+            adelante con los botones, o escribe el año directamente en la casilla (el cambio se
+            aplica al salir de ella). El último puede ser un <strong>periodo parcial</strong> (por
+            ejemplo, cifras a junio): en los estados financieros se anualiza automáticamente para
+            poder compararlo.
           </p>
 
           {years.length === 0 ? (
@@ -281,17 +382,16 @@ export default function FinAnalysisData() {
                   <span className="w-16 font-title text-lg text-center flex-shrink-0">
                     {yearLabel(y)}
                   </span>
-                  <input
-                    type="number"
-                    value={y.year}
-                    min={1990}
-                    max={2100}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      if (v >= 1990 && v <= 2100) handleYearChange(y.id, { year: v });
+                  <YearInput
+                    year={y.year}
+                    takenYears={years.filter((x) => x.id !== y.id).map((x) => x.year)}
+                    onCommit={(v, message) => {
+                      if (v == null) {
+                        setError(message || "");
+                        return;
+                      }
+                      handleYearChange(y.id, { year: v });
                     }}
-                    className="w-24 p-2 rounded-lg glass text-foreground outline-none focus:border-accent text-center"
-                    aria-label="Año"
                   />
                   <select
                     value={y.months}
