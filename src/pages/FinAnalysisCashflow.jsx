@@ -135,8 +135,10 @@ const clean = (v) => (Number.isFinite(v) && Math.abs(v) >= 0.05 ? v : 0);
 
 // Cifra en miles. Aquí un negativo es una aplicación de efectivo, no una
 // alarma, así que no se pinta de rojo (la nota del pie lo explica).
+// Las aplicaciones de efectivo (negativas) van en rojo, como en el resto del módulo.
 function Amount({ v, strong = false }) {
-  return <span className={strong ? "font-subtitle" : ""}>{fmtMiles.format(clean(v))}</span>;
+  const n = clean(v);
+  return <span className={`${n < 0 ? "text-red-500" : ""} ${strong ? "font-subtitle" : ""}`}>{fmtMiles.format(n)}</span>;
 }
 Amount.propTypes = { v: PropTypes.number, strong: PropTypes.bool };
 

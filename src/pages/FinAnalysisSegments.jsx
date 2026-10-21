@@ -28,6 +28,7 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeSegments } from "@/config/finCalc";
+import { Delta } from "@/components/fin/Delta";
 
 // Margen bruto por segmento de negocio (análisis opcional, hoja "Ventas y
 // Costo de lo vendido" del Excel). Los segmentos son dinámicos (fin_lines:
@@ -347,12 +348,15 @@ export default function FinAnalysisSegments() {
               ))}
               <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                 <td className="p-2">Total</td>
-                {years.map((y) => {
+                {years.map((y, yi) => {
                   const t = seg[y.id]?.[totalKey] ?? 0;
                   return (
                     <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                       {fmtMiles.format(t)}
                       <PctHint value={t > 0 ? 1 : null} />
+                      {yi > 0 && (
+                        <Delta curr={t} prev={seg[years[yi - 1].id]?.[totalKey] ?? 0} currYear={y} prevYear={years[yi - 1]} better={totalKey === "totalCosto" ? "lower" : "higher"} className="font-normal" />
+                      )}
                     </td>
                   );
                 })}
@@ -512,13 +516,16 @@ export default function FinAnalysisSegments() {
                         {lines.map((line) => (
                           <tr key={line.id} className="border-b border-card-border/50">
                             <td className="p-2 min-w-[180px]">{line.name}</td>
-                            {years.map((y) => {
+                            {years.map((y, yi) => {
                               const s = seg[y.id]?.bySegment[line.id];
                               const bruto = s?.bruto ?? 0;
                               return (
                                 <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                   <span className={bruto < 0 ? "text-red-500" : ""}>{fmtMiles.format(bruto)}</span>
                                   <PctHint value={s?.margen ?? null} />
+                                  {yi > 0 && (
+                                    <Delta curr={bruto} prev={seg[years[yi - 1].id]?.bySegment[line.id]?.bruto ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" />
+                                  )}
                                 </td>
                               );
                             })}
@@ -526,12 +533,15 @@ export default function FinAnalysisSegments() {
                         ))}
                         <tr className="bg-accent/5 font-subtitle">
                           <td className="p-2">Total</td>
-                          {years.map((y) => {
+                          {years.map((y, yi) => {
                             const t = seg[y.id]?.totalBruto ?? 0;
                             return (
                               <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                 <span className={t < 0 ? "text-red-500" : ""}>{fmtMiles.format(t)}</span>
                                 <PctHint value={seg[y.id]?.margenTotal ?? null} />
+                                {yi > 0 && (
+                                  <Delta curr={t} prev={seg[years[yi - 1].id]?.totalBruto ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                                )}
                               </td>
                             );
                           })}

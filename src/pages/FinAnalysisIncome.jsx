@@ -22,6 +22,10 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeIncome, computeEbitda } from "@/config/finCalc";
+import { Delta } from "@/components/fin/Delta";
+
+// Renglones donde subir es malo (costos, gastos e impuestos): su ▲ va en rojo.
+const LOWER_IS_BETTER = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
 
 // Estado de Resultados (modelo MP-AFH1). Aquí se capturan las 11 cifras del
 // estado financiero y las 3 partidas que no son efectivo (depreciación y
@@ -65,13 +69,15 @@ AmountInput.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
-// Celda calculada: cifra en miles y, debajo, su % sobre ventas.
-function ComputedCell({ value, pct }) {
+// Celda calculada: cifra en miles y, debajo, su % sobre ventas y la variación
+// contra el periodo anterior (▲ verde / ▼ rojo según convenga al renglón).
+function ComputedCell({ value, pct, prev, year, prevYear, better }) {
   const v = clean(value);
   return (
     <td className="p-2 text-right whitespace-nowrap align-top">
       <span className={v < 0 ? "text-red-500" : ""}>{fmtMiles.format(v)}</span>
-      <span className="block text-[11px] text-muted">{fmtPct(pct)}</span>
+      <span className="block text-[11px] text-muted font-normal">{fmtPct(pct)}</span>
+      {prev != null && <Delta curr={value ?? 0} prev={prev} currYear={year} prevYear={prevYear} better={better} className="font-normal" />}
     </td>
   );
 }
@@ -79,6 +85,10 @@ function ComputedCell({ value, pct }) {
 ComputedCell.propTypes = {
   value: PropTypes.number,
   pct: PropTypes.number,
+  prev: PropTypes.number,
+  year: PropTypes.object,
+  prevYear: PropTypes.object,
+  better: PropTypes.oneOf(["higher", "lower", "neutral"]),
 };
 
 // Encabezado de un bloque dentro de la tabla (ocupa todas las columnas).
@@ -328,11 +338,15 @@ export default function FinAnalysisIncome() {
                         className={`border-b border-card-border/50 ${isTotal ? "bg-accent/5 font-subtitle" : ""}`}
                       >
                         <td className="p-2">{row.label}</td>
-                        {years.map((y) => (
+                        {years.map((y, i) => (
                           <ComputedCell
                             key={y.id}
                             value={computed[y.id]?.[row.calc]}
                             pct={computed[y.id]?.pct?.[row.calc]}
+                            prev={i > 0 ? computed[years[i - 1].id]?.[row.calc] : null}
+                            year={y}
+                            prevYear={i > 0 ? years[i - 1] : null}
+                            better={LOWER_IS_BETTER.has(row.calc) ? "lower" : "higher"}
                           />
                         ))}
                       </tr>
