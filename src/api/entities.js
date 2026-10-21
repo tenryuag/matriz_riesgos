@@ -968,7 +968,13 @@ export const Initiative = {
   },
 };
 
-// 🔹 Análisis Financiero (sección histórica del modelo financiero). Cada usuario tiene el suyo.
+// 🔹 Análisis Financiero (modelo MP-AFH1; cifras en miles). Cada usuario tiene el suyo.
+// Las cifras viven en fin_values por sección (constantes en src/config/finConfig.js):
+//   income (Estado de Resultados + partidas que no son efectivo), balance,
+//   cashflow (capturas complementarias del Estado de cambios), sales y segcost
+//   (segmentos; concept_key = fin_lines.id), expenses (desglose del gasto),
+//   seasonality (m01…m12). Las razones y el Estado de cambios no se guardan:
+//   se calculan con src/config/finCalc.js en cada carga.
 export const FinAnalysis = {
   // Devuelve el análisis del usuario actual; si no existe, lo crea.
   async getOrCreate() {
@@ -1043,7 +1049,8 @@ export const FinYear = {
   },
 };
 
-// 🔹 Líneas de negocio del análisis financiero
+// 🔹 Segmentos de negocio del análisis financiero (fin_lines). Sus cifras van en
+// las secciones `sales` y `segcost` de fin_values con concept_key = id del segmento.
 export const FinLine = {
   async list(analysisId) {
     const { data, error } = await supabase
@@ -1074,22 +1081,16 @@ export const FinLine = {
     return true;
   },
 
-  // Elimina la línea y sus cifras (ventas y costos asociados).
+  // Elimina el segmento y sus cifras: ventas (`sales`) y costo (`segcost`),
+  // ambas con concept_key = id del segmento.
   async remove(analysisId, id) {
-    const { error: salesError } = await supabase
+    const { error: valuesError } = await supabase
       .from("fin_values")
       .delete()
       .eq("analysis_id", analysisId)
-      .eq("section", "sales")
+      .in("section", ["sales", "segcost"])
       .eq("concept_key", id);
-    if (salesError) handleQueryError(salesError);
-
-    const { error: costError } = await supabase
-      .from("fin_values")
-      .delete()
-      .eq("analysis_id", analysisId)
-      .eq("section", `cost:${id}`);
-    if (costError) handleQueryError(costError);
+    if (valuesError) handleQueryError(valuesError);
 
     const { error } = await supabase.from("fin_lines").delete().eq("id", id);
     if (error) handleQueryError(error);
@@ -1097,7 +1098,8 @@ export const FinLine = {
   },
 };
 
-// 🔹 Cifras del análisis financiero
+// 🔹 Cifras del análisis financiero (fin_values, en miles). Se capturan en
+// positivo salvo las partidas marcadas `signed` en finConfig (utilidad +, pérdida −).
 export const FinValue = {
   // Cifras de varias secciones: { [section]: { [concept_key]: { [year_id]: amount } } }.
   async getSections(analysisId, sections) {

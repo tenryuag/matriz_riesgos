@@ -29,8 +29,9 @@ import {
   Receipt,
   Scale,
   Waves,
-  ArrowLeftRight,
-  Gauge
+  Gauge,
+  PieChart,
+  CalendarRange
 } from "lucide-react";
 
 // ============================================================
@@ -85,17 +86,25 @@ export const MODULES = [
     bg: "bg-cyan-500/15",
     status: "ready",
     home: "FinAnalysisHome",
+    // Modelo MP-AFH1: captura (estados financieros), resultados (razones e
+    // informe) y análisis opcionales (segmentos, desglose del gasto,
+    // estacionalidad). El grupo de la página activa se abre solo.
+    groups: [
+      { key: "captura", nameKey: "navGroupFinCapture" },
+      { key: "resultados", nameKey: "navGroupFinResults" },
+      { key: "opcionales", nameKey: "navGroupFinOptional" },
+    ],
     pages: [
       { pageKey: "FinAnalysisHome", nameKey: "navFinAnalysisHome", icon: Calculator },
-      { pageKey: "FinAnalysisData", nameKey: "navFinAnalysisData", icon: Building2 },
-      { pageKey: "FinAnalysisSales", nameKey: "navFinAnalysisSales", icon: TrendingUp },
-      { pageKey: "FinAnalysisCosts", nameKey: "navFinAnalysisCosts", icon: Layers },
-      { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt },
-      { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText },
-      { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale },
-      { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves },
-      { pageKey: "FinAnalysisCashflowDirect", nameKey: "navFinAnalysisCashflowDirect", icon: ArrowLeftRight },
-      { pageKey: "FinAnalysisRatios", nameKey: "navFinAnalysisRatios", icon: Gauge },
+      { pageKey: "FinAnalysisData", nameKey: "navFinAnalysisData", icon: Building2, group: "captura" },
+      { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText, group: "captura" },
+      { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale, group: "captura" },
+      { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves, group: "captura" },
+      { pageKey: "FinAnalysisRatios", nameKey: "navFinAnalysisRatios", icon: Gauge, group: "resultados" },
+      { pageKey: "FinAnalysisReport", nameKey: "navFinAnalysisReport", icon: BarChart3, group: "resultados" },
+      { pageKey: "FinAnalysisSegments", nameKey: "navFinAnalysisSegments", icon: PieChart, group: "opcionales" },
+      { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt, group: "opcionales" },
+      { pageKey: "FinAnalysisSeasonality", nameKey: "navFinAnalysisSeasonality", icon: CalendarRange, group: "opcionales" },
     ],
   },
   {

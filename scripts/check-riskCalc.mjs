@@ -29,9 +29,9 @@ import {
 } from "../src/config/perspectives.js";
 import { perspectiveFor } from "../src/config/strategicCalc.js";
 import {
-  COST_CONCEPTS,
-  EXPENSE_CONCEPTS,
-  INCOME_INPUTS,
+  ALL_EXPENSE_KEYS,
+  INCOME_INPUT_KEYS,
+  INCOME_MEMO,
   ALL_BALANCE_KEYS,
   SALES_SECTION,
 } from "../src/config/finConfig.js";
@@ -154,18 +154,14 @@ check("Iconos lucide esperados", LANES.map((l) => l.iconName), ["Banknote", "Use
 check("Colores de procesos (text, bg, border)", [PERSPECTIVE_BY_KEY.procesos.colorClasses.text, PERSPECTIVE_BY_KEY.procesos.colorClasses.bg, PERSPECTIVE_BY_KEY.procesos.colorClasses.border],
   ["text-cyan-600 dark:text-cyan-400", "bg-cyan-500/15", "border-cyan-500/40"]);
 
-// finConcepts: cada clave debe existir en algún catálogo del módulo financiero.
-const FIN_KEYS = new Set([
-  SALES_SECTION,
-  ...COST_CONCEPTS.map((c) => c.key),
-  ...EXPENSE_CONCEPTS.map((c) => c.key),
-  ...INCOME_INPUTS.map((c) => c.key),
-  ...ALL_BALANCE_KEYS,
-]);
+// finConcepts: cada clave debe existir en algún catálogo del módulo financiero
+// (modelo MP-AFH1: sección `sales`, desglose del gasto, capturas y memo del
+// Estado de Resultados y cuentas del Balance).
+const allFin = [SALES_SECTION, ...ALL_EXPENSE_KEYS, ...INCOME_INPUT_KEYS, ...INCOME_MEMO.map((c) => c.key), ...ALL_BALANCE_KEYS];
+const FIN_KEYS = new Set(allFin);
 const unknownFin = PERSPECTIVES.flatMap((p) => p.finConcepts.filter((k) => !FIN_KEYS.has(k)).map((k) => `${p.key}:${k}`));
 check("finConcepts existen en finConfig", unknownFin, []);
 // Y las claves de finConfig no se repiten entre catálogos (una clave = un concepto).
-const allFin = [SALES_SECTION, ...COST_CONCEPTS, ...EXPENSE_CONCEPTS, ...INCOME_INPUTS].map((c) => c.key ?? c).concat(ALL_BALANCE_KEYS);
 check("Claves de finConfig sin duplicados entre catálogos", allFin.length === new Set(allFin).size, true);
 
 console.log("\n== Sugerencia por nombre de departamento ==");
