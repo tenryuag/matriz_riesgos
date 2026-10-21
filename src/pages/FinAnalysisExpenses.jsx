@@ -20,6 +20,7 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeExpenseBreakdown } from "@/config/finCalc";
+import { Delta } from "@/components/fin/Delta";
 
 // Desglose del gasto operativo (análisis opcional, hoja "Gasto" del Excel):
 // los 20 conceptos del catálogo más el bloque de partidas virtuales. La
@@ -289,10 +290,13 @@ export default function FinAnalysisExpenses() {
                 {/* Subtotal de los 20 conceptos */}
                 <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                   <td className="p-2">Gastos de operación</td>
-                  {years.map((y) => (
+                  {years.map((y, yi) => (
                     <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                       {fmtMiles.format(breakdown[y.id]?.gastosOperacion ?? 0)}
                       <PctHint value={breakdown[y.id]?.pct.gastosOperacion ?? null} />
+                      {yi > 0 && (
+                        <Delta curr={breakdown[y.id]?.gastosOperacion ?? 0} prev={breakdown[years[yi - 1].id]?.gastosOperacion ?? 0} currYear={y} prevYear={years[yi - 1]} better="lower" className="font-normal" />
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -343,12 +347,15 @@ export default function FinAnalysisExpenses() {
                 {/* Total y comparación con el Estado de Resultados */}
                 <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                   <td className="p-2">Total gasto de operación</td>
-                  {years.map((y) => {
+                  {years.map((y, yi) => {
                     const t = breakdown[y.id]?.total ?? 0;
                     return (
                       <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                         {fmtMiles.format(t)}
                         <PctHint value={t > 0 ? 1 : null} />
+                        {yi > 0 && (
+                          <Delta curr={t} prev={breakdown[years[yi - 1].id]?.total ?? 0} currYear={y} prevYear={years[yi - 1]} better="lower" className="font-normal" />
+                        )}
                       </td>
                     );
                   })}

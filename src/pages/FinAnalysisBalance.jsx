@@ -20,6 +20,10 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeBalance } from "@/config/finCalc";
+import { Delta } from "@/components/fin/Delta";
+
+// Variación anual de los totales: más activo o capital es bueno (verde); más pasivo, no (rojo).
+const TOTAL_BETTER = { activoCirculante: "higher", totalActivo: "higher", pasivoCirculante: "lower", totalPasivo: "lower", totalCapital: "higher", totalPasivoCapital: "neutral", resultadoPeriodo: "higher" };
 
 // Balance General por periodo (modelo MP-AFH1): 27 cuentas capturadas en
 // cinco grupos, subtotales en vivo, la fila automática "Resultado neto del
@@ -308,7 +312,7 @@ export default function FinAnalysisBalance() {
                               ; no se captura aquí.
                             </span>
                           </td>
-                          {years.map((y) => {
+                          {years.map((y, yi) => {
                             const t = totals[y.id];
                             const v = t?.[row.key] ?? 0;
                             const withIncome = hasIncome(y.id);
@@ -318,7 +322,12 @@ export default function FinAnalysisBalance() {
                                   {withIncome ? fmtMiles.format(v) : "—"}
                                 </span>
                                 {withIncome ? (
-                                  <PctLine value={t?.pct?.[row.key]} />
+                                  <>
+                                    <PctLine value={t?.pct?.[row.key]} />
+                                    {yi > 0 && hasIncome(years[yi - 1].id) && (
+                                      <Delta curr={v} prev={totals[years[yi - 1].id]?.[row.key] ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                                    )}
+                                  </>
                                 ) : (
                                   <span className="block text-[10px] text-right mt-0.5 text-amber-600 dark:text-amber-400">
                                     Sin Estado de Resultados
@@ -337,12 +346,15 @@ export default function FinAnalysisBalance() {
                           className={`bg-accent/5 border-b border-card-border/50 ${STRONG_TOTALS.has(t.key) ? "font-subtitle" : ""}`}
                         >
                           <td className="p-2">{t.label}</td>
-                          {years.map((y) => {
+                          {years.map((y, yi) => {
                             const v = totals[y.id]?.[t.key] ?? 0;
                             return (
                               <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                 <span className={`block ${v < 0 ? "text-red-500" : ""}`}>{fmtMiles.format(v)}</span>
                                 <PctLine value={totals[y.id]?.pct?.[t.key]} className="font-normal" />
+                                {yi > 0 && (
+                                  <Delta curr={v} prev={totals[years[yi - 1].id]?.[t.key] ?? 0} better={TOTAL_BETTER[t.key] || "neutral"} className="font-normal" />
+                                )}
                               </td>
                             );
                           })}

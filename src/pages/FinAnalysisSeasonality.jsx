@@ -19,6 +19,7 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeSeasonality } from "@/config/finCalc";
+import { Delta } from "@/components/fin/Delta";
 
 // Estacionalidad en ventas (análisis opcional, hoja "Estacionalidad en
 // ventas" del Excel): ventas por mes de cada año, en miles, con su % del
@@ -315,12 +316,15 @@ export default function FinAnalysisSeasonality() {
 
                   <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                     <td className="p-2">Total</td>
-                    {years.map((y) => {
+                    {years.map((y, yi) => {
                       const t = seasonality[y.id]?.total ?? 0;
                       return (
                         <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                           {fmtMiles.format(t)}
                           <PctHint value={t > 0 ? 1 : null} />
+                          {yi > 0 && (
+                            <Delta curr={t} prev={seasonality[years[yi - 1].id]?.total ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                          )}
                         </td>
                       );
                     })}
