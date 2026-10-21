@@ -29,8 +29,15 @@ import { z } from 'npm:zod@^4.3.6'
 
 import {
   SALES_SECTION,
+  SEGCOST_SECTION,
   BALANCE_SECTION,
+  EXPENSES_SECTION,
+  SEASONALITY_SECTION,
+  BALANCE_GROUPS,
+  EXPENSE_CONCEPTS,
+  SEASON_MONTHS,
   yearLabel,
+  RATIO_GROUPS,
   RATIO_DEFS,
   RATIO_BY_KEY,
   RATIO_STATUS_LABEL,
@@ -39,11 +46,13 @@ import {
 import {
   computeIncome,
   computeBalance,
+  computeEbitda,
   computeCashflow,
-  computeDirectCashflow,
   computeRatios,
   summarizeRatios,
-  pctChange,
+  computeSegments,
+  computeExpenseBreakdown,
+  computeSeasonality,
 } from '../_shared/app/finCalc.js'
 import {
   CUSTOMER_SECTION,
@@ -66,7 +75,7 @@ import {
   buildFoda,
 } from '../_shared/app/strategicCalc.js'
 
-const VERSION = '1.0.0'
+const VERSION = '1.1.0'
 
 // deno-lint-ignore no-explicit-any
 type Db = any
@@ -142,6 +151,38 @@ async function finContext(supabase: Db) {
   }
   return { analysis, years: years || [], lines: lines || [], sections }
 }
+
+// ---------- utilidades del análisis financiero (modelo MP-AFH1) ----------
+// Fracción → porcentaje con un decimal (0.3187 → 31.9); null si no hay valor.
+const pctFrac = (f: number | null | undefined) => (f == null || !isFinite(f) ? null : Math.round(f * 1000) / 10)
+// Un estado "cuadra" cuando su diferencia es despreciable (cifras en miles).
+const cuadra = (d: number) => Math.abs(d) <= 0.5
+// ¿La sección tiene al menos una cifra capturada?
+const hasAny = (sec: Record<string, Record<string, number>> | undefined) =>
+  !!sec && Object.values(sec).some((byYear) => Object.values(byYear).some((v) => v != null))
+// "6 meses" para un periodo parcial; null en un año completo.
+const parcialDe = (y: Db) => (y.months < 12 ? `${y.months} meses` : null)
+// Renglones del Estado de Resultados en el orden del estado:
+// [clave en computeIncome, clave de salida de la herramienta].
+const INCOME_OUT: [string, string][] = [
+  ['ventas', 'ventas'],
+  ['costo', 'costo_de_ventas'],
+  ['utilidadBruta', 'utilidad_bruta'],
+  ['gastoVenta', 'gasto_de_venta'],
+  ['gastoAdmin', 'gasto_de_administracion'],
+  ['gastoGeneral', 'gastos_operativos_en_general'],
+  ['gastoOperativo', 'gasto_operativo'],
+  ['resultadoOp', 'resultado_de_operacion'],
+  ['prodFin', 'productos_financieros'],
+  ['gastosFin', 'gastos_financieros'],
+  ['cambiaria', 'utilidad_cambiaria'],
+  ['rif', 'resultado_integral_de_financiamiento'],
+  ['otrosProd', 'otros_productos'],
+  ['rai', 'resultado_antes_de_impuestos'],
+  ['isr', 'isr'],
+  ['ptu', 'ptu'],
+  ['utilidadNeta', 'utilidad_neta'],
+]
 
 const compactRisk = (r: Db) => ({
   id: r.id,
@@ -251,7 +292,7 @@ Deno.serve(
           'resumen_general',
           {
             description:
-              'Vista rápida de los módulos a los que el usuario tiene acceso (riesgos críticos, prioridades del plan estratégico, iniciativas vencidas, últimas cifras financieras). Úsala primero para orientarte.',
+              'Vista rápida de los módulos a los que el usuario tiene acceso (riesgos críticos, prioridades del plan estratégico, iniciativas vencidas, últimas cifras financieras: ventas, crecimiento, margen operativo, liquidez y semáforo). Úsala primero para orientarte.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
@@ -299,21 +340,23 @@ Deno.serve(
             if (can(access, 'fin-analysis')) {
             const fin = await finContext(supabase)
             if (fin && fin.years.length) {
-              const inc = computeIncome({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
-              const ratios = computeRatios({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
+              const inc = computeIncome({ sections: fin.sections, years: fin.years }) as Record<string, Db>
+              const ratios = computeRatios({ sections: fin.sections, years: fin.years }) as Record<string, Db>
               const last = fin.years[fin.years.length - 1]
               const r = inc[last.id]
               const rr = ratios[last.id]
               const sem = summarizeRatios(rr) as Db
+              const fmt = (key: string) => formatRatio(RATIO_BY_KEY[key], rr.values[key])
               out.analisis_financiero = {
                 empresa: fin.analysis.company_name || null,
                 moneda: fin.analysis.currency,
                 unidad: 'miles',
                 ultimo_periodo: yearLabel(last),
+                parcial: parcialDe(last),
                 ventas: r.ventas,
-                utilidad_neta: r.utilidadNeta,
-                margen_neto: r.ventas ? Math.round((r.utilidadNeta / r.ventas) * 1000) / 10 : null,
-                liquidez: formatRatio(RATIO_BY_KEY.liquidez, rr.values.liquidez),
+                crecimiento_ventas: fmt('crecimiento_ventas'),
+                margen_operativo: fmt('margen_operativo'),
+                liquidez: fmt('liquidez'),
                 semaforo_razones: { verde: sem.verde, ambar: sem.ambar, rojo: sem.rojo },
               }
             } else {
@@ -657,12 +700,13 @@ Deno.serve(
 
         } // fin estratégica
 
-        // ===== Análisis financiero =====
+        // ===== Análisis financiero (modelo MP-AFH1) =====
         if (can(access, 'fin-analysis')) {
         server.registerTool(
           'empresa_financiera',
           {
-            description: 'Datos generales de la empresa en el análisis financiero (nombre, país, actividad, moneda), los años capturados y las líneas de negocio. Todas las cifras del módulo están en miles.',
+            description:
+              'Datos generales de la empresa en el análisis financiero (nombre, país, actividad, moneda), los periodos capturados (años completos y, si lo hay, el último parcial) y los segmentos de negocio con sus ventas y costo por periodo. Todas las cifras del módulo están en miles.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
@@ -670,6 +714,9 @@ Deno.serve(
             const fin = await finContext(supabase)
             if (!fin) return text({ mensaje: 'El usuario aún no ha empezado su análisis financiero.' })
             const sales = fin.sections[SALES_SECTION] || {}
+            const segcost = fin.sections[SEGCOST_SECTION] || {}
+            const porPeriodo = (map: Record<string, Record<string, number>>, id: string) =>
+              Object.fromEntries(fin.years.map((y: Db) => [yearLabel(y), map[id]?.[y.id] ?? null]))
             return text({
               empresa: {
                 nombre: fin.analysis.company_name || null,
@@ -679,10 +726,11 @@ Deno.serve(
                 moneda: fin.analysis.currency,
                 unidad: 'miles',
               },
-              anios: fin.years.map((y: Db) => ({ id: y.id, etiqueta: yearLabel(y), anio: y.year, meses: y.months, parcial: y.months < 12 })),
-              lineas_de_negocio: fin.lines.map((l: Db) => ({
+              periodos: fin.years.map((y: Db) => ({ id: y.id, etiqueta: yearLabel(y), anio: y.year, meses: y.months, parcial: y.months < 12 })),
+              segmentos: fin.lines.map((l: Db) => ({
                 nombre: l.name,
-                ventas_por_anio: Object.fromEntries(fin.years.map((y: Db) => [yearLabel(y), sales[l.id]?.[y.id] ?? null])),
+                ventas_por_periodo: porPeriodo(sales, l.id),
+                costo_por_periodo: porPeriodo(segcost, l.id),
               })),
             })
           }
@@ -691,52 +739,48 @@ Deno.serve(
         server.registerTool(
           'estado_resultados',
           {
-            description: 'Estado de resultados por año (ventas, costo, utilidad bruta, gastos, resultado de operación, EBITDA, utilidad neta) con márgenes y variación contra el año anterior. Cifras en miles; los periodos parciales se marcan.',
+            description:
+              'Estado de Resultados por periodo (ventas, costo, utilidad bruta, gastos de venta, administración y generales, resultado de operación, resultado integral de financiamiento, impuestos, utilidad neta) con el % sobre ventas de cada renglón, las partidas que no son efectivo (depreciación y reservas) y el EBITDA. Cifras reales del periodo en miles; los periodos parciales se marcan y no se anualizan.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
           async () => {
             const fin = await finContext(supabase)
             if (!fin || !fin.years.length) return text({ mensaje: 'El usuario aún no ha capturado años en su análisis financiero.' })
-            const inc = computeIncome({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
-            const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : null)
-            const pctFrac = (f: number | null) => (f == null ? null : Math.round(f * 1000) / 10)
-            const rows = fin.years.map((y: Db, i: number) => {
+            const inc = computeIncome({ sections: fin.sections, years: fin.years }) as Record<string, Db>
+            const ebitda = computeEbitda({ sections: fin.sections, years: fin.years }) as Record<string, number>
+            const periodos = fin.years.map((y: Db) => {
               const r = inc[y.id]
-              const prev = i > 0 ? inc[fin.years[i - 1].id] : null
               return {
                 periodo: yearLabel(y),
-                parcial: y.months < 12 ? `${y.months} meses` : null,
-                ventas: r.ventas,
-                costo_de_ventas: r.costo,
-                utilidad_bruta: r.utilidadBruta,
-                gastos_operacion: r.admVentas,
-                depreciacion: r.depreciacion,
-                otros_ingresos_gastos_operacion: r.otrosOp,
-                resultado_de_operacion: r.resultadoOp,
-                ebitda: r.ebitda,
-                resultado_antes_de_impuestos: r.rai,
-                utilidad_neta: r.utilidadNeta,
-                margenes_pct: {
-                  bruto: pct(r.utilidadBruta, r.ventas),
-                  operativo: pct(r.resultadoOp, r.ventas),
-                  ebitda: pct(r.ebitda, r.ventas),
-                  neto: pct(r.utilidadNeta, r.ventas),
+                parcial: parcialDe(y),
+                ...Object.fromEntries(INCOME_OUT.map(([k, name]) => [name, r[k]])),
+                pct_sobre_ventas: Object.fromEntries(INCOME_OUT.map(([k, name]) => [name, pctFrac(r.pct[k])])),
+                partidas_no_efectivo: {
+                  depreciacion_y_amortizacion: r.depreciacion,
+                  reserva_cuentas_por_cobrar: r.reservaCxc,
+                  reserva_inventarios: r.reservaInventarios,
                 },
-                variacion_vs_anterior_pct: prev
-                  ? { ventas: pctFrac(pctChange(r.ventas, prev.ventas)), utilidad_neta: pctFrac(pctChange(r.utilidadNeta, prev.utilidadNeta)) }
-                  : null,
+                ebitda: ebitda[y.id],
+                margen_ebitda_pct: pctFrac(r.ventas > 0 ? ebitda[y.id] / r.ventas : null),
               }
             })
-            return text({ moneda: fin.analysis.currency, unidad: 'miles', nota: 'EBITDA = resultado de operación + depreciación.', periodos: rows })
+            return text({
+              moneda: fin.analysis.currency,
+              unidad: 'miles',
+              nota:
+                'Costos, gastos e impuestos se muestran en positivo y ya están restados en los totales; utilidad_cambiaria y otros_productos llevan signo (utilidad +, pérdida o gasto −). Las partidas que no son efectivo están incluidas en el gasto operativo y no alteran los totales. EBITDA = resultado de operación + depreciación y amortización (más la amortización de activos diferidos y la creación de créditos diferidos del Balance) + reservas de cartera e inventarios.',
+              periodos,
+            })
           }
         )
 
         server.registerTool(
           'balance_general',
           {
-            description: 'Balance general por año: totales de activo, pasivo y capital, y si cuadra (Activo = Pasivo + Capital). Cifras en miles.',
-            inputSchema: z.object({ detalle: z.boolean().default(false).describe('Incluir todas las cuentas capturadas') }),
+            description:
+              'Balance General por periodo: totales de activo circulante y no circulante, pasivo circulante y a largo plazo, capital contable (con el resultado del periodo tomado del Estado de Resultados) y si cuadra (Activo = Pasivo + Capital). Cifras en miles.',
+            inputSchema: z.object({ detalle: z.boolean().default(false).describe('Incluir las cuentas capturadas con su % sobre el total activo') }),
             annotations: { readOnlyHint: true },
           },
           async ({ detalle }) => {
@@ -744,75 +788,121 @@ Deno.serve(
             if (!fin || !fin.years.length) return text({ mensaje: 'El usuario aún no ha capturado años en su análisis financiero.' })
             const bal = computeBalance({ sections: fin.sections, years: fin.years }) as Record<string, Db>
             const cuentas = fin.sections[BALANCE_SECTION] || {}
-            const rows = fin.years.map((y: Db) => {
+            const grupos = BALANCE_GROUPS as Db[]
+            const periodos = fin.years.map((y: Db) => {
               const b = bal[y.id]
               const out: Record<string, unknown> = {
                 periodo: yearLabel(y),
+                parcial: parcialDe(y),
                 activo_circulante: b.activoCirculante,
                 activo_no_circulante: b.activoNoCirculante,
                 total_activo: b.totalActivo,
                 pasivo_circulante: b.pasivoCirculante,
                 pasivo_largo_plazo: b.pasivoLargoPlazo,
                 total_pasivo: b.totalPasivo,
-                total_capital: b.totalCapital,
+                resultado_del_periodo: b.resultadoPeriodo,
+                total_capital_contable: b.totalCapital,
+                total_pasivo_mas_capital: b.totalPasivoCapital,
                 diferencia: b.diferencia,
-                cuadra: Math.abs(b.diferencia) <= 0.5,
+                cuadra: cuadra(b.diferencia),
               }
               if (detalle) {
-                out.cuentas = Object.fromEntries(
-                  Object.entries(cuentas).map(([k, byYear]: [string, Db]) => [k, byYear[y.id] ?? null]).filter(([, v]) => v != null)
+                out.cuentas = grupos.flatMap((g: Db) =>
+                  g.items
+                    .filter((i: Db) => cuentas[i.key]?.[y.id] != null)
+                    .map((i: Db) => ({
+                      grupo: g.title,
+                      clave: i.key,
+                      nombre: i.label,
+                      valor: cuentas[i.key][y.id],
+                      pct_total_activo: pctFrac(b.pct[i.key]),
+                    }))
                 )
               }
               return out
             })
-            return text({ moneda: fin.analysis.currency, unidad: 'miles', periodos: rows })
+            return text({
+              moneda: fin.analysis.currency,
+              unidad: 'miles',
+              nota: 'resultado_del_periodo no se captura: es la utilidad neta del Estado de Resultados y ya está dentro de total_capital_contable. Cuadra cuando |diferencia| ≤ 0.5 (miles).',
+              periodos,
+            })
           }
         )
 
         server.registerTool(
           'flujo_efectivo',
           {
-            description: 'Estado de cambios (método indirecto) y flujo directo por año: flujo de operación, inversión, financiamiento, caja inicial/final y la diferencia contra el balance. Cifras en miles.',
+            description:
+              'Estado de cambios en la situación financiera por periodo ((+) fuentes, (−) aplicaciones): EBITDA, inversión en capital de trabajo, flujo de operación, impuestos, costo integral de financiamiento pagado, efectivo generado por la operación, inversión (CAPEX y otros activos), financiamiento externo, aportaciones o retiros de los accionistas, flujo del periodo y la conciliación con la caja del Balance. Necesita al menos dos periodos; cifras en miles.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
           async () => {
             const fin = await finContext(supabase)
-            if (!fin || fin.years.length < 2) return text({ mensaje: 'El flujo de efectivo necesita al menos dos años capturados.' })
-            const flows = computeCashflow({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
-            const direct = computeDirectCashflow({ sections: fin.sections, years: fin.years }) as Record<string, Db>
+            if (!fin || fin.years.length < 2) return text({ mensaje: 'El Estado de cambios necesita al menos dos periodos capturados: compara cada uno con el anterior.' })
+            const flows = computeCashflow({ sections: fin.sections, years: fin.years }) as Record<string, Db>
+            const byId = new Map(fin.years.map((y: Db) => [y.id, y]))
             return text({
               moneda: fin.analysis.currency,
               unidad: 'miles',
-              estado_de_cambios: fin.years.slice(1).map((y: Db) => {
+              nota:
+                'Signos: positivo = fuente de efectivo, negativo = aplicación. Cada cuenta del Balance entra una sola vez; depreciación y reservas vienen del Estado de Resultados, y venta de activo fijo, efectos cambiarios y ajuste por revaluación de las capturas complementarias del Estado de cambios. Cuadra cuando caja_final_calculada = caja_final_balance (|diferencia| ≤ 0.5).',
+              periodos: fin.years.slice(1).map((y: Db) => {
                 const f = flows[y.id]
                 return {
                   periodo: yearLabel(y),
-                  utilidad_neta: f.utilidadNeta,
-                  depreciacion: f.depreciacion,
-                  variacion_capital_de_trabajo: f.wcTotal,
-                  flujo_operacion: f.flujoOperacion,
-                  flujo_inversion: f.flujoInversion,
-                  flujo_financiamiento: f.flujoFinanciamiento,
-                  flujo_neto: f.flujoNeto,
+                  parcial: parcialDe(y),
+                  periodo_anterior: yearLabel(byId.get(f.prevYearId)),
+                  ebitda: {
+                    resultado_de_operacion: f.resultadoOp,
+                    depreciacion_y_amortizacion: f.depAmort,
+                    reservas_cartera_e_inventarios: f.reservas,
+                    total: f.ebitda,
+                  },
+                  capital_de_trabajo: {
+                    clientes: f.workingCapital.clientes,
+                    inventarios: f.workingCapital.inventarios,
+                    proveedores: f.workingCapital.proveedores,
+                    pagos_anticipados: f.workingCapital.pagosAnticipados,
+                    cuentas_por_cobrar_relacionadas: f.workingCapital.cxcRelacionadas,
+                    cuentas_por_pagar_relacionadas: f.workingCapital.cxpRelacionadas,
+                    anticipos_de_clientes: f.workingCapital.anticipos,
+                    gastos_acumulados: f.workingCapital.gastosAcumulados,
+                    total: f.wcTotal,
+                  },
+                  flujo_de_operacion: f.flujoOperacion,
+                  impuestos: {
+                    impuestos_por_recuperar: f.impRecuperar,
+                    impuestos_por_pagar: f.impPagar,
+                    isr_y_ptu: f.isrPtu,
+                    total: f.impuestos,
+                  },
+                  costo_integral_financiamiento_pagado: f.cif,
+                  efectivo_generado_por_la_operacion: f.efectivoOperacion,
+                  inversion: { capex: f.capex, otros_activos: f.otrosActivos, total: f.flujoInversion },
+                  flujo_neto_de_inversion: f.flujoNetoInversion,
+                  financiamiento_externo: {
+                    porcion_circulante_anterior: f.financing.porcionCirculante,
+                    deuda_bancaria_corto_plazo: f.financing.deudaCP,
+                    deuda_bancaria_largo_plazo: f.financing.deudaLP,
+                    otros_activos_circulantes: f.financing.otrosCirculantes,
+                    otras_cuentas_por_cobrar: f.financing.otrasCxc,
+                    otras_cuentas_por_pagar: f.financing.otrasCxp,
+                    acreedores: f.financing.acreedores,
+                    otros_ingresos: f.financing.otrosIngresos,
+                    cargos_diferidos: f.financing.cargosDiferidos,
+                    creditos_diferidos: f.financing.creditosDiferidos,
+                    total: f.flujoFinExterno,
+                  },
+                  accionistas: { aportaciones: f.aportaciones, dividendos: f.dividendos, total: f.accionistas },
+                  flujo_de_financiamiento: f.flujoFinanciamiento,
+                  flujo_del_periodo: f.flujoPeriodo,
                   caja_inicial: f.cajaInicial,
-                  caja_final_calculada: f.cajaFinalCalculada,
-                  caja_final_balance: f.cajaFinalBalance,
+                  caja_final_calculada: f.cajaFinal,
+                  caja_final_balance: f.cajaBalance,
                   diferencia: f.diferencia,
-                }
-              }),
-              flujo_directo: fin.years.map((y: Db) => {
-                const d = direct[y.id]
-                return {
-                  periodo: yearLabel(y),
-                  saldo_inicial: d.saldoInicial,
-                  entradas_operacion: d.groups.entradas,
-                  salidas_operacion: d.groups.salidas,
-                  flujo_operacion: d.flujoOperacion,
-                  inversion: d.groups.inversion,
-                  financiamiento: d.groups.financiamiento,
-                  flujo_neto: d.flujoNeto,
-                  acumulado: d.acumulado,
+                  cuadra: cuadra(f.diferencia),
                 }
               }),
             })
@@ -822,14 +912,15 @@ Deno.serve(
         server.registerTool(
           'razones_financieras',
           {
-            description: 'Las 18 razones financieras por año (liquidez, eficiencia, apalancamiento, cobertura y rentabilidad) con semáforo verde/ámbar/rojo, su etiqueta (Sano/Vigilar/Atender/No aplica) y el motivo cuando no se puede calcular. Resumen por periodo con los indicadores que más llaman la atención. Cifras en miles; en periodos parciales el estado de resultados se anualiza.',
+            description:
+              'Las 41 razones financieras del modelo por periodo, en seis grupos (eficiencia, flujo de efectivo, liquidez, cobertura, solvencia y rentabilidad): 25 con semáforo verde/ámbar/rojo (etiqueta Sano/Vigilar/Atender/No aplica y motivo cuando no se puede calcular) y 16 informativas (cifras sin semáforo: EBIT, EBITDA, flujos, deuda con costo…). Resumen por periodo con los indicadores que más llaman la atención. Saldos al cierre; días sobre meses × 30; crecimiento, ROA y ROE anualizados en periodos parciales. Cifras en miles.',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
           async () => {
             const fin = await finContext(supabase)
             if (!fin || !fin.years.length) return text({ mensaje: 'El usuario aún no ha capturado años en su análisis financiero.' })
-            const ratios = computeRatios({ sections: fin.sections, years: fin.years, lines: fin.lines }) as Record<string, Db>
+            const ratios = computeRatios({ sections: fin.sections, years: fin.years }) as Record<string, Db>
             const defs = RATIO_DEFS as Db[]
             const labelOf = (status: string | null) => (RATIO_STATUS_LABEL as Record<string, string>)[status ?? 'na']
             const periodos = fin.years.map((y: Db) => {
@@ -837,17 +928,19 @@ Deno.serve(
               const sem = summarizeRatios(r) as Db
               return {
                 periodo: yearLabel(y),
-                parcial: y.months < 12 ? `${y.months} meses` : null,
+                parcial: parcialDe(y),
+                meses: r.months,
                 indicadores: defs.map((d: Db) => {
                   const semaforo = r.status[d.key] ?? null
                   return {
                     clave: d.key,
                     nombre: d.label,
                     grupo: d.group,
+                    informativo: !d.semaforo,
                     valor: r.values[d.key] ?? null,
                     valor_texto: formatRatio(d, r.values[d.key]),
                     semaforo,
-                    etiqueta: labelOf(semaforo),
+                    etiqueta: d.semaforo ? labelOf(semaforo) : null,
                     motivo: r.na[d.key] ?? null,
                   }
                 }),
@@ -863,9 +956,114 @@ Deno.serve(
             return text({
               moneda: fin.analysis.currency,
               unidad: 'miles',
-              nota: 'Umbrales de referencia general para PyMEs; días base 360; en periodos parciales las cifras del estado de resultados se anualizan. EBITDA = resultado de operación + depreciación.',
+              grupos: (RATIO_GROUPS as Db[]).map((g: Db) => ({ clave: g.key, nombre: g.title, pregunta: g.question })),
+              nota:
+                'Umbrales de referencia general para PyMEs (el dueño del producto los confirma). Saldos al cierre, sin promedios; días sobre meses × 30 del periodo; crecimiento en ventas, ROA y ROE se anualizan en periodos parciales y el resto usa las cifras reales. Los indicadores informativos (informativo: true) no llevan semáforo ni cuentan en el resumen. EBITDA = resultado de operación + depreciación y amortización + reservas.',
               periodos,
             })
+          }
+        )
+
+        server.registerTool(
+          'analisis_opcionales',
+          {
+            description:
+              'Los tres análisis opcionales del módulo, cada uno con su diferencia contra el Estado de Resultados (debe ser 0): segmentos de negocio (ventas, costo y margen bruto por segmento), desglose del gasto operativo (20 conceptos más partidas virtuales) y estacionalidad de las ventas por mes. Cifras en miles.',
+            inputSchema: z.object({
+              analisis: z.enum(['todos', 'segmentos', 'desglose_gasto', 'estacionalidad']).default('todos').describe('Qué análisis devolver'),
+            }),
+            annotations: { readOnlyHint: true },
+          },
+          async ({ analisis }) => {
+            const fin = await finContext(supabase)
+            if (!fin || !fin.years.length) return text({ mensaje: 'El usuario aún no ha capturado años en su análisis financiero.' })
+            const base = { sections: fin.sections, years: fin.years }
+            const out: Record<string, unknown> = { moneda: fin.analysis.currency, unidad: 'miles' }
+            if (analisis === 'todos' || analisis === 'segmentos') {
+              const seg = computeSegments({ ...base, lines: fin.lines }) as Record<string, Db>
+              out.segmentos = {
+                capturado: fin.lines.length > 0 && hasAny(fin.sections[SALES_SECTION]),
+                periodos: fin.years.map((y: Db) => {
+                  const s = seg[y.id]
+                  return {
+                    periodo: yearLabel(y),
+                    parcial: parcialDe(y),
+                    segmentos: fin.lines.map((l: Db) => {
+                      const v = s.bySegment[l.id]
+                      return {
+                        nombre: l.name,
+                        ventas: v.ventas,
+                        pct_ventas: pctFrac(v.pctVentas),
+                        costo: v.costo,
+                        pct_costo: pctFrac(v.pctCosto),
+                        utilidad_bruta: v.bruto,
+                        margen_bruto_pct: pctFrac(v.margen),
+                      }
+                    }),
+                    total_ventas: s.totalVentas,
+                    total_costo: s.totalCosto,
+                    total_utilidad_bruta: s.totalBruto,
+                    margen_bruto_pct: pctFrac(s.margenTotal),
+                    ventas_segun_estado_resultados: s.ventasResultados,
+                    costo_segun_estado_resultados: s.costoResultados,
+                    diferencia_ventas: s.difVentas,
+                    diferencia_costo: s.difCosto,
+                    cuadra: cuadra(s.difVentas) && cuadra(s.difCosto),
+                  }
+                }),
+              }
+            }
+            if (analisis === 'todos' || analisis === 'desglose_gasto') {
+              const br = computeExpenseBreakdown(base) as Record<string, Db>
+              const conceptos = EXPENSE_CONCEPTS as Db[]
+              out.desglose_gasto = {
+                capturado: hasAny(fin.sections[EXPENSES_SECTION]),
+                nota: 'Depreciación y reservas vienen del Estado de Resultados; amortizaciones y otras partidas virtuales se capturan en el desglose. El total debe coincidir con el gasto operativo del Estado de Resultados.',
+                periodos: fin.years.map((y: Db) => {
+                  const b = br[y.id]
+                  return {
+                    periodo: yearLabel(y),
+                    parcial: parcialDe(y),
+                    conceptos: conceptos.map((c: Db) => ({ clave: c.key, nombre: c.label, valor: b.concepts[c.key], pct_total: pctFrac(b.pct[c.key]) })),
+                    gastos_de_operacion: b.gastosOperacion,
+                    partidas_virtuales: {
+                      depreciacion_y_amortizacion: b.depreciacion,
+                      amortizaciones: b.amortizaciones,
+                      reserva_cuentas_por_cobrar: b.reservaCxc,
+                      reserva_inventarios: b.reservaInventarios,
+                      otras_partidas_virtuales: b.otrasVirtuales,
+                    },
+                    total: b.total,
+                    gasto_operativo_segun_estado_resultados: b.gastoEnResultados,
+                    diferencia: b.diferencia,
+                    cuadra: cuadra(b.diferencia),
+                  }
+                }),
+              }
+            }
+            if (analisis === 'todos' || analisis === 'estacionalidad') {
+              const sea = computeSeasonality(base) as Record<string, Db>
+              const meses = SEASON_MONTHS as Db[]
+              out.estacionalidad = {
+                capturado: hasAny(fin.sections[SEASONALITY_SECTION]),
+                nota: 'En un periodo parcial solo se listan los meses que incluye. La suma de los meses debe coincidir con las ventas del Estado de Resultados.',
+                periodos: fin.years.map((y: Db) => {
+                  const s = sea[y.id]
+                  return {
+                    periodo: yearLabel(y),
+                    parcial: parcialDe(y),
+                    meses: meses
+                      .filter((m: Db) => m.month <= y.months)
+                      .map((m: Db) => ({ mes: m.label, ventas: s.months[m.month - 1], pct: pctFrac(s.pct[m.month - 1]) })),
+                    total: s.total,
+                    ventas_segun_estado_resultados: s.ventasResultados,
+                    diferencia: s.diferencia,
+                    cuadra: cuadra(s.diferencia),
+                  }
+                }),
+              }
+            }
+            return text(out)
           }
         )
 

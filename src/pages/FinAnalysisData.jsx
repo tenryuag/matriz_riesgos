@@ -262,10 +262,11 @@ export default function FinAnalysisData() {
             <Info className="w-5 h-5 text-accent" />
           </div>
           <p className="text-sm text-muted leading-relaxed">
-            Esta información alimenta todo el módulo. Los <strong>años</strong> que
-            definas aquí aparecerán como columnas en Ventas, Costos, Gastos y los
-            estados financieros. Todas las cifras del módulo se capturan{" "}
-            <strong>en miles</strong>.
+            Esta información alimenta todo el módulo. Captura los estados financieros
+            anuales y el último periodo parcial que haya emitido tu contador: los{" "}
+            <strong>años</strong> que definas aquí aparecerán como columnas en el
+            Estado de Resultados, el Balance General y los demás análisis. Todas las
+            cifras del módulo se capturan <strong>en miles</strong>.
           </p>
         </CardContent>
       </Card>
@@ -367,8 +368,9 @@ export default function FinAnalysisData() {
             Se recomiendan de 3 a 5 años para ver tendencias. Agrega años hacia atrás o hacia
             adelante con los botones, o escribe el año directamente en la casilla (el cambio se
             aplica al salir de ella). El último puede ser un <strong>periodo parcial</strong> (por
-            ejemplo, cifras a junio): en los estados financieros se anualiza automáticamente para
-            poder compararlo.
+            ejemplo, cifras a junio): los estados financieros lo muestran tal cual, y las razones
+            que lo necesitan (crecimiento en ventas, ROA, ROE y los días) lo ajustan a los meses
+            del periodo para que la comparación sea justa.
           </p>
 
           {years.length === 0 ? (
@@ -427,9 +429,9 @@ export default function FinAnalysisData() {
 
       {/* Siguiente paso */}
       <div className="flex justify-end">
-        <Link to={createPageUrl("FinAnalysisSales")}>
+        <Link to={createPageUrl("FinAnalysisIncome")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            Siguiente: Ventas →
+            Siguiente: Estado de Resultados →
           </Button>
         </Link>
       </div>

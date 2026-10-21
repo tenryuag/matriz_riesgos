@@ -1,86 +1,108 @@
 // ============================================================
-// Motor de cálculo del Análisis Financiero (funciones puras).
-// Recibe las cifras cargadas con FinValue.getSections y devuelve los
-// estados financieros calculados por año: Estado de Resultados, Balance,
-// flujos de efectivo y razones financieras con semáforo (computeRatios,
-// ratioStatus, ratioTrend, summarizeRatios). Lo usan las pantallas del
-// módulo, el Inicio como tablero y el servidor MCP (copia en
-// supabase/functions/_shared/app vía `npm run mcp:sync`), por lo que NO
-// puede importar React ni APIs del navegador.
+// Motor de cálculo del Análisis Financiero (funciones puras, modelo
+// MP-AFH1). Recibe las cifras cargadas con FinValue.getSections
+// ({ [section]: { [conceptKey]: { [yearId]: amount } } }) y la lista de
+// años ([{ id, year, months }]) y devuelve los estados financieros
+// calculados por año: Estado de Resultados, Balance, EBITDA, Estado de
+// cambios en la situación financiera, razones financieras con semáforo y
+// los análisis opcionales (segmentos, desglose del gasto, estacionalidad).
+// Lo usan las pantallas del módulo, el Inicio como tablero y el servidor
+// MCP (copia en supabase/functions/_shared/app vía `npm run mcp:sync`),
+// por lo que NO puede importar React ni APIs del navegador.
+// Convención de signos: costos, gastos e impuestos del Estado de Resultados
+// se capturan en positivo y aquí se restan; las partidas marcadas `signed`
+// en finConfig llevan signo (utilidad +, pérdida/gasto −); las cuentas del
+// Balance llevan su signo contable (resultados acumulados negativos con
+// pérdidas) y se suman tal cual.
 // Verificación: `node scripts/check-finCalc.mjs`.
 // ============================================================
 import {
-  COST_CONCEPTS,
-  EXPENSE_CONCEPTS,
-  SALES_SECTION,
-  EXPENSES_SECTION,
   INCOME_SECTION,
   BALANCE_SECTION,
+  CASHFLOW_SECTION,
+  SALES_SECTION,
+  SEGCOST_SECTION,
+  EXPENSES_SECTION,
+  SEASONALITY_SECTION,
   BALANCE_GROUPS,
-  costSection,
-  toNumber,
-  annualizeFactor,
-  CASHFLOW_ANNEX_SECTION,
-  ANNEX_GROUPS,
-  CASHFLOW_DIRECT_SECTION,
-  DIRECT_GROUPS,
-  DIRECT_INITIAL_KEY,
+  ALL_BALANCE_KEYS,
+  EXPENSE_CONCEPTS,
+  SEASON_MONTHS,
   RATIO_DEFS,
+  toNumber,
 } from "./finConfig.js";
 
 // Valor numérico de una celda (0 si está vacía).
 const cell = (sections, section, key, yearId) =>
-  toNumber(sections[section]?.[key]?.[yearId]) ?? 0;
+  toNumber(sections?.[section]?.[key]?.[yearId]) ?? 0;
 
 // Suma de varias claves de una sección en un año.
 const sumKeys = (sections, section, keys, yearId) =>
   keys.reduce((s, k) => s + cell(sections, section, k, yearId), 0);
 
+const sum = (arr) => arr.reduce((s, v) => s + v, 0);
+
+// Proporción segura: null cuando la base no es positiva.
+const share = (v, base) => (base > 0 ? v / base : null);
+
+// Meses del periodo (12 si el año no lo trae).
+const monthsOf = (y) => (y && y.months > 0 ? y.months : 12);
+
+// Base de días del año comercial completo (12 meses × 30).
+export const DAYS_BASE = 360;
+
+// Días del periodo para las rotaciones: meses × 30 (180 en un semestre).
+export const periodDays = (y) => monthsOf(y) * 30;
+
+// Variación porcentual entre dos valores (null si no se puede calcular).
+export const pctChange = (curr, prev) =>
+  prev == null || prev === 0 || curr == null ? null : curr / Math.abs(prev) - 1;
+
 // ---------- Estado de Resultados ----------
-// Devuelve { [yearId]: { ventas, costo, utilidadBruta, admVentas, depreciacion,
-//   otrosOp, resultadoOp, ebitda, prodFin, gastosFin, cambiaria, otrosProd,
-//   rai, isr, ptu, utilidadNeta } } con las cifras reales del periodo.
-export function computeIncome({ sections, years, lines }) {
+// Devuelve { [yearId]: { ventas, costo, utilidadBruta, gastoVenta, gastoAdmin,
+//   gastoGeneral, gastoOperativo, resultadoOp, prodFin, gastosFin, cambiaria,
+//   rif, otrosProd, rai, isr, ptu, utilidadNeta, depreciacion, reservaCxc,
+//   reservaInventarios, pct: { [mismaClave]: valor / ventas | null } } }
+// con las cifras REALES del periodo (sin anualizar). Costos, gastos e
+// impuestos llegan en positivo y aquí se restan.
+export function computeIncome({ sections, years }) {
   const out = {};
-  years.forEach((y) => {
-    const ventas = lines.reduce((s, l) => s + cell(sections, SALES_SECTION, l.id, y.id), 0);
-    const costo = lines.reduce(
-      (s, l) => s + sumKeys(sections, costSection(l.id), COST_CONCEPTS.map((c) => c.key), y.id),
-      0
-    );
-    const admVentas = sumKeys(sections, EXPENSES_SECTION, EXPENSE_CONCEPTS.map((c) => c.key), y.id);
+  (years || []).forEach((y) => {
     const inp = (k) => cell(sections, INCOME_SECTION, k, y.id);
-    const depreciacion = inp("depreciacion");
-    const otrosOp = inp("otros_operacion");
+    const ventas = inp("ventas");
+    const costo = inp("costo");
+    const gastoVenta = inp("gasto_venta");
+    const gastoAdmin = inp("gasto_admin");
+    const gastoGeneral = inp("gasto_general");
     const prodFin = inp("productos_financieros");
     const gastosFin = inp("gastos_financieros");
     const cambiaria = inp("utilidad_cambiaria");
     const otrosProd = inp("otros_productos");
     const isr = inp("isr");
     const ptu = inp("ptu");
+    // Partidas que no son efectivo (memo): no alteran los totales.
+    const depreciacion = inp("depreciacion");
+    const reservaCxc = inp("reserva_cxc");
+    const reservaInventarios = inp("reserva_inventarios");
 
     const utilidadBruta = ventas - costo;
-    const resultadoOp = utilidadBruta - admVentas - depreciacion + otrosOp;
-    // EBITDA = resultado de operación + depreciación y amortización.
-    const ebitda = resultadoOp + depreciacion;
-    const rai = resultadoOp + prodFin - gastosFin + cambiaria + otrosProd;
+    const gastoOperativo = gastoVenta + gastoAdmin + gastoGeneral;
+    const resultadoOp = utilidadBruta - gastoOperativo;
+    const rif = prodFin - gastosFin + cambiaria;
+    const rai = resultadoOp + rif + otrosProd;
     const utilidadNeta = rai - isr - ptu;
 
-    out[y.id] = {
-      ventas, costo, utilidadBruta, admVentas, depreciacion, otrosOp,
-      resultadoOp, ebitda, prodFin, gastosFin, cambiaria, otrosProd,
-      rai, isr, ptu, utilidadNeta,
+    const row = {
+      ventas, costo, utilidadBruta,
+      gastoVenta, gastoAdmin, gastoGeneral, gastoOperativo, resultadoOp,
+      prodFin, gastosFin, cambiaria, rif, otrosProd, rai, isr, ptu, utilidadNeta,
+      depreciacion, reservaCxc, reservaInventarios,
     };
-  });
-  return out;
-}
-
-// Multiplica todas las partidas por un factor (para anualizar parciales).
-export function scaleIncome(row, factor) {
-  if (!row || factor === 1) return row;
-  const out = {};
-  Object.entries(row).forEach(([k, v]) => {
-    out[k] = v * factor;
+    const pct = {};
+    Object.entries(row).forEach(([k, v]) => {
+      pct[k] = share(v, ventas);
+    });
+    out[y.id] = { ...row, pct };
   });
   return out;
 }
@@ -89,168 +111,238 @@ export function scaleIncome(row, factor) {
 const groupKeys = (gk) => BALANCE_GROUPS.find((g) => g.key === gk).items.map((i) => i.key);
 
 // Devuelve { [yearId]: { activoCirculante, activoNoCirculante, totalActivo,
-//   pasivoCirculante, pasivoLargoPlazo, totalPasivo, totalCapital,
-//   totalPasivoCapital, diferencia } }.
+//   pasivoCirculante, pasivoLargoPlazo, totalPasivo, resultadoPeriodo,
+//   totalCapital, totalPasivoCapital, diferencia, acumuladosSugerido,
+//   pct: { [cuenta | total]: valor / totalActivo | null } } }.
+// `resultadoPeriodo` no se captura: es la utilidad neta del Estado de
+// Resultados y entra en `totalCapital`. `diferencia` = activo − (pasivo +
+// capital) debe ser 0. `acumuladosSugerido` = resultados acumulados del año
+// anterior + su utilidad neta (null en el primer año); solo es una pista.
 export function computeBalance({ sections, years }) {
+  const income = computeIncome({ sections, years });
   const out = {};
-  years.forEach((y) => {
+  (years || []).forEach((y, i) => {
+    const bal = (k, yearId = y.id) => cell(sections, BALANCE_SECTION, k, yearId);
     const g = (gk) => sumKeys(sections, BALANCE_SECTION, groupKeys(gk), y.id);
     const activoCirculante = g("activo_circulante");
     const activoNoCirculante = g("activo_no_circulante");
     const pasivoCirculante = g("pasivo_circulante");
     const pasivoLargoPlazo = g("pasivo_largo_plazo");
-    const totalCapital = g("capital");
+    const resultadoPeriodo = income[y.id]?.utilidadNeta ?? 0;
+    const totalCapital = g("capital") + resultadoPeriodo;
     const totalActivo = activoCirculante + activoNoCirculante;
     const totalPasivo = pasivoCirculante + pasivoLargoPlazo;
     const totalPasivoCapital = totalPasivo + totalCapital;
-    out[y.id] = {
+    const prev = i > 0 ? years[i - 1] : null;
+    const acumuladosSugerido = prev
+      ? bal("resultados_acumulados", prev.id) + (income[prev.id]?.utilidadNeta ?? 0)
+      : null;
+
+    const totals = {
       activoCirculante, activoNoCirculante, totalActivo,
       pasivoCirculante, pasivoLargoPlazo, totalPasivo,
-      totalCapital, totalPasivoCapital,
+      resultadoPeriodo, totalCapital, totalPasivoCapital,
+    };
+    const pct = {};
+    ALL_BALANCE_KEYS.forEach((k) => {
+      pct[k] = share(bal(k), totalActivo);
+    });
+    Object.entries(totals).forEach(([k, v]) => {
+      pct[k] = share(v, totalActivo);
+    });
+    out[y.id] = {
+      ...totals,
       diferencia: totalActivo - totalPasivoCapital,
+      acumuladosSugerido,
+      pct,
     };
   });
   return out;
 }
 
-// Variación porcentual entre dos valores (null si no se puede calcular).
-export const pctChange = (curr, prev) =>
-  prev == null || prev === 0 || curr == null ? null : curr / Math.abs(prev) - 1;
-
-// ---------- Estado de cambios (método indirecto) ----------
-
-// Cuentas de capital de trabajo: los activos restan su aumento, los
-// pasivos lo suman.
-export const WORKING_CAPITAL = [
-  { key: "clientes", label: "Clientes", kind: "asset" },
-  { key: "otras_cxc", label: "Otras cuentas por cobrar", kind: "asset" },
-  { key: "inventarios", label: "Inventarios", kind: "asset" },
-  { key: "pagos_anticipados", label: "Pagos anticipados", kind: "asset" },
-  { key: "impuestos_recuperar", label: "Impuestos por recuperar", kind: "asset" },
-  { key: "cxc_relacionadas", label: "Cuentas por cobrar a compañías relacionadas", kind: "asset" },
-  { key: "otros_circulantes", label: "Otros activos circulantes", kind: "asset" },
-  { key: "proveedores", label: "Proveedores", kind: "liability" },
-  { key: "acreedores", label: "Acreedores diversos", kind: "liability" },
-  { key: "impuestos_pagar", label: "Impuestos por pagar", kind: "liability" },
-  { key: "cias_relacionadas", label: "Compañías relacionadas (pasivo)", kind: "liability" },
-  { key: "anticipos", label: "Anticipos de clientes", kind: "liability" },
-  { key: "gastos_acumulados", label: "Gastos acumulados", kind: "liability" },
-  { key: "otras_cxp", label: "Otras cuentas por pagar", kind: "liability" },
-];
-
-// Calcula el flujo de cada año a partir del año anterior. Devuelve
-// { [yearId]: {...} } solo para los años que tienen un año previo.
-export function computeCashflow({ sections, years, lines }) {
-  const income = computeIncome({ sections, years, lines });
+// ---------- EBITDA y Estado de cambios ----------
+// Ajustes por partidas diferidas del Balance (0 cuando no hay año anterior):
+// la amortización de activos diferidos (baja del saldo) y la creación de
+// créditos diferidos (alza del saldo) son partidas virtuales que se suman al
+// EBITDA; sus movimientos contrarios van al financiamiento externo.
+const deferredAdjustments = (sections, y, p) => {
+  if (!p) return { amortActivosDiferidos: 0, creacionCreditosDiferidos: 0 };
   const bal = (k, yearId) => cell(sections, BALANCE_SECTION, k, yearId);
-  const annex = (k, yearId) => cell(sections, CASHFLOW_ANNEX_SECTION, k, yearId);
+  return {
+    amortActivosDiferidos: Math.max(bal("activos_diferidos", p.id) - bal("activos_diferidos", y.id), 0),
+    creacionCreditosDiferidos: Math.max(bal("pasivos_diferidos", y.id) - bal("pasivos_diferidos", p.id), 0),
+  };
+};
+
+const ebitdaOf = (inc, adj) =>
+  inc.resultadoOp +
+  inc.depreciacion + adj.amortActivosDiferidos + adj.creacionCreditosDiferidos +
+  inc.reservaCxc + inc.reservaInventarios;
+
+// Devuelve { [yearId]: ebitda } para TODOS los años ("UAFIRDA / EBITDA" =
+// resultado de operación + depreciación y amortización + reservas). En el
+// primer año los ajustes por diferidos valen 0.
+export function computeEbitda({ sections, years }) {
+  const income = computeIncome({ sections, years });
   const out = {};
-  years.forEach((y, i) => {
+  (years || []).forEach((y, i) => {
+    const adj = deferredAdjustments(sections, y, i > 0 ? years[i - 1] : null);
+    out[y.id] = ebitdaOf(income[y.id], adj);
+  });
+  return out;
+}
+
+// Estado de cambios en la situación financiera "(+) fuentes (−) aplicaciones",
+// réplica de la hoja "Conciliaciones" del Excel. Solo para los años con año
+// anterior; devuelve { [yearId]: {...} } (ver el objeto de salida al final).
+// Las capturas de `cashflow` (venta de activo fijo, efectos cambiarios,
+// ajuste por revaluación) llegan con el signo de finConfig: utilidad +.
+export function computeCashflow({ sections, years }) {
+  const income = computeIncome({ sections, years });
+  const bal = (k, yearId) => cell(sections, BALANCE_SECTION, k, yearId);
+  const out = {};
+  (years || []).forEach((y, i) => {
     if (i === 0) return;
     const p = years[i - 1];
-    const d = (k) => bal(k, y.id) - bal(k, p.id);
+    const inc = income[y.id];
+    const bp = (k) => bal(k, p.id); // saldo anterior
+    const bc = (k) => bal(k, y.id); // saldo actual
+    const cf = (k) => cell(sections, CASHFLOW_SECTION, k, y.id);
 
-    const utilidadNeta = income[y.id]?.utilidadNeta ?? 0;
-    const depreciacion = income[y.id]?.depreciacion ?? 0;
-    const provisiones = d("provisiones");
-    const impuestoDiferido = d("impuesto_diferido_pasivo") - d("impuesto_diferido_activo");
-    const workingCapital = {};
-    let wcTotal = 0;
-    WORKING_CAPITAL.forEach((w) => {
-      const v = w.kind === "asset" ? -d(w.key) : d(w.key);
-      workingCapital[w.key] = v;
-      wcTotal += v;
-    });
-    const flujoOperacion = utilidadNeta + depreciacion + provisiones + impuestoDiferido + wcTotal;
+    // EBITDA
+    const depreciacion = inc.depreciacion;
+    const { amortActivosDiferidos, creacionCreditosDiferidos } = deferredAdjustments(sections, y, p);
+    const depAmort = depreciacion + amortActivosDiferidos + creacionCreditosDiferidos;
+    const reservaCxc = inc.reservaCxc;
+    const reservaInventarios = inc.reservaInventarios;
+    const reservas = reservaCxc + reservaInventarios;
+    const resultadoOp = inc.resultadoOp;
+    const ebitda = resultadoOp + depAmort + reservas;
 
-    const signed = {};
-    const groupTotal = (gk) =>
-      ANNEX_GROUPS.find((g) => g.key === gk).items.reduce((s, it) => {
-        const v = it.sign * annex(it.key, y.id);
-        signed[it.key] = v;
-        return s + v;
-      }, 0);
-    const flujoInversion = groupTotal("inversion");
-    const flujoFinanciamiento = groupTotal("financiamiento");
-    const flujoNeto = flujoOperacion + flujoInversion + flujoFinanciamiento;
-    const cajaInicial = bal("caja", p.id);
-    const cajaFinalCalculada = cajaInicial + flujoNeto;
-    const cajaFinalBalance = bal("caja", y.id);
+    // Capturas complementarias
+    const fxClientes = cf("cambiaria_clientes");
+    const fxDeudaCP = cf("cambiaria_deuda_cp");
+    const fxDeudaLP = cf("cambiaria_deuda_lp");
+    const ventaActivoFijo = cf("venta_activo_fijo");
+    const ajusteRevaluacion = cf("ajuste_revaluacion");
 
-    // Conciliación del anexo contra el balance.
-    const capexNeto = annex("capex_adquisicion", y.id) - annex("capex_venta", y.id);
-    const deltaActivosFijos = d("activos_fijos") + depreciacion;
-    const deudaCpNeta = annex("deuda_cp_disposicion", y.id) - annex("deuda_cp_pago", y.id);
-    const deltaDeudaCp = d("bancario_cp") + d("porcion_circulante_lp");
-    const deudaLpNeta = annex("deuda_lp_disposicion", y.id) - annex("deuda_lp_pago", y.id);
-    const deltaDeudaLp = d("bancario_lp");
+    // Capital de trabajo: los activos liberan efectivo al bajar, los pasivos
+    // al subir. Las reservas ya redujeron el saldo contable y el efecto
+    // cambiario en clientes no es efectivo: ambos se neutralizan.
+    const workingCapital = {
+      clientes: bp("clientes") - reservaCxc - bc("clientes") + fxClientes,
+      inventarios: bp("inventarios") - reservaInventarios - bc("inventarios"),
+      proveedores: bc("proveedores") - bp("proveedores"),
+      pagosAnticipados: bp("pagos_anticipados") - bc("pagos_anticipados"),
+      cxcRelacionadas: bp("cxc_relacionadas") - bc("cxc_relacionadas"),
+      cxpRelacionadas: bc("cias_relacionadas") - bp("cias_relacionadas"),
+      anticipos: bc("anticipos") - bp("anticipos"),
+      gastosAcumulados: bc("gastos_acumulados") - bp("gastos_acumulados"),
+    };
+    const wcTotal = sum(Object.values(workingCapital));
+    const flujoOperacion = ebitda + wcTotal;
+
+    // Impuestos causados
+    const impRecuperar = bp("impuestos_recuperar") - bc("impuestos_recuperar");
+    const impPagar = bc("impuestos_pagar") - bp("impuestos_pagar");
+    const isrPtu = -(inc.isr + inc.ptu);
+    const impuestos = impRecuperar + impPagar + isrPtu;
+    const flujoOperativoNetoImpuestos = flujoOperacion + impuestos;
+
+    // Costo integral de financiamiento pagado (sin los efectos cambiarios
+    // que no fueron efectivo).
+    const gastoFinNeto = inc.prodFin - inc.gastosFin;
+    const cambiarioDevengado = inc.cambiaria;
+    const cif = gastoFinNeto + cambiarioDevengado - fxClientes - fxDeudaCP - fxDeudaLP;
+    const efectivoOperacion = flujoOperacion + impuestos + cif;
+
+    // Inversión. La variación de "Revaluación de activos" entra siempre en
+    // el CAPEX (el Excel solo la incluye en una columna; con 0 no cambia nada).
+    const activoFijoInicial = bp("activos_fijos");
+    const activoFijoFinal = bc("activos_fijos");
+    const variacionRevaluacion = bc("revaluacion") - bp("revaluacion");
+    const capex =
+      activoFijoInicial - depreciacion - ventaActivoFijo + ajusteRevaluacion - activoFijoFinal + variacionRevaluacion;
+    const otrosActivos = bp("otros_activos") - bc("otros_activos");
+    const flujoInversion = capex + otrosActivos;
+    const flujoNetoInversion = efectivoOperacion + flujoInversion;
+
+    // Financiamiento externo
+    const financing = {
+      porcionCirculante: -bp("porcion_circulante_lp"),
+      deudaCP: bc("bancario_cp") - bp("bancario_cp") + fxDeudaCP,
+      deudaLP: bc("porcion_circulante_lp") + bc("bancario_lp") - bp("bancario_lp") + fxDeudaLP,
+      otrosCirculantes: bp("otros_circulantes") - bc("otros_circulantes"),
+      otrasCxc: bp("otras_cxc") - bc("otras_cxc"),
+      otrasCxp: bc("otras_cxp") - bp("otras_cxp"),
+      acreedores: bc("acreedores") - bp("acreedores"),
+      otrosIngresos: inc.otrosProd + ventaActivoFijo,
+      cargosDiferidos: -Math.max(bc("activos_diferidos") - bp("activos_diferidos"), 0),
+      creditosDiferidos: Math.min(bc("pasivos_diferidos") - bp("pasivos_diferidos"), 0),
+    };
+    const flujoFinExterno = sum(Object.values(financing));
+
+    // Accionistas
+    const aportaciones =
+      bc("capital_social") + bc("aportaciones_futuras") - ajusteRevaluacion -
+      (bp("capital_social") + bp("aportaciones_futuras"));
+    const dividendos =
+      bc("reservas") + bc("resultados_acumulados") -
+      (bp("reservas") + bp("resultados_acumulados") + (income[p.id]?.utilidadNeta ?? 0));
+    const accionistas = aportaciones + dividendos;
+    const flujoFinanciamiento = flujoFinExterno + accionistas;
+
+    // Flujo del periodo y verificación contra la caja del Balance
+    const flujoPeriodo = flujoNetoInversion + flujoFinanciamiento;
+    const cajaInicial = bp("efectivo");
+    const cajaFinal = cajaInicial + flujoPeriodo;
+    const cajaBalance = bc("efectivo");
 
     out[y.id] = {
       prevYearId: p.id,
-      utilidadNeta, depreciacion, provisiones, impuestoDiferido,
+      depreciacion, amortActivosDiferidos, creacionCreditosDiferidos, depAmort,
+      reservaCxc, reservaInventarios, reservas,
+      resultadoOp, ebitda,
       workingCapital, wcTotal, flujoOperacion,
-      signed, flujoInversion, flujoFinanciamiento, flujoNeto,
-      cajaInicial, cajaFinalCalculada, cajaFinalBalance,
-      diferencia: cajaFinalCalculada - cajaFinalBalance,
-      reconciliation: [
-        { label: "CAPEX neto (adquisición − venta)", captured: capexNeto, balance: deltaActivosFijos, balanceLabel: "Δ activos fijos + depreciación" },
-        { label: "Deuda a corto plazo neta", captured: deudaCpNeta, balance: deltaDeudaCp, balanceLabel: "Δ bancario CP + porción circulante LP" },
-        { label: "Deuda a largo plazo neta", captured: deudaLpNeta, balance: deltaDeudaLp, balanceLabel: "Δ bancario LP" },
-      ],
+      impRecuperar, impPagar, isrPtu, impuestos, flujoOperativoNetoImpuestos,
+      gastoFinNeto, cambiarioDevengado, fxClientes, fxDeudaCP, fxDeudaLP, cif,
+      efectivoOperacion,
+      capex,
+      capexDetalle: { activoFijoInicial, depreciacion, ventaActivoFijo, ajusteRevaluacion, variacionRevaluacion, activoFijoFinal },
+      otrosActivos, flujoInversion, flujoNetoInversion,
+      financing, flujoFinExterno,
+      aportaciones, dividendos, accionistas, flujoFinanciamiento,
+      flujoPeriodo, cajaInicial, cajaFinal, cajaBalance,
+      diferencia: cajaFinal - cajaBalance,
     };
-  });
-  return out;
-}
-
-// ---------- Flujo de efectivo directo ----------
-// El saldo inicial se captura solo en el primer año; después es el
-// acumulado del año anterior.
-export function computeDirectCashflow({ sections, years }) {
-  const v = (k, yearId) => cell(sections, CASHFLOW_DIRECT_SECTION, k, yearId);
-  const out = {};
-  let prevAcumulado = null;
-  years.forEach((y, i) => {
-    const groups = {};
-    DIRECT_GROUPS.forEach((g) => {
-      groups[g.key] = g.items.reduce((s, it) => s + v(it.key, y.id), 0);
-    });
-    const flujoOperacion = groups.entradas - groups.salidas;
-    const flujoNeto = flujoOperacion + groups.inversion + groups.financiamiento;
-    const saldoInicial = i === 0 ? v(DIRECT_INITIAL_KEY, y.id) : prevAcumulado;
-    const acumulado = saldoInicial + flujoNeto;
-    prevAcumulado = acumulado;
-    out[y.id] = { groups, flujoOperacion, flujoNeto, saldoInicial, acumulado, initialIsInput: i === 0 };
   });
   return out;
 }
 
 // ---------- Razones financieras ----------
-// Fórmulas de la hoja "Razones Financieras" del Excel del cliente, con los
-// signos corregidos (costos y gastos financieros en positivo), siempre la
-// fila de Clientes para los días de cobranza y EBITDA = resultado de
-// operación + depreciación. Los flujos de un año parcial se anualizan con
-// annualizeFactor antes de calcular; los saldos del Balance no se tocan.
-
-// Base de días para rotaciones (año comercial).
-export const DAYS_BASE = 360;
+// Fórmulas de la hoja "Razones Financieras" del Excel MP-AFH1: saldos al
+// cierre (sin promedios), días sobre `meses × 30`, crecimiento, ROA y ROE
+// anualizados en periodos parciales; el resto usa las cifras reales.
 
 // Motivos (en español, cortos) de los valores no calculables.
-const NA_REASON = {
-  pasivoCirculante: "Sin pasivo circulante",
-  costo: "Sin costo de ventas",
-  inventarios: "Sin inventarios",
+export const NA_REASON = {
+  sinAnioAnterior: "Sin año anterior",
+  sinVentasAnterior: "Sin ventas el año anterior",
   ventas: "Sin ventas",
-  proveedores: "Sin crédito de proveedores",
+  costo: "Sin costo de ventas",
+  ciclo: "Sin ventas ni costo de ventas",
+  pasivoCirculante: "Sin pasivo circulante",
+  rif: "Sin costo financiero neto",
+  gastosFinNetos: "Sin gastos financieros netos",
   capital: "Capital contable negativo o cero",
   activos: "Sin activos",
-  cajaCubre: "La caja cubre toda la deuda",
   ebitda: "EBITDA negativo o cero",
-  gastosFin: "Sin gastos financieros",
-  ciclo: "Sin ventas ni costo de ventas",
+  sinDeuda: "Sin deuda con costo",
 };
 
 // Semáforo de un indicador según las bandas del catálogo. Solo bandas:
-// devuelve null si no hay valor o si el indicador hereda su estatus.
+// devuelve null si no hay valor, si el indicador es informativo o si
+// hereda su estatus (`statusFrom`).
 export function ratioStatus(def, value) {
   if (value == null || !isFinite(value) || !def?.bands) return null;
   const b = def.bands;
@@ -267,40 +359,57 @@ export function ratioStatus(def, value) {
   return null;
 }
 
-// Devuelve { [yearId]: { factor, values, status, na, aux } }:
-//   factor: 12/meses en años parciales (1 si es completo);
-//   values: { [key]: number | null } para los 18 indicadores de RATIO_DEFS;
-//   status: { [key]: 'verde' | 'ambar' | 'rojo' | null };
-//   na:     { [key]: motivo } solo para los indicadores sin valor;
-//   aux:    rotaciones, EBITDA, deuda bruta, promedios y cifras base
-//           (los flujos ya anualizados).
-export function computeRatios({ sections, years, lines }) {
-  const income = computeIncome({ sections, years, lines });
-  const balance = computeBalance({ sections, years });
-  const bal = (k, yearId) => cell(sections, BALANCE_SECTION, k, yearId);
-  const out = {};
-  years.forEach((y, i) => {
-    const factor = annualizeFactor(y);
-    const inc = scaleIncome(income[y.id], factor);
-    const prev = i > 0 ? years[i - 1] : null;
-    // Promedio del saldo del año y del anterior; el saldo del año si es el primero.
-    const promedio = (k) => (prev ? (bal(k, y.id) + bal(k, prev.id)) / 2 : bal(k, y.id));
+// Indicadores del bloque "Flujo de efectivo" que salen del Estado de cambios.
+const FLOW_FIELDS = {
+  inversion_capital_trabajo: "wcTotal",
+  flujo_operacion: "flujoOperacion",
+  efectivo_operacion: "efectivoOperacion",
+  efectivo_inversion: "flujoInversion",
+  efectivo_fin_externo: "flujoFinExterno",
+  accionistas: "accionistas",
+  efectivo_periodo: "flujoPeriodo",
+};
 
-    const { ventas, costo, ebitda, gastosFin, utilidadNeta } = inc;
-    const {
-      activoCirculante: ac,
-      pasivoCirculante: pc,
-      totalActivo: ta,
-      totalPasivo: tp,
-      totalCapital: tc,
-    } = balance[y.id];
-    const inventarios = bal("inventarios", y.id);
-    const clientes = bal("clientes", y.id);
-    const caja = bal("caja", y.id);
-    const invProm = promedio("inventarios");
-    const provProm = promedio("proveedores");
-    const deudaBruta =
-      bal("bancario_cp", y.id) + bal("porcion_circulante_lp", y.id) + bal("bancario_lp", y.id);
+// Devuelve { [yearId]: { months, values, status, na, aux } }:
+//   months: meses del periodo (la base de días es months × 30);
+//   values: { [key]: number | null } para los 41 indicadores de RATIO_DEFS;
+//   status: { [key]: 'verde' | 'ambar' | 'rojo' | null } (informativos: null);
+//   na:     { [key]: motivo } solo para los indicadores sin valor;
+//   aux:    cifras base del Estado de Resultados, del Balance y del EBITDA.
+export function computeRatios({ sections, years }) {
+  const income = computeIncome({ sections, years });
+  const balance = computeBalance({ sections, years });
+  const ebitdaByYear = computeEbitda({ sections, years });
+  const cashflow = computeCashflow({ sections, years });
+  const out = {};
+  (years || []).forEach((y, i) => {
+    const months = monthsOf(y);
+    const dayBase = months * 30;
+    const annual = 12 / months;
+    const inc = income[y.id];
+    const b = balance[y.id];
+    const ebitda = ebitdaByYear[y.id];
+    const cf = cashflow[y.id] ?? null;
+    const prev = i > 0 ? years[i - 1] : null;
+    const bal = (k) => cell(sections, BALANCE_SECTION, k, y.id);
+
+    const { ventas, costo, resultadoOp, rif, gastosFin, prodFin, utilidadNeta } = inc;
+    const ac = b.activoCirculante;
+    const pc = b.pasivoCirculante;
+    const ta = b.totalActivo;
+    const tp = b.totalPasivo;
+    const tc = b.totalCapital;
+    const efectivo = bal("efectivo");
+    const clientes = bal("clientes");
+    const inventarios = bal("inventarios");
+    const proveedores = bal("proveedores");
+    const anticipos = bal("anticipos");
+    const otrasCxc = bal("otras_cxc");
+    const cxcRelacionadas = bal("cxc_relacionadas");
+    const ciasRelacionadas = bal("cias_relacionadas");
+    const deudaCP = bal("bancario_cp") + bal("porcion_circulante_lp");
+    const deudaLP = bal("bancario_lp");
+    const deudaTotal = deudaCP + deudaLP;
 
     const values = {};
     const na = {};
@@ -310,58 +419,97 @@ export function computeRatios({ sections, years, lines }) {
       na[key] = reason;
       if (st) forced[key] = st;
     };
+    const z = (v) => v ?? 0; // los días no calculables cuentan como 0
+
+    // Eficiencia
+    if (!prev) skip("crecimiento_ventas", NA_REASON.sinAnioAnterior);
+    else {
+      const ventasPrev = income[prev.id].ventas;
+      if (ventasPrev <= 0) skip("crecimiento_ventas", NA_REASON.sinVentasAnterior);
+      else values.crecimiento_ventas = (ventas * annual) / ventasPrev - 1;
+    }
+    const diasVentas = (saldo) => saldo / (ventas / dayBase);
+    const diasCosto = (saldo) => saldo / (costo / dayBase);
+    if (ventas <= 0) skip("dias_clientes", NA_REASON.ventas);
+    else values.dias_clientes = diasVentas(clientes);
+    if (costo <= 0) skip("dias_inventario", NA_REASON.costo);
+    else values.dias_inventario = diasCosto(inventarios);
+    if (costo <= 0) skip("dias_anticipos", NA_REASON.costo);
+    else values.dias_anticipos = diasCosto(anticipos);
+    if (costo <= 0) skip("dias_proveedores", NA_REASON.costo);
+    else values.dias_proveedores = diasCosto(proveedores);
+    const sinCiclo = values.dias_clientes == null && values.dias_inventario == null;
+    if (sinCiclo) skip("ciclo_economico", NA_REASON.ciclo);
+    else {
+      values.ciclo_economico =
+        z(values.dias_clientes) + z(values.dias_inventario) - z(values.dias_anticipos) - z(values.dias_proveedores);
+    }
+    if (ventas <= 0) skip("dias_otras_cxc", NA_REASON.ventas);
+    else values.dias_otras_cxc = diasVentas(otrasCxc);
+    if (sinCiclo) skip("ciclo_con_ocxc", NA_REASON.ciclo);
+    else values.ciclo_con_ocxc = values.ciclo_economico + z(values.dias_otras_cxc);
+    if (ventas <= 0) skip("dias_cxc_inter", NA_REASON.ventas);
+    else values.dias_cxc_inter = diasVentas(cxcRelacionadas);
+    if (costo <= 0) skip("dias_cxp_inter", NA_REASON.costo);
+    else values.dias_cxp_inter = diasCosto(ciasRelacionadas);
+    if (sinCiclo) skip("ciclo_con_inter", NA_REASON.ciclo);
+    else values.ciclo_con_inter = values.ciclo_con_ocxc + z(values.dias_cxc_inter) - z(values.dias_cxp_inter);
+
+    // Flujo de efectivo (cifras en miles)
+    values.ebit = resultadoOp;
+    values.ebitda = ebitda;
+    Object.entries(FLOW_FIELDS).forEach(([key, field]) => {
+      if (!cf) skip(key, NA_REASON.sinAnioAnterior);
+      else values[key] = cf[field];
+    });
 
     // Liquidez
     if (pc <= 0) {
       skip("liquidez", NA_REASON.pasivoCirculante);
       skip("acido", NA_REASON.pasivoCirculante);
+      skip("liquidez_inmediata", NA_REASON.pasivoCirculante);
     } else {
       values.liquidez = ac / pc;
       values.acido = (ac - inventarios) / pc;
+      values.liquidez_inmediata = efectivo / pc;
     }
     values.capital_trabajo = ac - pc;
 
-    // Eficiencia
-    let rotacionInventarios = null;
-    let rotacionProveedores = null;
-    if (costo <= 0) skip("dias_inventario", NA_REASON.costo);
-    else if (invProm <= 0) skip("dias_inventario", NA_REASON.inventarios);
-    else {
-      rotacionInventarios = costo / invProm;
-      values.dias_inventario = DAYS_BASE / rotacionInventarios;
+    // Cobertura
+    if (rif >= 0) {
+      skip("cobertura_rif_ebit", NA_REASON.rif);
+      skip("cobertura_rif_ebitda", NA_REASON.rif);
+    } else {
+      values.cobertura_rif_ebit = resultadoOp / -rif;
+      values.cobertura_rif_ebitda = ebitda / -rif;
     }
-    if (ventas <= 0) skip("dias_clientes", NA_REASON.ventas);
-    else values.dias_clientes = clientes / (ventas / DAYS_BASE);
-    if (costo <= 0) skip("dias_proveedores", NA_REASON.costo);
-    else if (provProm <= 0) skip("dias_proveedores", NA_REASON.proveedores);
-    else {
-      rotacionProveedores = costo / provProm;
-      values.dias_proveedores = DAYS_BASE / rotacionProveedores;
+    const interesesNetos = gastosFin - prodFin;
+    if (interesesNetos <= 0) {
+      skip("cobertura_int_ebit", NA_REASON.gastosFinNetos);
+      skip("cobertura_int_ebitda", NA_REASON.gastosFinNetos);
+    } else {
+      values.cobertura_int_ebit = resultadoOp / interesesNetos;
+      values.cobertura_int_ebitda = ebitda / interesesNetos;
     }
-    // Los días no calculables cuentan como 0; si ninguno se pudo calcular
-    // no hay ciclo que mostrar.
-    const dias = [values.dias_inventario, values.dias_clientes, values.dias_proveedores];
-    if (dias.every((d) => d == null)) skip("ciclo", NA_REASON.ciclo);
-    else values.ciclo = (dias[0] ?? 0) + (dias[1] ?? 0) - (dias[2] ?? 0);
 
-    // Apalancamiento
+    // Solvencia
     if (tc <= 0) {
       skip("apalancamiento", NA_REASON.capital, "rojo");
-      skip("apalancamiento_fin", NA_REASON.capital, "rojo");
+      skip("apalancamiento_financiero", NA_REASON.capital, "rojo");
     } else {
       values.apalancamiento = tp / tc;
-      values.apalancamiento_fin = gastosFin / tc;
+      values.apalancamiento_financiero = deudaTotal / tc;
     }
-    if (ta <= 0) skip("capitalizacion", NA_REASON.activos);
-    else values.capitalizacion = tc / ta;
-    values.deuda_neta = deudaBruta - caja;
-    if (values.deuda_neta <= 0) skip("deuda_ebitda", NA_REASON.cajaCubre, "verde");
-    else if (ebitda <= 0) skip("deuda_ebitda", NA_REASON.ebitda, "rojo");
-    else values.deuda_ebitda = values.deuda_neta / ebitda;
-
-    // Cobertura
-    if (gastosFin <= 0) skip("cobertura", NA_REASON.gastosFin);
-    else values.cobertura = ebitda / gastosFin;
+    if (ta <= 0) skip("capital_activo", NA_REASON.activos);
+    else values.capital_activo = tc / ta;
+    if (ebitda <= 0) skip("pasivo_ebitda", NA_REASON.ebitda, "rojo");
+    else values.pasivo_ebitda = tp / ebitda;
+    if (deudaTotal <= 0) skip("pasivo_fin_ebitda", NA_REASON.sinDeuda, "verde");
+    else if (ebitda <= 0) skip("pasivo_fin_ebitda", NA_REASON.ebitda, "rojo");
+    else values.pasivo_fin_ebitda = deudaTotal / ebitda;
+    values.deuda_cp = deudaCP;
+    values.deuda_lp = deudaLP;
+    values.deuda_total = deudaTotal;
 
     // Rentabilidad
     if (ventas <= 0) {
@@ -370,48 +518,36 @@ export function computeRatios({ sections, years, lines }) {
       skip("margen_neto", NA_REASON.ventas);
     } else {
       values.margen_bruto = inc.utilidadBruta / ventas;
-      values.margen_operativo = inc.resultadoOp / ventas;
+      values.margen_operativo = resultadoOp / ventas;
       values.margen_neto = utilidadNeta / ventas;
     }
     if (ta <= 0) skip("roa", NA_REASON.activos);
-    else values.roa = utilidadNeta / ta;
+    else values.roa = (utilidadNeta / ta) * annual;
     if (tc <= 0) skip("roe", NA_REASON.capital, "rojo");
-    else values.roe = utilidadNeta / tc;
+    else values.roe = (utilidadNeta / tc) * annual;
 
-    // Semáforo: primero por bandas (o forzado en los N/A con estatus),
-    // después las herencias (`statusFrom`).
+    // Semáforo: informativos siempre null; primero por bandas (o forzado en
+    // los N/A con estatus), después las herencias (`statusFrom`).
     const status = {};
     RATIO_DEFS.forEach((d) => {
-      if (!d.statusFrom) status[d.key] = forced[d.key] ?? ratioStatus(d, values[d.key]);
+      if (!d.semaforo) status[d.key] = null;
+      else if (!d.statusFrom) status[d.key] = forced[d.key] ?? ratioStatus(d, values[d.key]);
     });
     RATIO_DEFS.forEach((d) => {
-      if (d.statusFrom) status[d.key] = status[d.statusFrom] ?? null;
+      if (d.semaforo && d.statusFrom) status[d.key] = status[d.statusFrom] ?? null;
     });
 
     out[y.id] = {
-      factor,
+      months,
       values,
       status,
       na,
       aux: {
-        rotacion_inventarios: rotacionInventarios,
-        rotacion_proveedores: rotacionProveedores,
-        ebitda,
-        deuda_bruta: deudaBruta,
-        inventario_promedio: invProm,
-        proveedores_promedio: provProm,
-        ventas,
-        costo,
-        gastos_financieros: gastosFin,
-        utilidad_neta: utilidadNeta,
-        activo_circulante: ac,
-        pasivo_circulante: pc,
-        total_activo: ta,
-        total_pasivo: tp,
-        total_capital: tc,
-        caja,
-        clientes,
-        inventarios,
+        ventas, costo, resultadoOp, rif, gastosFin, prodFin, utilidadNeta, ebitda,
+        activoCirculante: ac, pasivoCirculante: pc, totalActivo: ta, totalPasivo: tp, totalCapital: tc,
+        efectivo, clientes, inventarios, proveedores, anticipos,
+        otras_cxc: otrasCxc, cxc_relacionadas: cxcRelacionadas, cias_relacionadas: ciasRelacionadas,
+        deuda_total: deudaTotal,
       },
     };
   });
@@ -419,10 +555,11 @@ export function computeRatios({ sections, years, lines }) {
 }
 
 // Tendencia del último periodo contra el anterior:
-// 'mejora' | 'empeora' | 'igual' | null (sin alguno de los dos valores o
-// indicador de rango, donde "más" no es mejor ni peor).
+// 'mejora' | 'empeora' | 'igual' | null (sin alguno de los dos valores, o
+// indicador de rango o sin `better`, donde "más" no es mejor ni peor).
 export function ratioTrend(def, curr, prev) {
-  if (!def || curr == null || prev == null || def.better === "range") return null;
+  if (!def || curr == null || prev == null) return null;
+  if (def.better !== "higher" && def.better !== "lower") return null;
   const diff = curr - prev;
   if (Math.abs(diff) < 1e-9) return "igual";
   const sube = diff > 0;
@@ -431,17 +568,18 @@ export function ratioTrend(def, curr, prev) {
 
 // Resumen del semáforo de un periodo (una entrada de computeRatios):
 // { verde, ambar, rojo, na, atencion: [{ key, status, value }] }.
-// `atencion` lleva primero todos los rojos y luego los ámbar, en el orden
-// del catálogo; los N/A sin estatus no aparecen.
+// Solo cuenta los indicadores con `semaforo: true` (los informativos no
+// entran ni en `na`). Los N/A con estatus cuentan en su color; los N/A sin
+// estatus en `na`. `atencion` lleva primero todos los rojos y luego los
+// ámbar, en el orden del catálogo.
 export function summarizeRatios(yearRatios) {
   const out = { verde: 0, ambar: 0, rojo: 0, na: 0, atencion: [] };
   if (!yearRatios) return out;
-  const entry = (d) => ({
+  const rows = RATIO_DEFS.filter((d) => d.semaforo).map((d) => ({
     key: d.key,
     status: yearRatios.status?.[d.key] ?? null,
     value: yearRatios.values?.[d.key] ?? null,
-  });
-  const rows = RATIO_DEFS.map(entry);
+  }));
   rows.forEach((r) => {
     if (r.status) out[r.status] += 1;
     else out.na += 1;
@@ -450,5 +588,123 @@ export function summarizeRatios(yearRatios) {
     ...rows.filter((r) => r.status === "rojo"),
     ...rows.filter((r) => r.status === "ambar"),
   ];
+  return out;
+}
+
+// ---------- Análisis opcionales ----------
+
+// Margen bruto por segmento de negocio (hoja "Ventas y Costo de lo vendido").
+// `lines` = [{ id, name }] (fin_lines). Devuelve { [yearId]: { bySegment:
+//   { [lineId]: { ventas, costo, bruto, margen, pctVentas, pctCosto } },
+//   totalVentas, totalCosto, totalBruto, margenTotal, ventasResultados,
+//   costoResultados, difVentas, difCosto } }. Las diferencias son "según
+// Estado de Resultados − suma de segmentos" y deben ser 0.
+export function computeSegments({ sections, years, lines }) {
+  const income = computeIncome({ sections, years });
+  const out = {};
+  (years || []).forEach((y) => {
+    const bySegment = {};
+    let totalVentas = 0;
+    let totalCosto = 0;
+    (lines || []).forEach((l) => {
+      const ventas = cell(sections, SALES_SECTION, l.id, y.id);
+      const costo = cell(sections, SEGCOST_SECTION, l.id, y.id);
+      const bruto = ventas - costo;
+      bySegment[l.id] = { ventas, costo, bruto, margen: share(bruto, ventas) };
+      totalVentas += ventas;
+      totalCosto += costo;
+    });
+    Object.values(bySegment).forEach((s) => {
+      s.pctVentas = share(s.ventas, totalVentas);
+      s.pctCosto = share(s.costo, totalCosto);
+    });
+    const totalBruto = totalVentas - totalCosto;
+    const ventasResultados = income[y.id]?.ventas ?? 0;
+    const costoResultados = income[y.id]?.costo ?? 0;
+    out[y.id] = {
+      bySegment,
+      totalVentas,
+      totalCosto,
+      totalBruto,
+      margenTotal: share(totalBruto, totalVentas),
+      ventasResultados,
+      costoResultados,
+      difVentas: ventasResultados - totalVentas,
+      difCosto: costoResultados - totalCosto,
+    };
+  });
+  return out;
+}
+
+// Desglose del gasto operativo (hoja "Gasto"). Los 20 conceptos y las dos
+// partidas virtuales capturables vienen de `expenses`; depreciación y
+// reservas, del memo del Estado de Resultados. Devuelve { [yearId]: {
+//   concepts: { [key]: valor }, gastosOperacion, depreciacion, amortizaciones,
+//   reservaCxc, reservaInventarios, otrasVirtuales, total,
+//   pct: { [key | campo]: valor / total | null }, gastoEnResultados,
+//   diferencia } }. `diferencia` = total − gasto operativo del Estado de
+// Resultados y debe ser 0.
+export function computeExpenseBreakdown({ sections, years }) {
+  const income = computeIncome({ sections, years });
+  const out = {};
+  (years || []).forEach((y) => {
+    const concepts = {};
+    EXPENSE_CONCEPTS.forEach((c) => {
+      concepts[c.key] = cell(sections, EXPENSES_SECTION, c.key, y.id);
+    });
+    const gastosOperacion = sum(Object.values(concepts));
+    const inc = income[y.id];
+    const depreciacion = inc?.depreciacion ?? 0;
+    const reservaCxc = inc?.reservaCxc ?? 0;
+    const reservaInventarios = inc?.reservaInventarios ?? 0;
+    const amortizaciones = cell(sections, EXPENSES_SECTION, "amortizaciones", y.id);
+    const otrasVirtuales = cell(sections, EXPENSES_SECTION, "otras_virtuales", y.id);
+    const total = gastosOperacion + depreciacion + amortizaciones + reservaCxc + reservaInventarios + otrasVirtuales;
+    const pct = {};
+    Object.entries(concepts).forEach(([k, v]) => {
+      pct[k] = share(v, total);
+    });
+    Object.entries({ gastosOperacion, depreciacion, amortizaciones, reservaCxc, reservaInventarios, otrasVirtuales }).forEach(
+      ([k, v]) => {
+        pct[k] = share(v, total);
+      }
+    );
+    const gastoEnResultados = inc?.gastoOperativo ?? 0;
+    out[y.id] = {
+      concepts,
+      gastosOperacion,
+      depreciacion,
+      amortizaciones,
+      reservaCxc,
+      reservaInventarios,
+      otrasVirtuales,
+      total,
+      pct,
+      gastoEnResultados,
+      diferencia: total - gastoEnResultados,
+    };
+  });
+  return out;
+}
+
+// Estacionalidad en ventas (hoja "Estacionalidad en ventas"). Devuelve
+// { [yearId]: { months: [12 números], pct: [12 | null], total,
+//   ventasResultados, diferencia } }; `diferencia` = ventas del Estado de
+// Resultados − suma de los meses y debe ser 0.
+export function computeSeasonality({ sections, years }) {
+  const income = computeIncome({ sections, years });
+  const out = {};
+  (years || []).forEach((y) => {
+    const months = SEASON_MONTHS.map((m) => cell(sections, SEASONALITY_SECTION, m.key, y.id));
+    const total = sum(months);
+    const ventasResultados = income[y.id]?.ventas ?? 0;
+    out[y.id] = {
+      months,
+      pct: months.map((v) => share(v, total)),
+      total,
+      ventasResultados,
+      diferencia: ventasResultados - total,
+    };
+  });
   return out;
 }

@@ -73,21 +73,21 @@ import FinAnalysisHome from "./FinAnalysisHome";
 
 import FinAnalysisData from "./FinAnalysisData";
 
-import FinAnalysisSales from "./FinAnalysisSales";
-
-import FinAnalysisCosts from "./FinAnalysisCosts";
-
-import FinAnalysisExpenses from "./FinAnalysisExpenses";
-
 import FinAnalysisIncome from "./FinAnalysisIncome";
 
 import FinAnalysisBalance from "./FinAnalysisBalance";
 
 import FinAnalysisCashflow from "./FinAnalysisCashflow";
 
-import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
-
 import FinAnalysisRatios from "./FinAnalysisRatios";
+
+import FinAnalysisReport from "./FinAnalysisReport";
+
+import FinAnalysisSegments from "./FinAnalysisSegments";
+
+import FinAnalysisExpenses from "./FinAnalysisExpenses";
+
+import FinAnalysisSeasonality from "./FinAnalysisSeasonality";
 
 import OAuthConsent from "./OAuthConsent";
 
@@ -99,7 +99,7 @@ import ModuleAccessAdmin from "./ModuleAccessAdmin";
 
 import { ModuleAccessProvider } from "@/components/ModuleAccessContext";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
 const PAGES = {
 
@@ -169,21 +169,21 @@ const PAGES = {
 
     FinAnalysisData: FinAnalysisData,
 
-    FinAnalysisSales: FinAnalysisSales,
-
-    FinAnalysisCosts: FinAnalysisCosts,
-
-    FinAnalysisExpenses: FinAnalysisExpenses,
-
     FinAnalysisIncome: FinAnalysisIncome,
 
     FinAnalysisBalance: FinAnalysisBalance,
 
     FinAnalysisCashflow: FinAnalysisCashflow,
 
-    FinAnalysisCashflowDirect: FinAnalysisCashflowDirect,
-
     FinAnalysisRatios: FinAnalysisRatios,
+
+    FinAnalysisReport: FinAnalysisReport,
+
+    FinAnalysisSegments: FinAnalysisSegments,
+
+    FinAnalysisExpenses: FinAnalysisExpenses,
+
+    FinAnalysisSeasonality: FinAnalysisSeasonality,
 
     FinancialHistory: FinancialHistory,
 
@@ -404,21 +404,6 @@ function PagesContent() {
                     <FinAnalysisData />
                 </Layout>
             } />
-            <Route path="/FinAnalysisSales" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisSales />
-                </Layout>
-            } />
-            <Route path="/FinAnalysisCosts" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisCosts />
-                </Layout>
-            } />
-            <Route path="/FinAnalysisExpenses" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisExpenses />
-                </Layout>
-            } />
             <Route path="/FinAnalysisIncome" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisIncome />
@@ -434,14 +419,29 @@ function PagesContent() {
                     <FinAnalysisCashflow />
                 </Layout>
             } />
-            <Route path="/FinAnalysisCashflowDirect" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisCashflowDirect />
-                </Layout>
-            } />
             <Route path="/FinAnalysisRatios" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisRatios />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisReport" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisReport />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSegments" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSegments />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisExpenses" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisExpenses />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSeasonality" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSeasonality />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={
@@ -459,6 +459,8 @@ function PagesContent() {
                     <FinancialCurrent />
                 </Layout>
             } />
+            {/* Cualquier ruta desconocida (por ejemplo, pantallas que ya no existen) vuelve al inicio. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }

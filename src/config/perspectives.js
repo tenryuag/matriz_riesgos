@@ -47,12 +47,12 @@ export const PERSPECTIVES = [
         threat_type: "Interna",
       },
     ],
-    // Conceptos del Análisis Financiero que este tipo de riesgo suele mover.
-    // Balance: caja, clientes, otras_cxc, bancario_cp, porcion_circulante_lp,
-    // bancario_lp, impuestos_pagar · Estado de resultados: gastos_financieros,
-    // utilidad_cambiaria, isr, ptu · Gastos: seguros.
+    // Conceptos del Análisis Financiero (modelo MP-AFH1) que este tipo de
+    // riesgo suele mover. Balance: efectivo, clientes, otras_cxc, bancario_cp,
+    // porcion_circulante_lp, bancario_lp, impuestos_pagar · Estado de
+    // resultados: gastos_financieros, utilidad_cambiaria, isr, ptu · Gastos: seguros.
     finConcepts: [
-      "caja",
+      "efectivo",
       "clientes",
       "otras_cxc",
       "bancario_cp",
@@ -168,14 +168,11 @@ export const PERSPECTIVES = [
         threat_type: "Externa",
       },
     ],
-    // Costo de ventas: materia_prima, indirectos, fletes, subcontratados ·
-    // Balance: inventarios, proveedores, activos_fijos · Gastos: tecnologia,
-    // mantenimiento, suministros, logistica.
+    // Estado de resultados: costo (el costo de ventas ya no se desglosa por
+    // concepto en el modelo MP-AFH1) · Balance: inventarios, proveedores,
+    // activos_fijos · Gastos: tecnologia, mantenimiento, suministros, logistica.
     finConcepts: [
-      "materia_prima",
-      "indirectos",
-      "fletes",
-      "subcontratados",
+      "costo",
       "inventarios",
       "proveedores",
       "activos_fijos",
@@ -216,11 +213,13 @@ export const PERSPECTIVES = [
         threat_type: "Interna",
       },
     ],
-    // Costo de ventas: mano_obra · Gastos: sueldos, prestaciones, bonos,
-    // honorarios, capacitacion, outsourcing, legales · Balance: provisiones,
-    // gastos_acumulados.
+    // Estado de resultados: costo (la mano de obra va dentro del costo de
+    // ventas; "costo" también está en procesos a propósito) · Gastos: sueldos,
+    // prestaciones, bonos, honorarios, capacitacion, outsourcing, legales ·
+    // Balance: gastos_acumulados (las provisiones del modelo anterior quedaron
+    // dentro de esta cuenta o de pasivos_diferidos).
     finConcepts: [
-      "mano_obra",
+      "costo",
       "sueldos",
       "prestaciones",
       "bonos",
@@ -228,7 +227,6 @@ export const PERSPECTIVES = [
       "capacitacion",
       "outsourcing",
       "legales",
-      "provisiones",
       "gastos_acumulados",
     ],
     colorClasses: {
