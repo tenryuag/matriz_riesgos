@@ -23,6 +23,7 @@ import {
 } from "@/config/finConfig";
 import { computeIncome, computeEbitda } from "@/config/finCalc";
 import { Delta } from "@/components/fin/Delta";
+import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
 
 // Renglones donde subir es malo (costos, gastos e impuestos): su ▲ va en rojo.
 const LOWER_IS_BETTER = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
@@ -116,39 +117,9 @@ export default function FinAnalysisIncome() {
   const [values, setValues] = useState({}); // { [conceptKey]: { [yearId]: "texto" } }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [importOpen, setImportOpen] = useState(false); // diálogo "Importar desde PDF"
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const a = await FinAnalysis.getOrCreate();
-      const ys = await FinYear.list(a.id);
-      const stored = await FinValue.getSections(a.id, [INCOME_SECTION, BALANCE_SECTION]);
-      const inc = stored[INCOME_SECTION] || {};
-      const map = {};
-      CAPTURE_KEYS.forEach((key) => {
-        map[key] = {};
-        ys.forEach((y) => {
-          const v = inc[key]?.[y.id];
-          map[key][y.id] = v == null ? "" : String(v);
-        });
-      });
-      setAnalysis(a);
-      setYears(ys);
-      setBalance(stored[BALANCE_SECTION] || {});
-      setValues(map);
-    } catch (err) {
-      console.error("Error al cargar el Estado de Resultados:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const { status: saveStatus, flush } = useAutosave({
+  const { status: saveStatus, flush, rebase } = useAutosave({
     data: values,
     enabled: !loading && !!analysis,
     onSave: async () => {
@@ -162,8 +133,60 @@ export default function FinAnalysisIncome() {
     },
   });
 
+  // `silent`: recarga las cifras sin pasar por el esqueleto de carga (tras
+  // importar desde PDF) y fija la nueva línea base del autoguardado para que
+  // lo recién leído de la BD no se interprete como cambios pendientes.
+  const load = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!silent) setLoading(true);
+      setError("");
+      try {
+        const a = await FinAnalysis.getOrCreate();
+        const ys = await FinYear.list(a.id);
+        const stored = await FinValue.getSections(a.id, [INCOME_SECTION, BALANCE_SECTION]);
+        const inc = stored[INCOME_SECTION] || {};
+        const map = {};
+        CAPTURE_KEYS.forEach((key) => {
+          map[key] = {};
+          ys.forEach((y) => {
+            const v = inc[key]?.[y.id];
+            map[key][y.id] = v == null ? "" : String(v);
+          });
+        });
+        setAnalysis(a);
+        setYears(ys);
+        setBalance(stored[BALANCE_SECTION] || {});
+        setValues(map);
+        if (silent) rebase(map);
+      } catch (err) {
+        console.error("Error al cargar el Estado de Resultados:", err);
+        setError("No pudimos cargar la información. Intenta recargar la página.");
+      }
+      if (!silent) setLoading(false);
+    },
+    [rebase]
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
   const handleCell = (key, yearId, value) => {
     setValues((prev) => ({ ...prev, [key]: { ...prev[key], [yearId]: value } }));
+  };
+
+  // Importar desde PDF: no se abre mientras haya captura sin guardar (el botón
+  // se deshabilita si está pendiente o guardando; si el último guardado falló,
+  // se avisa), guarda lo que esté en vuelo y recarga las cifras al confirmar.
+  const importBlocked = saveStatus === "saving" || saveStatus === "pending";
+  const openImport = async () => {
+    if (saveStatus === "error") {
+      setError('Hay cambios sin guardar. Reintenta guardar (botón "Guardar ahora") antes de importar.');
+      return;
+    }
+    setError("");
+    await flush();
+    setImportOpen(true);
   };
 
   // Cifras calculadas con lo que se está capturando (el Balance solo entra
@@ -207,13 +230,13 @@ export default function FinAnalysisIncome() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-24">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Link to={createPageUrl("FinAnalysisHome")}>
           <Button variant="ghost" size="icon" className="glass">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="w-12 h-12 bg-cyan-500/15 rounded-2xl flex items-center justify-center flex-shrink-0">
             <FileText className="w-6 h-6 text-cyan-500" />
           </div>
@@ -222,7 +245,27 @@ export default function FinAnalysisIncome() {
             <p className="text-muted">Cuánto ganas realmente después de costos, gastos e impuestos.</p>
           </div>
         </div>
+        {years.length > 0 && (
+          <Button
+            variant="outline"
+            className="glass hover:border-accent font-subtitle"
+            onClick={openImport}
+            disabled={importBlocked}
+            title={importBlocked ? "Espera a que se guarde tu captura" : undefined}
+          >
+            <Sparkles className="w-4 h-4 mr-2" /> Importar desde PDF
+          </Button>
+        )}
       </div>
+
+      <ImportStatementsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        analysisId={analysis?.id}
+        years={years}
+        section="income"
+        onImported={() => load({ silent: true })}
+      />
 
       {/* Intro */}
       <Card className="glass">

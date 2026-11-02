@@ -28,8 +28,12 @@ export const annualizeFactor = (y) => (y && y.months < 12 ? 12 / y.months : 1);
 
 // Formato de cifras en miles (sin símbolo de moneda; la unidad es "miles").
 export const fmtMiles = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 });
-export const fmtPct = (v) =>
-  v == null || !isFinite(v) ? "—" : `${(v * 100).toFixed(1)}%`;
+// Un negativo diminuto (−0.03 %) se muestra como "0.0%" y no como "-0.0%".
+export const fmtPct = (v) => {
+  if (v == null || !isFinite(v)) return "—";
+  const r = Math.round(v * 1000) / 1000;
+  return `${((Object.is(r, -0) ? 0 : r) * 100).toFixed(1)}%`;
+};
 
 // Convierte el texto de un input a número (o null si está vacío/ inválido).
 export function toNumber(value) {
@@ -809,8 +813,10 @@ export function formatRatio(def, value) {
   switch (def?.format) {
     case "pct":
       return fmtPct(value);
-    case "days":
-      return `${Math.round(value)} días`;
+    case "days": {
+      const d = Math.round(value);
+      return `${Object.is(d, -0) ? 0 : d} ${Math.abs(d) === 1 ? "día" : "días"}`;
+    }
     case "miles":
       return fmtMiles.format(value);
     default:

@@ -24,6 +24,7 @@ El sistema está diseñado para que las organizaciones puedan:
 | **Routing**       | React Router DOM 7                                |
 | **UI Components** | Radix UI + shadcn/ui                              |
 | **Backend/BaaS**  | Supabase (Auth + Database + RLS + RPC)            |
+| **Asistente de IA** | Claude (`claude-opus-5-5`) desde la Edge Function `ia` de Supabase; ver [IA.md](./IA.md) |
 | **Gráficos**      | Recharts                                          |
 | **Exportación**   | xlsx + file-saver                                 |
 | **Animaciones**   | Framer Motion                                     |
@@ -61,6 +62,8 @@ graph TB
     DB --> RPC
 ```
 
+Dos piezas más viven del lado del servidor como **Edge Functions de Supabase** que verifican el JWT del usuario y leen con su RLS: el **servidor MCP** (`mcp`, para conversar con los datos desde Claude; [MCP.md](./MCP.md)) y el **asistente de IA** (`ia`, botones dentro de la app que llaman a Claude con la llave de la consultoría, sin chat; [IA.md](./IA.md)).
+
 ## Estructura de Directorios
 
 ```
@@ -70,9 +73,11 @@ tenryu-riesgos/
 │   ├── api/
 │   │   ├── supabaseClient.js      # Configuración del cliente Supabase
 │   │   ├── entities.js            # Modelos: Department, Risk, User, InvitationCode
+│   │   ├── ia.js                  # Cliente del asistente de IA (Edge Function ia)
 │   │   └── integrations.js        # Integraciones de Supabase (LLM, Email, etc.)
 │   ├── components/
 │   │   ├── ui/                    # Componentes UI reutilizables (shadcn/ui)
+│   │   ├── ia/                    # IaDisclaimer: nota al pie de lo generado con IA
 │   │   ├── GlobalErrorBoundary.jsx
 │   │   └── LanguageContext.jsx    # Sistema de internacionalización
 │   ├── hooks/
@@ -89,6 +94,8 @@ tenryu-riesgos/
 │   │   ├── DepartmentRisks.jsx    # Riesgos por departamento
 │   │   ├── AddRisk.jsx            # Crear/Editar riesgo
 │   │   ├── AllRisks.jsx           # Matriz completa de riesgos
+│   │   ├── ExecutiveSummary.jsx   # Resumen ejecutivo con IA (sin módulo, modo launcher)
+│   │   ├── IaUsageAdmin.jsx       # Panel "Uso de IA" (Admin)
 │   │   ├── InvitationCodes.jsx    # Gestión de códigos (Admin)
 │   │   ├── AddInvitationCode.jsx  # Crear código de invitación
 │   │   ├── Register.jsx           # Registro con código
@@ -100,6 +107,8 @@ tenryu-riesgos/
 │   ├── main.jsx                   # Punto de entrada
 │   ├── App.css
 │   └── index.css                  # Estilos globales
+├── supabase/functions/ia/         # Edge Function del asistente de IA (ver IA.md)
+├── supabase-ia.sql                # Tablas ia_usage / ia_resultados + RPC del asistente
 ├── supabase-invitation-codes.sql  # Schema + funciones de invitation_codes
 ├── supabase-admin-rls-policies.sql# Políticas RLS para admins
 ├── supabase-fix-invitation-codes.sql # Fix de constraints
@@ -159,3 +168,5 @@ flowchart TD
 - [06 - Internacionalización](./06-INTERNACIONALIZACION.md)
 - [07 - API y Entidades](./07-API-ENTIDADES.md)
 - [08 - Despliegue](./08-DESPLIEGUE.md)
+- [IA - Asistente de IA (Claude) dentro de la app](./IA.md)
+- [MCP - Servidor MCP (conectar Claude a tu cuenta)](./MCP.md)

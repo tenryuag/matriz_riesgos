@@ -7,6 +7,8 @@ La app expone un **servidor MCP** (Model Context Protocol) para que un cliente d
 - **Mismos cálculos que la app**: prioridades, FODA y estados financieros (modelo MP-AFH1: Estado de Resultados, Balance, Estado de cambios, EBITDA, 41 razones y análisis opcionales) salen de los módulos de `src/config/` copiados a la función con `npm run mcp:sync`.
 - **Costo para nosotros**: solo la invocación de la Edge Function (despreciable). La conversación la paga el usuario con su propia cuenta de Claude.
 
+> **Nota:** el **asistente de IA dentro de la app** (botones «Explicar con IA», «Importar desde PDF», «Sugerir con IA», «Sugerir iniciativa con IA» y el Resumen ejecutivo) es **otra pieza**: la Edge Function `ia`, que llama a Claude con la llave de la consultoría y sin chat; está documentada en [IA.md](./IA.md). Las dos funciones comparten los módulos de `supabase/functions/_shared/app/` (copias de `src/config/` hechas con `npm run mcp:sync`), pero cada una se despliega por separado: desplegar `ia` no toca a `mcp`.
+
 URL del servidor (la que se registra en Claude): **`https://app.mara-perez.online/mcp`**
 
 Es un proxy transparente de Netlify (`public/_redirects`) hacia la Edge Function `https://hcmeoducjqudokfhhvyc.supabase.co/functions/v1/mcp`. Se usa el dominio propio por dos razones: la URL es más limpia y **Claude toma el icono del conector del dominio registrable de la URL** (pide el favicon de `mara-perez.online` a un servicio de Google); con la URL de Supabase mostraba el logo de Supabase. La función anuncia la URL pública en el descubrimiento OAuth mediante el secreto `PUBLIC_MCP_URL`.
@@ -64,7 +66,7 @@ npx supabase functions deploy mcp --no-verify-jwt
 npx supabase functions list             # debe aparecer "mcp"
 ```
 
-Cada vez que cambie algo en `src/config/finCalc.js`, `finConfig.js`, `strategicCatalog.js` o `strategicCalc.js`, hay que volver a correr `npm run mcp:sync` y desplegar.
+Cada vez que cambie algo en `src/config/finCalc.js`, `finConfig.js`, `strategicCatalog.js`, `strategicCalc.js`, `perspectives.js` o `riskCalc.js` (los seis archivos que copia `scripts/sync-mcp-shared.mjs`), hay que volver a correr `npm run mcp:sync` y desplegar las dos funciones que los usan: `mcp` y la `ia` del asistente ([IA.md](./IA.md)).
 
 ### 3. Probar
 
@@ -157,4 +159,4 @@ Para probar sin pasar por Claude: crear un usuario de prueba con `POST /auth/v1/
 
 - Herramientas de escritura con confirmación (crear riesgo como borrador, agregar iniciativa, marcar control como implementado).
 - Perspectivas en lugar de departamentos cuando se apruebe esa propuesta (la herramienta `listar_departamentos` pasará a `listar_perspectivas`).
-- **Redesplegar la función por el modelo MP-AFH1** (`npm run mcp:sync` ya corrido; falta `npx supabase functions deploy mcp --no-verify-jwt`). El código de `index.ts` (v1.1.0) y las copias en `_shared/app/` ya siguen el modelo nuevo, pero la función **no se desplegó en esta fase**: en producción sigue la v1.0.0 con el modelo anterior (18 razones, flujo directo, `computeIncome` por líneas). Hay que desplegarla **junto con** la migración `supabase-fin-model-afh1.sql` y el despliegue de la app: una vez migrados los datos, la función vieja leería secciones y claves que ya no existen (`cost:<lineId>`, `balance.caja`) y devolvería ceros.
+- **Redesplegar la función por el modelo MP-AFH1** (`npm run mcp:sync` ya corrido; falta `npx supabase functions deploy mcp --no-verify-jwt`). El código de `index.ts` (v1.1.0) y las copias en `_shared/app/` ya siguen el modelo nuevo, pero la función **no se desplegó en esta fase**: en producción sigue la v1.0.0 con el modelo anterior (18 razones, flujo directo, `computeIncome` por líneas). Hay que desplegarla **junto con** la migración `supabase-fin-model-afh1.sql` y el despliegue de la app: una vez migrados los datos, la función vieja leería secciones y claves que ya no existen (`cost:<lineId>`, `balance.caja`) y devolvería ceros. Desplegar la función `ia` del asistente de IA **no** resuelve este pendiente: cada Edge Function se empaqueta por separado, así que `mcp` sigue en producción con la versión anterior hasta que se despliegue explícitamente.

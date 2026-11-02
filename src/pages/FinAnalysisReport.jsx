@@ -30,6 +30,7 @@ import {
 } from "@/config/finConfig";
 import { computeRatios, computeIncome } from "@/config/finCalc";
 import { SemaforoDot } from "@/components/fin/Semaforo";
+import IaInterpretacion from "@/components/fin/IaInterpretacion";
 
 // Informe del Análisis Financiero (hoja "Cuadros Informe" del Excel
 // MP-AFH1): diez cuadros, cada uno con una gráfica pequeña y una tabla
@@ -610,6 +611,9 @@ export default function FinAnalysisReport() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Explicación con IA (solo cuando hay cifras; se imprime con los cuadros) */}
+      <IaInterpretacion ready={ready} />
 
       {error && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">{error}</div>

@@ -23,6 +23,7 @@ import {
 import { PERSPECTIVE_BY_KEY, isPerspectiveKey } from "@/config/perspectives";
 import { NO_DEPARTMENT } from "@/lib/perspectiveView";
 import PerspectivePicker from "@/components/perspectives/PerspectivePicker";
+import IaRiskSuggest from "@/components/risk/IaRiskSuggest";
 
 export default function AddRisk() {
   const navigate = useNavigate();
@@ -140,6 +141,29 @@ export default function AddRisk() {
       // Recalcular grado de control si se cambió un sub-criterio
       for (const num of [1, 2, 3]) {
         if (CONTROL_FIELDS.some(f => field === `${f}_${num}`)) {
+          updated[`control_grade_${num}`] = controlGrade(updated, num);
+        }
+      }
+      return updated;
+    });
+    if (error) setError("");
+  };
+
+  // Aplica varios campos a la vez (sugerencias del asistente de IA) en un
+  // solo setFormData, recalculando lo mismo que handleChange: niveles
+  // inherente/residual y grado de control de cada medida afectada.
+  const applyPatch = (patch) => {
+    if (!patch || typeof patch !== "object") return;
+    setFormData(prev => {
+      const updated = { ...prev, ...patch };
+      if ("inherent_probability" in patch || "inherent_impact" in patch) {
+        updated.inherent_level = calculateRiskLevel(updated.inherent_probability, updated.inherent_impact);
+      }
+      if ("residual_probability" in patch || "residual_impact" in patch) {
+        updated.residual_level = calculateRiskLevel(updated.residual_probability, updated.residual_impact);
+      }
+      for (const num of [1, 2, 3]) {
+        if (CONTROL_FIELDS.some(f => `${f}_${num}` in patch)) {
           updated[`control_grade_${num}`] = controlGrade(updated, num);
         }
       }
@@ -266,6 +290,13 @@ export default function AddRisk() {
               <Label>{t('riskDescriptionLabel')}</Label>
               <Textarea value={formData.description} onChange={(e) => handleChange("description", e.target.value)} placeholder={t('riskDescriptionPlaceholder')} rows={3} className="input-glass resize-none" disabled={loading} />
             </div>
+            {/* Asistente de IA: sugiere redacción, evaluación, controles y residual a partir de la descripción */}
+            <IaRiskSuggest
+              formData={formData}
+              departmentName={departments.find(d => d.id === formData.department_id)?.name || ""}
+              onApply={applyPatch}
+              disabled={loading}
+            />
             <div className="space-y-2">
               <Label>{t('departmentOptionalLabel')}</Label>
               <Select value={formData.department_id || NO_DEPARTMENT} onValueChange={(v) => handleChange("department_id", v === NO_DEPARTMENT ? "" : v)} disabled={loading}>
