@@ -28,7 +28,18 @@ export const isConfigured = () => !!Deno.env.get('ANTHROPIC_API_KEY')
 let client: Anthropic | null = null
 function getClient(): Anthropic {
   if (!isConfigured()) throw new IaError('no_configurado', 'Falta el secreto ANTHROPIC_API_KEY', 503)
-  if (!client) client = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY'), maxRetries: 1, timeout: 150_000 })
+  if (!client) {
+    // Una llave creada a nivel organización (no ligada a un workspace) exige
+    // el encabezado anthropic-workspace-id; el secreto ANTHROPIC_WORKSPACE_ID
+    // (opcional, formato wrkspc_…) lo cubre. Con una llave de workspace no hace falta.
+    const workspace = (Deno.env.get('ANTHROPIC_WORKSPACE_ID') || '').trim()
+    client = new Anthropic({
+      apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
+      maxRetries: 1,
+      timeout: 150_000,
+      ...(workspace ? { defaultHeaders: { 'anthropic-workspace-id': workspace } } : {}),
+    })
+  }
   return client
 }
 
@@ -130,6 +141,18 @@ function mapApiError(err: unknown): IaError {
     return new IaError('saturado', 'La API de Claude limitó la petición (429)', 429)
   }
   if (err instanceof Anthropic.BadRequestError) {
+    // Dos 400 que en realidad son de configuración de la cuenta, no de la petición.
+    const msg = String(err.message || '').toLowerCase()
+    if (msg.includes('workspace')) {
+      return new IaError(
+        'no_configurado',
+        'La llave de la API de Claude no está ligada a un espacio de trabajo (workspace). Crea la llave dentro de un workspace en console.anthropic.com o registra el secreto ANTHROPIC_WORKSPACE_ID con el ID del workspace.',
+        503
+      )
+    }
+    if (msg.includes('credit balance') || msg.includes('billing')) {
+      return new IaError('no_configurado', 'La cuenta de la API de Claude no tiene saldo disponible. Revisa Plans & Billing en console.anthropic.com.', 503)
+    }
     return new IaError('peticion_invalida', 'La API rechazó la petición', 400)
   }
   if (err instanceof Anthropic.APIError) {

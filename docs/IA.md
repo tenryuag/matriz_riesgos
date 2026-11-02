@@ -320,6 +320,8 @@ Si la respuesta de error llega sin `code` (por ejemplo, un 401 del gateway), `to
 
    ```bash
    npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-… --project-ref hcmeoducjqudokfhhvyc
+
+   La llave debe crearse **dentro de un workspace** (al crearla, el selector "Workspace" → por ejemplo *Default*). Una llave creada a nivel organización ("not scoped to a workspace") hace que la API responda 400 pidiendo el encabezado `anthropic-workspace-id`; en ese caso, o se crea otra llave dentro de un workspace, o se registra además el secreto `ANTHROPIC_WORKSPACE_ID` con el ID del workspace (Settings → Workspaces, formato `wrkspc_…`). La app muestra ese caso en ámbar con el texto exacto.
    # opcionales (con sus valores por omisión):
    npx supabase secrets set IA_MODEL=claude-opus-5-5 IA_DAILY_USD=2 IA_DAILY_CALLS=40 IA_MONTHLY_USD=150 --project-ref hcmeoducjqudokfhhvyc
    ```

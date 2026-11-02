@@ -54,6 +54,7 @@ const USER_FACING = new Set([
   "sin_acceso",
   "limite_diario",
   "limite_global",
+  "no_configurado",
 ]);
 
 // Convierte la respuesta cruda de la función en IaError.
