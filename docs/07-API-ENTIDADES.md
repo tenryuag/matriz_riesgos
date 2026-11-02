@@ -9,6 +9,7 @@ La capa de acceso a datos se organiza en tres archivos:
 | `src/api/supabaseClient.js` | Inicialización del cliente Supabase                      |
 | `src/api/entities.js`       | Modelos de datos: Department, Risk, User, InvitationCode |
 | `src/api/integrations.js`   | Integraciones externas (LLM, Email, etc.)                |
+| `src/api/ia.js`             | Cliente del asistente de IA (Edge Function `ia`): `callIa`, `IaError`, `iaStatus`, `iaSavedResult`, `IaUsage` — ver [IA.md](./IA.md) |
 
 ```mermaid
 graph TD
@@ -286,6 +287,48 @@ const resumen = summarizeRatios(ratios[last.id]);  // { verde, ambar, rojo, na, 
 
 Las razones, el EBITDA y el Estado de cambios no se guardan: se recalculan en cada carga a partir de estas secciones (ver [02 - Reglas de Negocio §7](./02-REGLAS-DE-NEGOCIO.md)). `lines` solo hace falta para `computeSegments({ sections, years, lines })`.
 
+### Asistente de IA: `callIa`, `iaStatus`, `iaSavedResult`, `IaUsage` (`src/api/ia.js`)
+
+El asistente de IA ([IA.md](./IA.md)) no pasa por `entities.js`: `src/api/ia.js` llama a la Edge Function `ia` con `supabase.functions.invoke` (la sesión del usuario viaja como bearer y la función aplica su RLS) y lee dos tablas propias (`ia_usage`, `ia_resultados`; [03 - Base de Datos](./03-BASE-DE-DATOS.md)). La app **nunca** habla con la API de Claude.
+
+| Export | Firma | Descripción |
+| --- | --- | --- |
+| `callIa` | `callIa(action, params = {}, { signal }?) → { result, usage, cached, generated_at }` | Invoca una acción (`interpretar_informe`, `extraer_estados`, `sugerir_riesgo`, `sugerir_iniciativa`, `resumen_ejecutivo`, `estado`) con `body: { action, ...params }`. Sin sesión local lanza `IaError('sin_sesion')` sin llamar. Si la función responde `ok: false` (supabase-js lo envuelve en `FunctionsHttpError` con la respuesta en `context`), lee `error.code` del cuerpo y lanza `IaError`. `usage` es `null` y `cached` es `true` cuando se devolvió un resultado guardado. `signal` permite cancelar (lo usa el Resumen ejecutivo). |
+| `IaError` | `class IaError extends Error { code, status }` | `message` = `IA_ERROR_MESSAGES[code]` (texto en español listo para mostrar) o, si el código no está en la tabla, el mensaje de la función; `code` por omisión `desconocido`. Sin `code` en la respuesta se deduce por HTTP: 401 → `sin_sesion`, 429 → `saturado`, 413 → `archivo_grande`, otro → `desconocido`. |
+| `IA_ERROR_MESSAGES` | `{ [code]: mensaje }` | `no_configurado`, `sin_sesion`, `sin_acceso`, `sin_datos`, `limite_diario`, `limite_global`, `peticion_invalida`, `archivo_grande`, `rechazado`, `incompleto`, `proveedor`, `saturado`, `desconocido` (tabla completa con HTTP y causa en [IA.md](./IA.md)). El panel de administración también los usa para explicar `error_code`. |
+| `iaStatus` | `iaStatus() → { ok, version, configurado, modelo, limites: { diario_usd, llamadas_dia, mensual_usd }, uso: { usuario_24h_usd, usuario_24h_llamadas, global_30d_usd } \| null }` | Acción `estado` (no exige llave ni módulos y no cuesta). Si la función falla devuelve `{ ok: false, error: <code>, configurado: false }` en vez de lanzar. |
+| `iaSavedResult` | `iaSavedResult(kind) → { result, input_hash, model, cost_usd, created_at } \| null` | Último resultado guardado del usuario en `ia_resultados` (RLS "lo propio") para `kind` `'informe'` o `'resumen_ejecutivo'`; lo leen el Informe y el Resumen al abrir, sin llamar a la IA. |
+| `IaUsage.recent` | `recent(limit = 50) → fila[]` | Filas de `ia_usage` ordenadas por `created_at` desc (`id, user_id, action, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, duration_ms, ok, error_code, created_at`). RLS: el usuario ve lo suyo; el administrador, todo. |
+| `IaUsage.byUser` | `byUser() → fila[]` | RPC `ia_usage_by_user`: `{ user_id, email, full_name, calls, calls_30d, cost_usd, cost_30d_usd, last_call }` por usuario, ordenadas por gasto; vacío para quien no es administrador. |
+| `fmtUsd` | `fmtUsd(v) → "$0.09 USD"` | Dos decimales; cuatro cuando el monto es menor a un centavo (`"$0.0043 USD"`). |
+| `fileToBase64` | `fileToBase64(file) → Promise<string>` | Lee un `File` del navegador con `FileReader` y devuelve el base64 sin el prefijo `data:`. Lo usa el diálogo «Importar desde PDF». |
+
+Los errores de `iaSavedResult` e `IaUsage` pasan por `handleQueryError`, igual que las entidades (sin sesión fuerza el logout).
+
+**Ejemplo de uso:**
+
+```javascript
+import { callIa, iaSavedResult, IaError, fmtUsd } from "@/api/ia";
+
+// Al abrir la pantalla: lo guardado, sin gastar
+const saved = await iaSavedResult("informe"); // null si todavía no hay
+
+// Al pulsar el botón
+try {
+  const { result, usage, cached } = await callIa("interpretar_informe", saved ? { force: true } : {});
+  if (cached) console.log("Mismos datos: se devolvió el guardado"); // usage === null
+  else console.log(`Costo aprox. ${fmtUsd(usage.cost_usd)}`);
+} catch (err) {
+  if (err instanceof IaError && err.code === "no_configurado") {
+    /* aviso ámbar: falta la llave en el servidor */
+  } else {
+    setError(err.message); // ya viene en español
+  }
+}
+```
+
+Las formas exactas de `result` por acción, los topes y los códigos están en [IA.md](./IA.md).
+
 ---
 
 ## Operaciones Comunes
@@ -346,7 +389,7 @@ Se exportan las siguientes integraciones de Supabase, que están disponibles per
 | `CreateFileSignedUrl`         | Creación de URLs firmadas          |
 | `UploadPrivateFile`           | Subida de archivos privados        |
 
-> **Nota:** Estas integraciones están disponibles como wrappers para futuras funcionalidades pero no están implementadas en la versión actual de la aplicación.
+> **Nota:** Estas integraciones están disponibles como wrappers para futuras funcionalidades pero no están implementadas en la versión actual de la aplicación. El asistente de IA **no** usa `InvokeLLM`: llama a Claude desde la Edge Function `ia` a través de `src/api/ia.js` (ver arriba y [IA.md](./IA.md)).
 
 ---
 

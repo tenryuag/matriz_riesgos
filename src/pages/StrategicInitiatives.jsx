@@ -27,6 +27,7 @@ import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import SaveStatusBar from "@/components/SaveStatusBar";
 import RiskWarningsCard from "@/components/strategy/RiskWarningsCard";
 import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
+import IaInitiativeSuggest from "@/components/strategy/IaInitiativeSuggest";
 import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
 import {
   RISK_ACKNOWLEDGED,
@@ -174,6 +175,14 @@ export default function StrategicInitiatives() {
 
   const addInitiative = (strategyId, label = null) => {
     setInitiatives((prev) => [...prev, emptyInitiative(planId, strategyId, label)]);
+  };
+
+  // Iniciativa ya llena (borrador sugerido por la IA). Solo toca el estado:
+  // el autoguardado la sube con las demás; después se desplaza a su tarjeta.
+  const addInitiativeFrom = (strategyId, label, fields) => {
+    const row = { ...emptyInitiative(planId, strategyId, label), ...fields };
+    setInitiatives((prev) => [...prev, row]);
+    setScrollTo(row.id);
   };
 
   const removeInitiative = async (it) => {
@@ -609,6 +618,19 @@ export default function StrategicInitiatives() {
 
           <div className="space-y-3">
             {list.map(renderInitiativeCard)}
+            <IaInitiativeSuggest
+              objective={{
+                id: o.id,
+                label: o.label,
+                tipo: "riesgo",
+                perspectiva: o.perspective,
+                estrategia: o.strategy,
+                nivel: o.levelLabel,
+                controles: o.controls.map((c) => c.text),
+              }}
+              existingTitles={list.map((it) => (it.title || "").trim()).filter(Boolean)}
+              onAdd={(fields) => addInitiativeFrom(o.id, o.label, fields)}
+            />
             <button
               type="button"
               onClick={() => addInitiative(o.id, o.label)}
@@ -799,6 +821,17 @@ export default function StrategicInitiatives() {
                   </div>
                   <div className="space-y-3">
                     {list.map(renderInitiativeCard)}
+                    <IaInitiativeSuggest
+                      objective={{
+                        id: obj.id,
+                        label: obj.label,
+                        tipo: "debilidad",
+                        perspectiva: perspectiveFor(obj),
+                        fuente: obj.source,
+                      }}
+                      existingTitles={list.map((it) => (it.title || "").trim()).filter(Boolean)}
+                      onAdd={(fields) => addInitiativeFrom(obj.id, null, fields)}
+                    />
                     <button
                       type="button"
                       onClick={() => addInitiative(obj.id)}

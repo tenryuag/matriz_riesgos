@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/components/LanguageContext";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
@@ -131,6 +131,31 @@ export default function ModuleLauncher() {
           );
         })}
       </div>
+
+      {/* Resumen ejecutivo con IA: junta los módulos del usuario en un
+          documento. Vive fuera de los módulos (el Layout lo muestra en modo
+          launcher), por eso va como tarjeta aparte debajo del grid. */}
+      {modules.length > 0 && (
+        <Card className="glass border-accent/30">
+          <CardContent className="p-6 flex flex-wrap items-center gap-4">
+            <div className="w-12 h-12 bg-accent/15 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-6 h-6 text-accent" />
+            </div>
+            <div className="flex-grow min-w-0">
+              <h2 className="font-title text-lg">Resumen ejecutivo con IA</h2>
+              <p className="text-sm text-muted">
+                Junta lo más importante de tus módulos en un documento para tu cliente o tu equipo.
+              </p>
+            </div>
+            <Link
+              to={createPageUrl("ExecutiveSummary")}
+              className="inline-flex items-center text-accent text-sm font-subtitle hover:underline underline-offset-4"
+            >
+              Abrir <ArrowRight className="w-4 h-4 ml-1" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

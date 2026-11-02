@@ -620,6 +620,24 @@ const AppLayout = ({ children, currentPageName }) => {
     .table-glass tbody tr:hover {
       background: var(--table-row-hover) !important;
     }
+
+    /* Impresión: el papel es blanco aunque la app esté en tema oscuro, así
+       que el texto, el texto atenuado y los bordes vuelven a los valores del
+       tema claro, y los vidrios quedan transparentes (sin fondo, desenfoque
+       ni sombra). */
+    @media print {
+      .dark {
+        --foreground: 0 0% 7%;
+        --foreground-muted: rgba(18, 18, 18, 0.7);
+        --card-border: rgba(18, 18, 18, 0.15);
+      }
+      .glass, .glass-darker {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+      }
+    }
   `;
 
   if (loading) {
@@ -744,7 +762,7 @@ const AppLayout = ({ children, currentPageName }) => {
 
         {/* Barra superior: selector de módulos y placeholder "en desarrollo" */}
         {isLauncherMode && (
-          <header className="sticky top-0 z-30 glass-darker">
+          <header className="sticky top-0 z-30 glass-darker print:hidden">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
               <div>
                 <h1 className="font-title text-lg text-foreground">{t('riskManagement')}</h1>

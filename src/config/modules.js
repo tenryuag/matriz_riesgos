@@ -31,7 +31,8 @@ import {
   Waves,
   Gauge,
   PieChart,
-  CalendarRange
+  CalendarRange,
+  Sparkles
 } from "lucide-react";
 
 // ============================================================
@@ -172,6 +173,7 @@ export const MODULES = [
       { pageKey: "InvitationCodes", nameKey: "invitationCodes", icon: Ticket },
       { pageKey: "UserManagement", nameKey: "userManagement", icon: Users },
       { pageKey: "ModuleAccess", nameKey: "moduleAccessNav", icon: LayoutGrid },
+      { pageKey: "IaUsage", nameKey: "navIaUsage", icon: Sparkles },
       { pageKey: "Documentation", nameKey: "documentation", icon: BookOpen, external: "/documentacion.html" },
       { pageKey: "AddInvitationCode", hidden: true },
     ],

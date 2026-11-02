@@ -97,6 +97,10 @@ import ModuleInDevelopment from "./ModuleInDevelopment";
 
 import ModuleAccessAdmin from "./ModuleAccessAdmin";
 
+import ExecutiveSummary from "./ExecutiveSummary";
+
+import IaUsageAdmin from "./IaUsageAdmin";
+
 import { ModuleAccessProvider } from "@/components/ModuleAccessContext";
 
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
@@ -108,6 +112,10 @@ const PAGES = {
     ModuleInDevelopment: ModuleInDevelopment,
 
     ModuleAccess: ModuleAccessAdmin,
+
+    ExecutiveSummary: ExecutiveSummary,
+
+    IaUsage: IaUsageAdmin,
 
     Dashboard: Dashboard,
 
@@ -252,6 +260,16 @@ function PagesContent() {
             <Route path="/ModuleAccess" element={
                 <Layout currentPageName={currentPage}>
                     <ModuleAccessAdmin />
+                </Layout>
+            } />
+            <Route path="/ExecutiveSummary" element={
+                <Layout currentPageName={currentPage}>
+                    <ExecutiveSummary />
+                </Layout>
+            } />
+            <Route path="/IaUsage" element={
+                <Layout currentPageName={currentPage}>
+                    <IaUsageAdmin />
                 </Layout>
             } />
             <Route path="/Dashboard" element={
