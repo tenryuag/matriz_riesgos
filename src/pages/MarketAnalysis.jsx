@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan, Competitor } from "@/api/entities";
@@ -10,13 +11,13 @@ import {
   Trash2,
   ChevronDown,
   Building2,
-  Waves,
+  Leaf,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
-import { COMP_GROUPS, ALL_COMP_KEYS, OCEAN_QUESTIONS } from "@/config/strategicCatalog";
+import { COMP_GROUPS, ALL_COMP_KEYS } from "@/config/strategicCatalog";
 
 const GLOBAL_SECTION = "market";
 const compSection = (id) => `market-comp:${id}`;
@@ -46,6 +47,12 @@ function Choice({ value, options, onChange }) {
     </div>
   );
 }
+
+Choice.propTypes = {
+  value: PropTypes.string,
+  options: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onChange: PropTypes.func.isRequired,
+};
 
 export default function MarketAnalysis() {
   const [planId, setPlanId] = useState(null);
@@ -88,7 +95,9 @@ export default function MarketAnalysis() {
   };
 
   // Autoguardado: persiste ~1.5 s después del último cambio, guardando solo
-  // las secciones vigentes (global + competidores existentes).
+  // las secciones vigentes (global + competidores existentes). De la sección
+  // global NO se re-suben las claves bo_* (Blue Ocean): se editan en
+  // Oportunidades del mercado y aquí solo se leen, así no se pisan.
   const { status: saveStatus, flush } = useAutosave({
     data: answers,
     enabled: !loading && !!planId,
@@ -96,7 +105,11 @@ export default function MarketAnalysis() {
       const valid = new Set([GLOBAL_SECTION, ...competitors.map((c) => compSection(c.id))]);
       const toSave = {};
       Object.entries(answers).forEach(([section, values]) => {
-        if (valid.has(section)) toSave[section] = values;
+        if (!valid.has(section)) return;
+        toSave[section] =
+          section === GLOBAL_SECTION
+            ? Object.fromEntries(Object.entries(values).filter(([k]) => !k.startsWith("bo_")))
+            : values;
       });
       await StrategicPlan.saveSections(planId, toSave);
     },
@@ -192,9 +205,10 @@ export default function MarketAnalysis() {
               <h2 className="font-subtitle text-lg mb-1">¿Qué hago aquí?</h2>
               <p className="text-sm text-muted leading-relaxed">
                 Agrega hasta {MAX_COMPETITORS} competidores — los que tienen más mercado que tú
-                o los que han crecido fuerte — y responde las preguntas de cada uno. Al final
-                encontrarás 4 preguntas para detectar oportunidades que nadie está aprovechando.
-                Todo se guarda con el botón de abajo.
+                o los que han crecido fuerte — y responde las preguntas de cada uno. Lo que
+                captures alimenta tus conclusiones y las amenazas y oportunidades de tu FODA.
+                Todo se guarda solo. En el siguiente paso encontrarás las 4 preguntas para
+                detectar oportunidades que nadie está aprovechando.
               </p>
             </div>
           </div>
@@ -329,41 +343,21 @@ export default function MarketAnalysis() {
         )}
       </div>
 
-      {/* Oportunidades del mercado (Blue Ocean) */}
+      {/* Tu propia responsabilidad social (las preguntas Blue Ocean viven en
+          "Oportunidades del mercado", el siguiente paso del recorrido) */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-cyan-500/15 rounded-xl flex items-center justify-center">
-            <Waves className="w-5 h-5 text-cyan-500" />
+          <div className="w-10 h-10 bg-green-500/15 rounded-xl flex items-center justify-center">
+            <Leaf className="w-5 h-5 text-green-600 dark:text-green-500" />
           </div>
           <div>
-            <h2 className="text-xl font-title">Oportunidades del mercado</h2>
+            <h2 className="text-xl font-title">Tu responsabilidad social</h2>
             <p className="text-sm text-muted">
-              Con lo que viste de tu competencia, responde estas 4 preguntas.
+              Ya comparaste a tu competencia en este punto; ahora tú.
             </p>
           </div>
         </div>
 
-        {OCEAN_QUESTIONS.map((item) => (
-          <Card key={item.key} className="glass">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-subtitle bg-cyan-500/15 text-cyan-600 dark:text-cyan-400">
-                  {item.label}
-                </span>
-              </div>
-              <label className="text-sm block mb-2">{item.q}</label>
-              <textarea
-                value={(answers[GLOBAL_SECTION] || {})[item.key] || ""}
-                onChange={(e) => setAnswer(GLOBAL_SECTION, item.key, e.target.value)}
-                rows={2}
-                placeholder="Escribe tu respuesta aquí…"
-                className="w-full p-3 rounded-xl glass text-foreground placeholder:text-muted outline-none focus:border-accent resize-y"
-              />
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Tu propia responsabilidad social */}
         <Card className="glass">
           <CardContent className="p-5">
             <label className="text-sm block mb-2">
@@ -386,9 +380,9 @@ export default function MarketAnalysis() {
 
       {/* Siguiente paso del recorrido */}
       <div className="flex justify-end">
-        <Link to={createPageUrl("MarketConclusions")}>
+        <Link to={createPageUrl("MarketOpportunities")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            Siguiente: Conclusiones del mercado →
+            Siguiente: Oportunidades del mercado →
           </Button>
         </Link>
       </div>

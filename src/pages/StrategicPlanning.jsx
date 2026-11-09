@@ -26,6 +26,8 @@ import {
   CalendarClock,
   Wallet,
   Crosshair,
+  Waves,
+  Radar,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
@@ -65,10 +67,12 @@ const PHASES = [
     screens: [
       { key: "CustomerAnalysis", name: "Análisis del cliente", icon: Users },
       { key: "MarketAnalysis", name: "Análisis del mercado", icon: Globe },
+      { key: "MarketOpportunities", name: "Oportunidades del mercado", icon: Waves },
       { key: "MarketConclusions", name: "Conclusiones del mercado", icon: ClipboardCheck },
       { key: "OpportunityAnalysis", name: "Análisis de oportunidades", icon: Sprout },
       { key: "OpportunityConclusions", name: "Conclusión de oportunidades", icon: ListChecks },
       { key: "FinancialStrategies", name: "Estrategias financieras", icon: Banknote },
+      { key: "ExternalDiagnosis", name: "Diagnóstico externo", icon: Radar },
     ],
   },
   {
@@ -77,6 +81,7 @@ const PHASES = [
     screens: [
       { key: "Foda", name: "FODA", icon: Grid2x2 },
       { key: "StrategicSummary", name: "Resumen y priorización", icon: ListOrdered },
+      { key: "StrategicRisks", name: "Riesgos de la matriz", icon: ShieldAlert },
       { key: "StrategicMap", name: "Mapa estratégico", icon: Map },
       { key: "StrategicMapCalibrated", name: "Mapa calibrado", icon: Filter },
     ],
@@ -178,7 +183,9 @@ export default function StrategicPlanning() {
       altaNoPlan,
       unrated,
       fCount: foda.fortalezas.length,
-      dCount: scored.length,
+      // Solo debilidades (las estrategias del diagnóstico externo también se
+      // priorizan, pero no son debilidades).
+      dCount: scored.filter((w) => w.source !== "external").length,
       initiativeCount: initiatives.length,
       budget,
       overdue,

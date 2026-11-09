@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan } from "@/api/entities";
@@ -17,21 +18,12 @@ import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
-import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
-import { CATALOG as MKT_CATALOG, SECTION as MKT_CONCL_SECTION } from "./MarketConclusions";
-import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
-import { SECTION as OPP_CONCL_SECTION, effectiveConclusions } from "./OpportunityConclusions";
-import { FIN_GROUPS, SECTION as FIN_SECTION } from "./FinancialStrategies";
+import { PLAN_SOURCE_SECTIONS } from "@/config/strategicCatalog";
 
 export const RATING_SECTION = "summary-ratings";
 
-// Secciones que el resumen necesita leer (útil también para el hub).
-export const SUMMARY_SOURCE_SECTIONS = [
-  MKT_CONCL_SECTION,
-  OPP_SECTION,
-  OPP_CONCL_SECTION,
-  FIN_SECTION,
-];
+// Secciones que el resumen necesita leer (catálogo único; útil también para el hub).
+export const SUMMARY_SOURCE_SECTIONS = PLAN_SOURCE_SECTIONS;
 
 // Motor compartido con el servidor MCP (fuentes, puntaje y prioridad).
 export { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
@@ -41,7 +33,14 @@ const SOURCES = [
   { key: "market", title: "Del análisis del mercado" },
   { key: "opportunities", title: "De tus oportunidades" },
   { key: "financial", title: "De tus finanzas" },
+  { key: "external", title: "De tu diagnóstico externo" },
 ];
+
+// Chip de las estrategias del diagnóstico externo (de qué nacen).
+const KIND_CHIP = {
+  Oportunidad: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/40",
+  Amenaza: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40",
+};
 
 const DIMS = [
   { dim: "costo", label: "Costo de implementar", options: ["Alto", "Medio", "Bajo"], help: "¿Qué tan caro es hacerlo?" },
@@ -71,6 +70,11 @@ function PriorityBadge({ priority, score }) {
     </span>
   );
 }
+
+PriorityBadge.propTypes = {
+  priority: PropTypes.string,
+  score: PropTypes.number,
+};
 
 export default function StrategicSummary() {
   const { inputs, loading, error } = useStrategyInputs();
@@ -142,7 +146,7 @@ export default function StrategicSummary() {
           </div>
           <div>
             <h1 className="text-3xl font-title">Resumen y priorización</h1>
-            <p className="text-muted">Todas tus debilidades juntas — y por dónde empezar.</p>
+            <p className="text-muted">Todas tus estrategias juntas — y por dónde empezar.</p>
           </div>
         </div>
       </div>
@@ -157,9 +161,11 @@ export default function StrategicSummary() {
             <div>
               <h2 className="font-subtitle text-lg mb-1">¿Qué hago aquí?</h2>
               <p className="text-sm text-muted leading-relaxed">
-                Aquí están las debilidades que marcaste en el mercado, las oportunidades y
-                tus finanzas. Califica cada una en 4 aspectos y el sistema calculará su
-                prioridad: <span className="text-green-600 dark:text-green-500 font-subtitle">alta</span> significa
+                Aquí están las estrategias que salen de tu planeación: las debilidades que
+                marcaste en el mercado, las oportunidades y tus finanzas, y lo que detectaste
+                en tu diagnóstico externo. Califica cada una en 4 aspectos y el sistema
+                calculará su prioridad:{" "}
+                <span className="text-green-600 dark:text-green-500 font-subtitle">alta</span> significa
                 barata, de bajo riesgo y con buen beneficio — por ahí conviene empezar.
               </p>
             </div>
@@ -192,16 +198,10 @@ export default function StrategicSummary() {
 
       {/* Resumen */}
       <div className="flex flex-wrap gap-3">
-        {riskObjectives.length > 0 && (
-          <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm text-red-600 dark:text-red-400">
-            <ShieldAlert className="w-4 h-4" />
-            <span className="font-subtitle">{riskObjectives.length}</span>{" "}
-            {riskObjectives.length === 1 ? "riesgo crítico" : "riesgos críticos"}
-          </span>
-        )}
         <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm">
           <Wrench className="w-4 h-4 text-orange-500" />
-          <span className="font-subtitle">{weaknesses.length}</span> debilidades
+          <span className="font-subtitle">{weaknesses.length}</span>{" "}
+          {weaknesses.length === 1 ? "estrategia a priorizar" : "estrategias a priorizar"}
         </span>
         <span className="inline-flex items-center gap-2 px-4 py-2 glass rounded-xl text-sm text-muted">
           {ratedCount} calificadas
@@ -221,68 +221,12 @@ export default function StrategicSummary() {
         )}
       </div>
 
-      {/* Riesgos críticos de la matriz: prioridad alta sin calificar */}
-      {riskObjectives.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="font-subtitle text-sm text-accent uppercase tracking-wide">
-            Riesgos críticos de tu matriz ({riskObjectives.length})
-          </h2>
-          <p className="text-sm text-muted">
-            Entran a tu plan sin calificarlos: por su gravedad son prioridad alta. Si crees
-            que alguno está sobreestimado, corrige su probabilidad e impacto en la matriz.
-          </p>
-          {riskObjectives.map((o) => (
-            <Card key={o.id} id={`risk-${o.riskId}`} className="glass">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="min-w-0 space-y-2">
-                    <p className="text-sm font-subtitle break-words">{o.label}</p>
-                    <RiskObjectiveBadges objective={o} />
-                  </div>
-                  <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-subtitle border flex-shrink-0 border-green-500/50 bg-green-500/15 text-green-600 dark:text-green-400"
-                    title={`Prioridad alta por la gravedad del riesgo (puntaje ${o.score} de 25)`}
-                  >
-                    Prioridad alta · por su gravedad
-                  </span>
-                </div>
-                <p className="text-xs text-muted">
-                  Estrategia: {o.strategy || "Sin definir"} · Controles: {o.controls.length || "ninguno"}
-                  {o.residualLabel ? ` · Después de controles: ${o.residualLabel}` : ""}
-                </p>
-                {o.controls.length > 0 && (
-                  <ul className="text-xs text-muted space-y-1 list-disc pl-5">
-                    {o.controls.map((c) => (
-                      <li key={c.n}>{c.text}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex flex-wrap gap-4 text-xs">
-                  <Link
-                    to={createPageUrl("StrategicInitiatives") + "#risk-" + o.riskId}
-                    className="text-accent font-subtitle hover:underline"
-                  >
-                    {o.controls.length > 0 ? "Planear sus controles →" : "Planear este riesgo →"}
-                  </Link>
-                  <Link
-                    to={createPageUrl(`AddRisk?id=${o.riskId}`)}
-                    className="text-accent font-subtitle hover:underline"
-                  >
-                    Ver en la matriz →
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
       {/* Sin debilidades aún */}
       {weaknesses.length === 0 && (
         <Card className="glass">
           <CardContent className="p-8 text-center text-muted space-y-3">
             <p className="text-sm">
-              Aún no hay debilidades marcadas. Completa las pantallas de análisis y
+              Aún no hay estrategias que priorizar. Completa las pantallas de análisis y
               conclusiones para que aparezcan aquí.
             </p>
             <Link to={createPageUrl("MarketConclusions")} className="text-accent text-sm font-subtitle hover:underline">
@@ -305,7 +249,16 @@ export default function StrategicSummary() {
               <Card key={w.id} className="glass">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-                    <p className="text-sm font-subtitle flex-grow">{w.label}</p>
+                    <div className="flex-grow min-w-0">
+                      <p className="text-sm font-subtitle">{w.label}</p>
+                      {w.kind && (
+                        <span
+                          className={`mt-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-subtitle border ${KIND_CHIP[w.kind] || ""}`}
+                        >
+                          {w.kind} detectada en tu diagnóstico externo
+                        </span>
+                      )}
+                    </div>
                     {w.priority ? (
                       <PriorityBadge priority={w.priority} score={w.score} />
                     ) : (
@@ -346,6 +299,29 @@ export default function StrategicSummary() {
           </div>
         );
       })}
+
+      {/* Riesgos críticos de la matriz: viven en su propia pantalla */}
+      {riskObjectives.length > 0 && (
+        <Card className="glass border-red-500/30">
+          <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="w-5 h-5 text-red-500" />
+            </div>
+            <p className="text-sm text-muted flex-grow">
+              Tus <span className="font-subtitle text-foreground">{riskObjectives.length}</span>{" "}
+              {riskObjectives.length === 1 ? "riesgo crítico" : "riesgos críticos"} de la Matriz de
+              Riesgos no se califican aquí: entran a tu plan como prioridad alta por su gravedad y
+              tienen su propia pantalla.
+            </p>
+            <Link
+              to={createPageUrl("StrategicRisks")}
+              className="text-accent text-sm font-subtitle hover:underline flex-shrink-0"
+            >
+              Ver riesgos de la matriz →
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Fortalezas (referencia) */}
       {strengths.length > 0 && (

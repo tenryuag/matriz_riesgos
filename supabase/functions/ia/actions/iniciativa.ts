@@ -64,7 +64,7 @@ const strList = (v: unknown, max: number, maxLen = 400) =>
   Array.isArray(v) ? v.map((s) => str(s, maxLen)).filter(Boolean).slice(0, max) : []
 
 // Fuente de la debilidad, traducida como en planContext.
-const FUENTE: Record<string, string> = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas' }
+const FUENTE: Record<string, string> = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas', external: 'Diagnóstico externo' }
 
 function parseObjetivo(raw: unknown): Objetivo {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>

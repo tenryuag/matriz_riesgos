@@ -315,26 +315,18 @@ const AppLayout = ({ children, currentPageName }) => {
   // Acceso por módulo del usuario (Fase 2): para proteger las páginas.
   const { isAdmin: hasAdminAccess, grantedModules, loading: accessLoading } = useModuleAccess();
 
-  // Grupos del menú lateral abiertos. El grupo de la página activa se abre
-  // automáticamente; el usuario puede plegar/desplegar los demás.
-  const [openGroups, setOpenGroups] = React.useState(() => new Set());
+  // Grupo del menú lateral abierto (acordeón: uno a la vez). Al navegar a
+  // una página con grupo, ese grupo se abre y el anterior se cierra; el
+  // usuario puede plegar el abierto o abrir otro, que cierra el anterior.
+  const [openGroup, setOpenGroup] = React.useState(null);
   React.useEffect(() => {
     const mod = findModuleByPage(currentPageName);
     const page = mod?.pages.find((p) => p.pageKey === currentPageName);
-    if (page?.group) {
-      setOpenGroups((prev) =>
-        prev.has(page.group) ? prev : new Set([...prev, page.group])
-      );
-    }
+    if (page?.group) setOpenGroup(page.group);
   }, [currentPageName]);
 
   const toggleGroup = (key) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setOpenGroup((prev) => (prev === key ? null : key));
   };
 
   // Cierra la sesión tras 8 horas de inactividad (solo con sesión activa).
@@ -584,7 +576,6 @@ const AppLayout = ({ children, currentPageName }) => {
     .nav-glass:hover {
       background: rgba(221, 191, 90, 0.2);
       border-color: rgba(221, 191, 90, 0.4);
-      transform: translateX(4px);
     }
 
     .nav-glass.active {
@@ -871,7 +862,7 @@ const AppLayout = ({ children, currentPageName }) => {
                 if (entry.type === 'link') return renderItem(entry);
 
                 // Sección plegable
-                const open = openGroups.has(entry.key);
+                const open = openGroup === entry.key;
                 const hasActiveChild = entry.items.some(
                   (it) => !it.external && currentPath === it.href
                 );
