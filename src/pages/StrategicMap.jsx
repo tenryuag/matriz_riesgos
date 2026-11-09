@@ -105,7 +105,7 @@ Bubble.propTypes = {
 };
 
 export function StrategicMapBase({ calibrated = false }) {
-  const { inputs, loading, error } = useStrategyInputs();
+  const { inputs, loading, error, reload } = useStrategyInputs();
 
   // Riesgos críticos como objetivos: ya traen priority 'Alta', perspective y
   // source 'risk'. Sin acceso al módulo de riesgos, inputs.risks es [].
@@ -177,7 +177,7 @@ export function StrategicMapBase({ calibrated = false }) {
             <p>
               {calibrated
                 ? "Este mapa se llena solo con tus estrategias de prioridad alta. Es tu foco de trabajo real."
-                : "Este mapa se llena solo con las debilidades que marcaste para trabajar."}
+                : "Este mapa se llena solo con las estrategias que marcaste para trabajar: tus debilidades y lo que detectaste en tu diagnóstico externo."}
             </p>
             <p>
               Se lee <span className="text-foreground font-subtitle">de abajo hacia arriba</span>:
@@ -218,7 +218,7 @@ export function StrategicMapBase({ calibrated = false }) {
             <p className="text-sm">
               {calibrated
                 ? "Aún no hay estrategias de prioridad alta. Califica tus debilidades en el resumen para encontrar tu foco."
-                : "Aún no hay debilidades marcadas. Completa las pantallas de análisis y conclusiones para que el mapa se llene."}
+                : "Aún no hay estrategias marcadas. Completa las pantallas de análisis, conclusiones y diagnóstico externo para que el mapa se llene."}
             </p>
             <Link
               to={createPageUrl(calibrated ? "StrategicSummary" : "MarketConclusions")}
@@ -278,7 +278,7 @@ export function StrategicMapBase({ calibrated = false }) {
           </div>
 
           {/* Riesgos críticos que no caben en ningún carril (sin perspectiva) */}
-          <UnassignedRisksNote objectives={riskObjectives} />
+          <UnassignedRisksNote objectives={riskObjectives} onAssigned={reload} />
         </>
       )}
 

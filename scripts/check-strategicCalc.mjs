@@ -37,6 +37,12 @@ import {
   mergeFodaWithRisks,
   riskCountIn,
   objectivesById,
+  // FODA v2 (redacción, diagnóstico externo, situaciones financieras)
+  fodaTextFor,
+  competitorFoda,
+  selectedFinSituations,
+  answeredExternal,
+  isYes,
 } from "../src/config/strategicCalc.js";
 import {
   RISK_INITIATIVE_TEMPLATES,
@@ -450,6 +456,72 @@ const flowFocus = focusItems(OBJ, [weak("w1", 1.3), weak("w2", 1.1)], [created])
 check("foco: items 5, hidden 4, total 9", [flowFocus.items.length, flowFocus.hidden, flowFocus.total], [5, 4, 9]);
 check("foco: 3 INT + s2 + s3 (R-A y R-B ocultos)", flowFocus.items.map((i) => i.riskId), ["s1", "s4", "s5", "s2", "s3"]);
 check("foco: Errores planned", flowFocus.items.find((i) => i.riskId === "s2")?.status, "planned");
+
+// ---------- FODA v2: redacción, diagnóstico externo, situaciones financieras ----------
+console.log("\n== FODA v2 ==");
+const FODA_SECTIONS = {
+  "market-conclusions": { precio_valor: "F", servicio_calidad: "D" },
+  "opportunities": { precios: "Sí", complementarios: "No", patentes: "No", software: "Sí", cartera: "Sí", proveeduria: "No" },
+  "opportunity-conclusions": {},
+  "financial-strategies": { ventas_volumen: "D", ventas_modelos: "D", costo_mermas: "D" },
+  "financial-situations": { sit_ventas: "Sí", sit_f_cartera: "Sí", sit_rotacion: "Sí", sit_mermas: "" },
+  "external-diagnosis": { ext_mercado_crece: "Sí", ext_sustitutos: "Sí", ext_tec_ia: "No" },
+  "market": { bo_crear: "Servicio 24/7\nApp propia", bo_incrementar: "Garantía" },
+  "market-comp:c1": { precio: "Mayor", servicio: "Mejor", redes: "Sí" },
+  "market-comp:c2": { precio: "Mayor", servicio: "Peor" },
+  "summary-ratings": {
+    "mkt:servicio_calidad:costo": "Bajo", "mkt:servicio_calidad:riesgo": "Bajo",
+    "mkt:servicio_calidad:complejidad": "Baja", "mkt:servicio_calidad:beneficio": "Ingresos",
+  },
+};
+const COMPS = [{ id: "c1", name: "Alfa" }, { id: "c2", name: "Beta" }];
+const F2 = buildFoda({ sections: FODA_SECTIONS, competitors: COMPS, ratings: FODA_SECTIONS["summary-ratings"] });
+check("isYes", [isYes("Sí"), isYes("No"), isYes("")], [true, false, false]);
+check("selectedFinSituations: 3 marcadas (la vacía no)", selectedFinSituations(FODA_SECTIONS).map((s) => s.key), ["sit_ventas", "sit_f_cartera", "sit_rotacion"]);
+check("answeredExternal: solo los Sí", answeredExternal(FODA_SECTIONS).map((q) => q.key), ["ext_mercado_crece", "ext_sustitutos"]);
+check("fortalezas: mkt F + opp F + situación F, con redacción FODA",
+  F2.fortalezas.map((i) => [i.id, i.label]),
+  [["mkt:precio_valor", "La relación valor-precio de la empresa es competitiva"],
+   ["opp:precios", "La empresa tiene capacidad de incrementar sus precios"],
+   ["finsit:sit_f_cartera", "La empresa tiene una cartera de clientes diversificada"]]);
+check("fortalezas: software (Sí) no aplica al FODA", F2.fortalezas.some((i) => i.id === "opp:software"), false);
+check("fortalezas: palanca cartera (Sí) cede ante la situación sit_f_cartera", F2.fortalezas.some((i) => i.id === "opp:cartera"), false);
+check("debilidades: palanca proveeduría (No) entra porque sit_proveedores no está marcada", F2.debilidades.some((i) => i.id === "opp:proveeduria"), true);
+const F3 = buildFoda({ sections: { ...FODA_SECTIONS, "financial-situations": { sit_proveedores: "Sí" } }, competitors: [], ratings: {} });
+check("debilidades: con sit_proveedores marcada la palanca proveeduría no se repite", [F3.debilidades.some((i) => i.id === "opp:proveeduria"), F3.debilidades.some((i) => i.id === "finsit:sit_proveedores")], [false, true]);
+check("fortalezas: sin sit_f_cartera la palanca cartera sí entra", F3.fortalezas.some((i) => i.id === "opp:cartera"), true);
+check("debilidades: ids (sin patentes, sin ventas_volumen porque manda sit_ventas)",
+  F2.debilidades.map((i) => i.id),
+  ["mkt:servicio_calidad", "opp:complementarios", "opp:proveeduria", "fin:ventas_modelos", "fin:costo_mermas", "finsit:sit_ventas", "finsit:sit_rotacion"]);
+check("debilidades: redacción D del mercado + prioridad del resumen",
+  [F2.debilidades[0].label, F2.debilidades[0].priority, F2.debilidades[0].strategy],
+  ["La calidad del servicio de la empresa es inferior al nivel esperado por el cliente", "Alta", "Mejorar la calidad de servicio"]);
+check("debilidades: decisión financiera sin situación usa plan A",
+  F2.debilidades.find((i) => i.id === "fin:costo_mermas")?.label,
+  "La empresa no mide o controla adecuadamente las mermas y su impacto en los costos");
+check("oportunidades: externo, competidores agregados, blue ocean",
+  F2.oportunidades.map((i) => [i.id, i.detail || i.kind || ""]),
+  [["ext:ext_mercado_crece", ""], ["comp:precio:Mayor", "Alfa, Beta"], ["comp:servicio:Peor", "Beta"],
+   ["ocean:crear:0", "Crear"], ["ocean:crear:1", "Crear"], ["ocean:incrementar:0", "Incrementar"]]);
+check("oportunidades: redacción externa", F2.oportunidades[0].label, "El mercado objetivo de la empresa presenta una tendencia de crecimiento");
+check("amenazas: externo + competidores mejores", F2.amenazas.map((i) => i.id), ["ext:ext_sustitutos", "comp:servicio:Mejor", "comp:redes:Sí"]);
+check("amenazas: detalle con el competidor", F2.amenazas[1].detail, "Alfa");
+check("buildFoda vacío", buildFoda({ sections: {}, competitors: [], ratings: {} }), { fortalezas: [], debilidades: [], oportunidades: [], amenazas: [] });
+check("buildFoda sin sections", buildFoda({ competitors: [] }).debilidades, []);
+check("competitorFoda sin competidores", competitorFoda(FODA_SECTIONS, []), { oportunidades: [], amenazas: [] });
+check("fodaTextFor patentes → null", fodaTextFor({ id: "opp:patentes", label: "Tramitar patentes" }, "D"), null);
+check("fodaTextFor mkt F", fodaTextFor({ id: "mkt:entrega_simple" }, "F"), "La empresa ofrece un proceso de compra o entrega más simple para el cliente");
+check("fodaTextFor desconocido → label", fodaTextFor({ id: "x:y", label: "Otra" }, "D"), "Otra");
+const CS = collectStrategies(FODA_SECTIONS);
+check("collectStrategies: externas al final con kind y sugerencia",
+  CS.weaknesses.filter((w) => w.source === "external").map((w) => [w.id, w.kind, w.label, !!w.suggestion]),
+  [["ext:ext_mercado_crece", "Oportunidad", "Aprovechar el crecimiento del mercado objetivo", true],
+   ["ext:ext_sustitutos", "Amenaza", "Reducir la vulnerabilidad frente a productos o servicios sustitutos", true]]);
+check("collectStrategies: patentes sigue siendo estrategia", CS.weaknesses.some((w) => w.id === "opp:patentes"), true);
+check("collectStrategies: fortaleza financiera (situación F)", CS.strengths.some((s) => s.label === "La empresa tiene una cartera de clientes diversificada" && s.source === "financial"), true);
+check("perspectiveFor ext (catálogo)", [perspectiveFor({ id: "ext:ext_sustitutos" }), perspectiveFor({ id: "ext:ext_mercado_crece" }), perspectiveFor({ id: "ext:ext_tec_ia" }), perspectiveFor({ id: "ext:ext_eco_favorable" })], ["competitiva", "cliente", "procesos", "financiera"]);
+check("perspectiveFor ext desconocida → competitiva", perspectiveFor({ id: "ext:nada" }), "competitiva");
+check("mergeFodaWithRisks conserva el FODA v2", mergeFodaWithRisks(F2, []).oportunidades.length, 6);
 
 console.log(`\n${failures === 0 ? "TODO OK" : `${failures} FALLA(S)`}`);
 process.exit(failures === 0 ? 0 : 1);

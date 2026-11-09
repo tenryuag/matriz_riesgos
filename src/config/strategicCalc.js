@@ -10,9 +10,14 @@ import {
   OPP_SECTION,
   OPP_CONCL_SECTION,
   FIN_SECTION,
+  FIN_SIT_SECTION,
+  EXT_SECTION,
   MKT_CATALOG,
   OPP_GROUPS,
   FIN_GROUPS,
+  ALL_FIN_SITUATIONS,
+  ALL_EXT_QUESTIONS,
+  COMP_FODA_RULES,
   compSection,
   templatesForStrategy,
 } from "./strategicCatalog.js";
@@ -44,8 +49,29 @@ export function effectiveConclusions(oppAnswers, overrides) {
   return out;
 }
 
-// Junta las estrategias de las tres fuentes: conclusiones del mercado,
-// conclusión de oportunidades (efectiva) y estrategias financieras.
+// "Sí" en una pregunta de Sí/No (diagnóstico externo, situaciones financieras).
+export const isYes = (answer) => answer === "Sí";
+
+const EXT_BY_KEY = Object.fromEntries(ALL_EXT_QUESTIONS.map((q) => [q.key, q]));
+
+// Situaciones financieras marcadas por el usuario (objetos del catálogo).
+export function selectedFinSituations(sections) {
+  const sel = sections?.[FIN_SIT_SECTION] || {};
+  return ALL_FIN_SITUATIONS.filter((s) => isYes(sel[s.key]));
+}
+
+// Preguntas del diagnóstico externo respondidas "Sí" (objetos del catálogo).
+export function answeredExternal(sections) {
+  const ext = sections?.[EXT_SECTION] || {};
+  return ALL_EXT_QUESTIONS.filter((q) => isYes(ext[q.key]));
+}
+
+// Junta las estrategias de las cuatro fuentes: conclusiones del mercado,
+// conclusión de oportunidades (efectiva), estrategias financieras
+// (decisiones) y diagnóstico externo (estrategias derivadas de cada
+// oportunidad o amenaza respondida "Sí"). `weaknesses` es la lista que se
+// prioriza en el resumen y llega al mapa y a las iniciativas; `strengths`
+// solo informa (incluye las situaciones financieras favorables).
 export function collectStrategies(sections) {
   const weaknesses = [];
   const strengths = [];
@@ -72,6 +98,19 @@ export function collectStrategies(sections) {
       if (fin[i.key] === "D") weaknesses.push({ id: `fin:${i.key}`, label: i.label, source: "financial" });
     })
   );
+  selectedFinSituations(sections).forEach((s) => {
+    if (s.type === "F") strengths.push({ label: s.label, source: "financial" });
+  });
+
+  answeredExternal(sections).forEach((q) => {
+    weaknesses.push({
+      id: `ext:${q.key}`,
+      label: q.strategy,
+      source: "external",
+      kind: q.type === "O" ? "Oportunidad" : "Amenaza",
+      suggestion: q.initiative,
+    });
+  });
 
   return { weaknesses, strengths };
 }
@@ -124,6 +163,9 @@ export function perspectiveFor(item) {
   if (src === "risk") return item.perspective || item.perspective_key || null;
   if (src === "mkt") return "cliente";
   if (src === "fin") return key === "ventas_area_comercial" ? "competitiva" : "financiera";
+  // Diagnóstico externo: el carril viene en el catálogo (cliente, competitiva,
+  // procesos o financiera según la categoría de la pregunta).
+  if (src === "ext") return EXT_BY_KEY[key]?.perspective || "competitiva";
   if (src !== "opp") return "cliente";
   if (OPP_COMPETITIVA.has(key)) return "competitiva";
   if (OPP_PROCESOS.has(key)) return "procesos";
@@ -143,50 +185,135 @@ export const splitPoints = (text) =>
     .map((s) => s.replace(/^[-•\d.\s]+/, "").trim())
     .filter(Boolean);
 
-// FODA automático a partir de lo capturado.
+// Índices del catálogo por clave (para la redacción FODA de cada estrategia).
+const MKT_BY_KEY = Object.fromEntries(MKT_CATALOG.flatMap((g) => g.items.map((i) => [i.key, i])));
+const OPP_BY_KEY = Object.fromEntries(OPP_GROUPS.flatMap((g) => g.questions.map((q) => [q.key, q])));
+const FIN_BY_KEY = Object.fromEntries(FIN_GROUPS.flatMap((g) => g.items.map((i) => [i.key, i])));
+
+// Situaciones financieras enlazadas a una estrategia ('fin:<k>' o 'opp:<k>').
+// Si alguna está marcada, en el FODA manda la situación y la estrategia no se
+// repite (evita dos líneas casi iguales en el mismo cuadrante).
+function situationWins(id, situationKeys) {
+  const [src, key] = String(id || "").split(":");
+  const linked = (src === "fin" ? FIN_BY_KEY[key] : src === "opp" ? OPP_BY_KEY[key] : null)?.situations || [];
+  return linked.some((k) => situationKeys.has(k));
+}
+
+// Redacción FODA de una estrategia del resumen según el lado en que queda
+// ('F' o 'D'). null = la estrategia no aplica al FODA (p. ej. patentes).
+export function fodaTextFor(item, side) {
+  const [src, key] = String(item?.id || "").split(":");
+  if (src === "mkt") return MKT_BY_KEY[key]?.foda?.[side] ?? item.label ?? null;
+  if (src === "opp") {
+    const q = OPP_BY_KEY[key];
+    if (!q) return item.label ?? null;
+    if (q.foda === null) return null;
+    return q.foda?.[side] ?? item.label ?? null;
+  }
+  if (src === "fin") return FIN_BY_KEY[key]?.foda?.[side] ?? item.label ?? null;
+  return item?.label ?? null;
+}
+
+// Oportunidades y amenazas que salen de la comparación con competidores:
+// una línea por regla cumplida, con los nombres de los competidores que la
+// cumplen en `detail`. Regla: competencia mejor = amenaza, peor = oportunidad.
+export function competitorFoda(sections, competitors) {
+  const oportunidades = [];
+  const amenazas = [];
+  const list = competitors || [];
+  if (list.length === 0) return { oportunidades, amenazas };
+  COMP_FODA_RULES.forEach((rule) => {
+    const names = list
+      .filter((c) => (sections[compSection(c.id)] || {})[rule.key] === rule.value)
+      .map((c) => c.name || "Competidor");
+    if (names.length === 0) return;
+    const item = {
+      id: `comp:${rule.key}:${rule.value}`,
+      label: rule.text,
+      source: "competitors",
+      tag: "Competencia",
+      detail: names.join(", "),
+    };
+    if (rule.type === "O") oportunidades.push(item);
+    else amenazas.push(item);
+  });
+  return { oportunidades, amenazas };
+}
+
+// FODA automático a partir de lo capturado, con la redacción del Excel v2_FODA.
+// - Fortalezas: 'voy a mantener' del mercado y de las palancas (redacción F)
+//   + situaciones financieras favorables.
+// - Debilidades: 'voy a cambiar' del mercado y de las palancas (redacción D,
+//   con su prioridad del resumen), situaciones financieras desfavorables y
+//   las decisiones financieras cuya situación no está marcada (plan A).
+// - Oportunidades: diagnóstico externo (O), competidores peores que la
+//   empresa y las respuestas Blue Ocean (crear / incrementar).
+// - Amenazas: diagnóstico externo (A) y competidores mejores que la empresa.
 export function buildFoda({ sections, competitors, ratings }) {
-  const strengths = [];
-  const mkt = sections[MKT_CONCL_SECTION] || {};
+  const sx = sections || {};
+  const fortalezas = [];
+  const debilidades = [];
+  const oportunidades = [];
+  const amenazas = [];
+
+  // Fortalezas
+  const mkt = sx[MKT_CONCL_SECTION] || {};
   MKT_CATALOG.forEach((g) =>
     g.items.forEach((i) => {
-      if (mkt[i.key] === "F") strengths.push({ label: i.label });
+      if (mkt[i.key] === "F")
+        fortalezas.push({ id: `mkt:${i.key}`, label: i.foda?.F ?? i.label, strategy: i.label, source: "market" });
     })
   );
-  const oppEff = effectiveConclusions(sections[OPP_SECTION] || {}, sections[OPP_CONCL_SECTION] || {});
+  const situations = selectedFinSituations(sx);
+  const situationKeys = new Set(situations.map((s) => s.key));
+  const oppEff = effectiveConclusions(sx[OPP_SECTION] || {}, sx[OPP_CONCL_SECTION] || {});
   OPP_GROUPS.forEach((g) =>
     g.questions.forEach((q) => {
-      if (oppEff[q.key] === "F") strengths.push({ label: q.strategy });
+      if (oppEff[q.key] !== "F" || q.foda === null) return;
+      if (situationWins(`opp:${q.key}`, situationKeys)) return; // manda la situación
+      fortalezas.push({ id: `opp:${q.key}`, label: q.foda?.F ?? q.strategy, strategy: q.strategy, source: "opportunities" });
     })
   );
+  situations
+    .filter((s) => s.type === "F")
+    .forEach((s) => fortalezas.push({ id: `finsit:${s.key}`, label: s.label, source: "financial", situation: true }));
 
-  const { weaknesses } = collectStrategies(sections);
-  const debilidades = weaknesses.map((w) => {
+  // Debilidades (en el orden del resumen) + situaciones financieras D
+  const { weaknesses } = collectStrategies(sx);
+  weaknesses.forEach((w) => {
+    if (w.source === "external") return; // van a oportunidades / amenazas
+    if (situationWins(w.id, situationKeys)) return; // manda la situación financiera
+    const label = fodaTextFor(w, "D");
+    if (label == null) return; // no aplica al FODA
     const score = scoreFor(ratings || {}, w.id);
-    return { ...w, score, priority: priorityFor(score) };
+    debilidades.push({ ...w, label, strategy: w.label, score, priority: priorityFor(score) });
+  });
+  situations
+    .filter((s) => s.type === "D")
+    .forEach((s) => debilidades.push({ id: `finsit:${s.key}`, label: s.label, source: "financial", situation: true }));
+
+  // Oportunidades y amenazas: diagnóstico externo
+  answeredExternal(sx).forEach((q) => {
+    const item = { id: `ext:${q.key}`, label: q.foda, strategy: q.strategy, source: "external", tag: "Entorno" };
+    if (q.type === "O") oportunidades.push(item);
+    else amenazas.push(item);
   });
 
-  const market = sections[MARKET_SECTION] || {};
-  const oportunidades = [
-    ...splitPoints(market.bo_crear).map((label) => ({ label, kind: "Crear" })),
-    ...splitPoints(market.bo_incrementar).map((label) => ({ label, kind: "Incrementar" })),
-  ];
+  // Competidores
+  const comp = competitorFoda(sx, competitors);
+  oportunidades.push(...comp.oportunidades);
+  amenazas.push(...comp.amenazas);
 
-  const amenazas = [];
-  (competitors || []).forEach((c) => {
-    const a = sections[compSection(c.id)] || {};
-    const add = (label) => amenazas.push({ label });
-    if (a.precio === "Menor") add(`${c.name} tiene precios menores que los tuyos`);
-    if (a.servicio === "Mejor") add(`${c.name} ofrece mejor servicio que el tuyo`);
-    if (a.postventa_mejor === "Sí") add(`${c.name} tiene mejor servicio post-venta`);
-    if (a.entrega_simple === "Sí") add(`${c.name} entrega de forma más simple`);
-    if (a.entrega_comoda === "Sí") add(`${c.name} ofrece una entrega más cómoda`);
-    if (a.imagen === "Sí") add(`${c.name} tiene mejor imagen de marca`);
-    if (a.mercado === "Más") add(`${c.name} tiene más mercado que tú`);
-    if (a.redes === "Sí" || a.publicidad === "Sí")
-      add(`${c.name} está activo en redes sociales o publicidad`);
-  });
+  // Blue Ocean (crear / incrementar)
+  const market = sx[MARKET_SECTION] || {};
+  splitPoints(market.bo_crear).forEach((label, i) =>
+    oportunidades.push({ id: `ocean:crear:${i}`, label, kind: "Crear", source: "ocean" })
+  );
+  splitPoints(market.bo_incrementar).forEach((label, i) =>
+    oportunidades.push({ id: `ocean:incrementar:${i}`, label, kind: "Incrementar", source: "ocean" })
+  );
 
-  return { fortalezas: strengths, debilidades, oportunidades, amenazas };
+  return { fortalezas, debilidades, oportunidades, amenazas };
 }
 
 // ============================================================

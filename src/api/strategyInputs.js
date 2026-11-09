@@ -41,24 +41,15 @@ import {
 } from "@/api/entities";
 import { isAuthError } from "@/api/authHelpers";
 import {
-  MKT_CONCL_SECTION,
-  OPP_SECTION,
-  OPP_CONCL_SECTION,
-  FIN_SECTION,
+  PLAN_SOURCE_SECTIONS,
   RATING_SECTION,
   MARKET_SECTION,
   compSection,
 } from "@/config/strategicCatalog";
 
-// Secciones que alimentan collectStrategies. Es la misma lista que
-// SUMMARY_SOURCE_SECTIONS en src/pages/StrategicSummary.jsx; se repite aquí
-// para que src/api no dependa de una página.
-export const STRATEGY_SOURCE_SECTIONS = [
-  MKT_CONCL_SECTION,
-  OPP_SECTION,
-  OPP_CONCL_SECTION,
-  FIN_SECTION,
-];
+// Secciones que alimentan collectStrategies y buildFoda (catálogo único:
+// mercado, oportunidades, financieras, situaciones y diagnóstico externo).
+export const STRATEGY_SOURCE_SECTIONS = PLAN_SOURCE_SECTIONS;
 
 // Secciones de plan_answers donde viven las decisiones sobre riesgos.
 export const RISK_CONTROLS_SECTION = "risk-controls";

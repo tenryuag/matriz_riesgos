@@ -44,6 +44,9 @@ import StrategicInitiatives from "./StrategicInitiatives";
 import ScoreCard from "./ScoreCard";
 
 import MarketConclusions from "./MarketConclusions";
+import MarketOpportunities from "./MarketOpportunities";
+import ExternalDiagnosis from "./ExternalDiagnosis";
+import StrategicRisks from "./StrategicRisks";
 
 import OpportunityAnalysis from "./OpportunityAnalysis";
 
@@ -150,6 +153,9 @@ const PAGES = {
     MarketAnalysis: MarketAnalysis,
 
     MarketConclusions: MarketConclusions,
+    MarketOpportunities: MarketOpportunities,
+    ExternalDiagnosis: ExternalDiagnosis,
+    StrategicRisks: StrategicRisks,
 
     OpportunityAnalysis: OpportunityAnalysis,
 
@@ -350,6 +356,21 @@ function PagesContent() {
             <Route path="/MarketAnalysis" element={
                 <Layout currentPageName={currentPage}>
                     <MarketAnalysis />
+                </Layout>
+            } />
+            <Route path="/MarketOpportunities" element={
+                <Layout currentPageName={currentPage}>
+                    <MarketOpportunities />
+                </Layout>
+            } />
+            <Route path="/ExternalDiagnosis" element={
+                <Layout currentPageName={currentPage}>
+                    <ExternalDiagnosis />
+                </Layout>
+            } />
+            <Route path="/StrategicRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicRisks />
                 </Layout>
             } />
             <Route path="/MarketConclusions" element={

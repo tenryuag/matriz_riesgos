@@ -63,9 +63,11 @@ import {
   OCEAN_QUESTIONS,
   MKT_CONCL_SECTION,
   OPP_SECTION,
-  OPP_CONCL_SECTION,
   FIN_SECTION,
+  FIN_SIT_SECTION,
+  EXT_SECTION,
   RATING_SECTION,
+  PLAN_SOURCE_SECTIONS,
 } from '../_shared/app/strategicCatalog.js'
 import {
   collectStrategies,
@@ -318,7 +320,7 @@ Deno.serve(
             if (can(access, 'strategic')) {
             const plan = await getPlan(supabase)
             if (plan) {
-              const sections = await answersFor(supabase, plan.id, [MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION])
+              const sections = await answersFor(supabase, plan.id, [...PLAN_SOURCE_SECTIONS, RATING_SECTION])
               const ratings = sections[RATING_SECTION] || {}
               const { weaknesses } = collectStrategies(sections)
               const scored = weaknesses.map((w: Db) => ({ ...w, priority: priorityFor(scoreFor(ratings, w.id)) }))
@@ -512,7 +514,7 @@ Deno.serve(
           async () => {
             const plan = await getPlan(supabase)
             if (!plan) return text({ mensaje: 'El usuario aún no ha empezado su planeación estratégica.' })
-            const sections = await answersFor(supabase, plan.id, [CUSTOMER_SECTION, MARKET_SECTION, MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION])
+            const sections = await answersFor(supabase, plan.id, [CUSTOMER_SECTION, MARKET_SECTION, ...PLAN_SOURCE_SECTIONS, RATING_SECTION])
             const { data: comps } = await supabase.from('competitors').select('id, name').eq('plan_id', plan.id)
             const { data: inits } = await supabase.from('strategic_initiatives').select('id').eq('plan_id', plan.id)
             const ratings = sections[RATING_SECTION] || {}
@@ -527,8 +529,11 @@ Deno.serve(
                 conclusiones_mercado: Object.values(sections[MKT_CONCL_SECTION] || {}).filter(Boolean).length,
                 oportunidades_respondidas: Object.values(sections[OPP_SECTION] || {}).filter(Boolean).length,
                 estrategias_financieras_marcadas: Object.values(sections[FIN_SECTION] || {}).filter(Boolean).length,
+                situaciones_financieras_marcadas: Object.values(sections[FIN_SIT_SECTION] || {}).filter((v) => v === 'Sí').length,
+                diagnostico_externo_respondido: Object.values(sections[EXT_SECTION] || {}).filter(Boolean).length,
                 fortalezas: strengths.length,
-                debilidades: weaknesses.length,
+                debilidades: weaknesses.filter((w: Db) => w.source !== 'external').length,
+                estrategias_diagnostico_externo: weaknesses.filter((w: Db) => w.source === 'external').length,
                 prioridad_alta: prio.filter((p) => p === 'Alta').length,
                 prioridad_media: prio.filter((p) => p === 'Media').length,
                 prioridad_baja: prio.filter((p) => p === 'Baja').length,
@@ -552,12 +557,12 @@ Deno.serve(
           async ({ prioridad }) => {
             const plan = await getPlan(supabase)
             if (!plan) return text({ mensaje: 'El usuario aún no ha empezado su planeación estratégica.' })
-            const sections = await answersFor(supabase, plan.id, [MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION])
+            const sections = await answersFor(supabase, plan.id, [...PLAN_SOURCE_SECTIONS, RATING_SECTION])
             const ratings = sections[RATING_SECTION] || {}
             const { data: inits } = await supabase.from('strategic_initiatives').select('strategy_id').eq('plan_id', plan.id)
             const initCount: Record<string, number> = {}
             for (const i of inits || []) initCount[i.strategy_id] = (initCount[i.strategy_id] || 0) + 1
-            const SOURCE = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas' } as Record<string, string>
+            const SOURCE = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas', external: 'Diagnóstico externo' } as Record<string, string>
             let rows = collectStrategies(sections).weaknesses.map((w: Db) => {
               const score = scoreFor(ratings, w.id)
               return {
@@ -585,7 +590,7 @@ Deno.serve(
         server.registerTool(
           'foda',
           {
-            description: 'FODA automático del plan: fortalezas y debilidades (con prioridad) de las conclusiones, oportunidades Blue Ocean y amenazas detectadas en la comparación con competidores.',
+            description: 'FODA automático del plan con la redacción de la metodología: fortalezas y debilidades (con prioridad) de las conclusiones del mercado, las palancas y las situaciones financieras; oportunidades y amenazas del diagnóstico externo, de la comparación con competidores (mejor que la empresa = amenaza, peor = oportunidad) y del Blue Ocean (crear / incrementar).',
             inputSchema: z.object({}),
             annotations: { readOnlyHint: true },
           },
@@ -595,7 +600,7 @@ Deno.serve(
             const { data: comps, error } = await supabase.from('competitors').select('id, name').eq('plan_id', plan.id)
             if (error) throw new Error(error.message)
             const sections = await answersFor(supabase, plan.id, [
-              MARKET_SECTION, MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION,
+              MARKET_SECTION, ...PLAN_SOURCE_SECTIONS, RATING_SECTION,
               ...(comps || []).map((c: Db) => compSection(c.id)),
             ])
             return text(buildFoda({ sections, competitors: comps || [], ratings: sections[RATING_SECTION] || {} }))
@@ -616,7 +621,7 @@ Deno.serve(
             if (!plan) return text({ mensaje: 'El usuario aún no ha empezado su planeación estratégica.' })
             const [{ data: inits, error }, sections] = await Promise.all([
               supabase.from('strategic_initiatives').select('*').eq('plan_id', plan.id).order('position', { ascending: true }),
-              answersFor(supabase, plan.id, [MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION]),
+              answersFor(supabase, plan.id, PLAN_SOURCE_SECTIONS),
             ])
             if (error) throw new Error(error.message)
             const labels = new Map(collectStrategies(sections).weaknesses.map((w: Db) => [w.id, w.label]))

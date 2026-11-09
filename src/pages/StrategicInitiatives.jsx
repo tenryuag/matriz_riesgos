@@ -16,6 +16,7 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -28,6 +29,7 @@ import SaveStatusBar from "@/components/SaveStatusBar";
 import RiskWarningsCard from "@/components/strategy/RiskWarningsCard";
 import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
 import IaInitiativeSuggest from "@/components/strategy/IaInitiativeSuggest";
+import InlinePerspectivePicker from "@/components/strategy/InlinePerspectivePicker";
 import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
 import {
   RISK_ACKNOWLEDGED,
@@ -101,7 +103,7 @@ const scrollToId = (domId) =>
   document.getElementById(domId)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 export default function StrategicInitiatives() {
-  const { inputs, loading, error: loadError, risksEnabled } = useStrategyInputs();
+  const { inputs, loading, error: loadError, risksEnabled, reload } = useStrategyInputs();
   const today = localISODate();
 
   const [planId, setPlanId] = useState(null);
@@ -643,6 +645,11 @@ export default function StrategicInitiatives() {
             </button>
           </div>
 
+          {/* Sin perspectiva: se asigna aquí mismo, sin ir a la matriz */}
+          {!o.perspective && (
+            <InlinePerspectivePicker riskId={o.riskId} value={null} onSaved={reload} />
+          )}
+
           <div className="flex flex-wrap gap-4 text-xs">
             <Link
               to={createPageUrl(`AddRisk?id=${o.riskId}`)}
@@ -650,14 +657,6 @@ export default function StrategicInitiatives() {
             >
               <ExternalLink className="w-3 h-3" /> Corregir probabilidad e impacto en la matriz →
             </Link>
-            {!o.perspective && (
-              <Link
-                to={createPageUrl(`AddRisk?id=${o.riskId}`)}
-                className="inline-flex items-center gap-1.5 text-accent font-subtitle hover:underline"
-              >
-                <ExternalLink className="w-3 h-3" /> Asignar perspectiva →
-              </Link>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -814,13 +813,35 @@ export default function StrategicInitiatives() {
               <Card key={obj.id} className="glass">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-                    <p className="font-subtitle text-sm flex-grow">{obj.label}</p>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-subtitle text-sm">{obj.label}</p>
+                      {obj.kind && (
+                        <p className="text-xs text-muted mt-1">
+                          {obj.kind} detectada en tu diagnóstico externo
+                        </p>
+                      )}
+                    </div>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-subtitle border border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400 flex-shrink-0">
                       Prioridad alta
                     </span>
                   </div>
                   <div className="space-y-3">
                     {list.map(renderInitiativeCard)}
+                    {/* Iniciativa sugerida por el diagnóstico externo (un clic la agrega) */}
+                    {obj.suggestion &&
+                      !list.some((it) => (it.title || "").trim() === obj.suggestion) && (
+                        <button
+                          type="button"
+                          onClick={() => addInitiativeFrom(obj.id, null, { title: obj.suggestion })}
+                          className="w-full flex items-start gap-3 p-3 glass rounded-xl text-left hover:border-accent transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                          <span className="text-sm min-w-0">
+                            <span className="font-subtitle">Iniciativa sugerida:</span> {obj.suggestion}
+                            <span className="block text-xs text-accent font-subtitle mt-0.5">Agregar al plan →</span>
+                          </span>
+                        </button>
+                      )}
                     <IaInitiativeSuggest
                       objective={{
                         id: obj.id,

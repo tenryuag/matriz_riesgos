@@ -108,8 +108,8 @@ Las herramientas se ofrecen **según los módulos a los que el usuario tiene acc
 | `obtener_riesgo` | Detalle completo de un riesgo: calificación, estrategia, controles con su evaluación, residual |
 | `resumen_riesgos` | Conteos por nivel y departamento; críticos sin controles o con residual aún alto |
 | `resumen_plan` | Visión, misión, valores y avance de cada paso de la planeación estratégica |
-| `prioridades` | Debilidades con puntaje, prioridad (Alta/Media/Baja), perspectiva e iniciativas |
-| `foda` | FODA automático |
+| `prioridades` | Estrategias a priorizar con puntaje, prioridad (Alta/Media/Baja), perspectiva, `fuente` (Análisis del mercado / Oportunidades / Finanzas / Diagnóstico externo) e iniciativas |
+| `foda` | FODA automático con la redacción de la metodología (Excel v2_FODA, nov-2026): fortalezas y debilidades (con prioridad) de las conclusiones del mercado, las palancas y las situaciones financieras; oportunidades y amenazas del diagnóstico externo, de la comparación con competidores (mejor que la empresa = amenaza, peor = oportunidad; `detail` con los nombres) y del Blue Ocean. Items `{ id, label, strategy?, source, tag?, detail?, kind?, priority?, score? }` |
 | `iniciativas` | Plan de acción con responsable, fechas, presupuesto y estado (vencidas, próximas, sin responsable) |
 | `analisis_cliente` | Las 9 preguntas del cliente con sus respuestas |
 | `competidores` | Comparación con cada competidor y respuestas Blue Ocean |
@@ -135,6 +135,8 @@ Todas devuelven `moneda`, `unidad: 'miles'` y una lista `periodos` con `periodo`
 
 Las fórmulas, los motivos de N/A y las bandas del semáforo son las de [02 - Reglas de Negocio §7](./02-REGLAS-DE-NEGOCIO.md); `index.ts` no las repite: llama a `computeIncome`, `computeBalance`, `computeEbitda`, `computeCashflow`, `computeRatios`, `summarizeRatios`, `computeSegments`, `computeExpenseBreakdown` y `computeSeasonality` de `_shared/app/finCalc.js`.
 
+> **Nota (FODA v2, 9-nov-2026):** `index.ts` lee las secciones del plan con `PLAN_SOURCE_SECTIONS` (incluye `financial-situations` y `external-diagnosis`), `prioridades` / `resumen_plan` traducen `source: 'external'` como "Diagnóstico externo" y la descripción de `foda` cambió; las copias de `_shared/app/` ya traen el catálogo y el motor nuevos (`npm run mcp:sync` corrido). **Hay que redesplegar `mcp`** para que el conector devuelva el FODA con la redacción nueva (reglas PE1–PE14 en [02 - Reglas de Negocio §9](./02-REGLAS-DE-NEGOCIO.md)); hasta entonces responde con el FODA anterior, sin romperse.
+
 > **Nota (Fase 2 de perspectivas — riesgos críticos en el plan):** las funciones nuevas de `src/config/strategicCalc.js` (`riskObjectivesFrom`, `riskInitiativeWarnings`, `focusItems`, `mergeFodaWithRisks`, plantillas de `strategicCatalog.js`, etc.) ya están **sincronizadas** a `supabase/functions/_shared/app/` con `npm run mcp:sync`, pero el servidor **aún no las expone**: `resumen_plan`, `prioridades`, `foda` e `iniciativas` siguen respondiendo solo con debilidades y no incluyen los riesgos críticos que la app ya muestra como objetivos de prioridad alta. Incorporarlos a las herramientas estratégicas (y a `resumen_general`) queda para una fase posterior; `index.ts` no cambió y la función no se redesplegó por esta fase.
 
 
@@ -159,4 +161,4 @@ Para probar sin pasar por Claude: crear un usuario de prueba con `POST /auth/v1/
 
 - Herramientas de escritura con confirmación (crear riesgo como borrador, agregar iniciativa, marcar control como implementado).
 - Perspectivas en lugar de departamentos cuando se apruebe esa propuesta (la herramienta `listar_departamentos` pasará a `listar_perspectivas`).
-- **Redesplegar la función por el modelo MP-AFH1** (`npm run mcp:sync` ya corrido; falta `npx supabase functions deploy mcp --no-verify-jwt`). El código de `index.ts` (v1.1.0) y las copias en `_shared/app/` ya siguen el modelo nuevo, pero la función **no se desplegó en esta fase**: en producción sigue la v1.0.0 con el modelo anterior (18 razones, flujo directo, `computeIncome` por líneas). Hay que desplegarla **junto con** la migración `supabase-fin-model-afh1.sql` y el despliegue de la app: una vez migrados los datos, la función vieja leería secciones y claves que ya no existen (`cost:<lineId>`, `balance.caja`) y devolvería ceros. Desplegar la función `ia` del asistente de IA **no** resuelve este pendiente: cada Edge Function se empaqueta por separado, así que `mcp` sigue en producción con la versión anterior hasta que se despliegue explícitamente.
+- **Redesplegar la función por FODA v2** (9-nov-2026): `npm run mcp:sync` ya corrido; falta `npx supabase functions deploy mcp --no-verify-jwt --project-ref hcmeoducjqudokfhhvyc`. La versión desplegada el 2-nov-2026 (modelo MP-AFH1) sigue funcionando, pero devuelve el FODA con la redacción anterior y sin las secciones nuevas. Desplegar la función `ia` **no** resuelve este pendiente: cada Edge Function se empaqueta por separado.

@@ -135,7 +135,7 @@ La integración riesgos → plan no agrega entidades: usa estos métodos existen
 | Método                       | Firma                                            | Descripción                                                                                                                                                                                                                                                                                               |
 | ---------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Risk.listCritical`          | `listCritical({ perspective? })`                 | Riesgos del usuario con `inherent_score >= 13`, ordenados por gravedad. **Ninguna página lo llama directamente**: solo `loadStrategyInputs`, y solo si `includeRisks` es `true` (usuario con el módulo `risk`). Ante error de permisos o columnas faltantes devuelve `[]` y avisa en consola. |
-| `loadStrategyInputs`         | `loadStrategyInputs({ includeRisks, extraSections })` | Devuelve `{ plan, sections, ratings, competitors, initiatives, risks, decisions }`; `decisions = { controls, objectives }` son las secciones `risk-controls` y `risk-objectives` de `plan_answers`. Las páginas la consumen a través del hook `useStrategyInputs`.                                   |
+| `loadStrategyInputs`         | `loadStrategyInputs({ includeRisks, extraSections })` | Devuelve `{ plan, sections, ratings, competitors, initiatives, risks, decisions }`; `sections` trae `PLAN_SOURCE_SECTIONS` (`STRATEGY_SOURCE_SECTIONS` es un alias; incluye `financial-situations` y `external-diagnosis` desde nov-2026) más `market`, `summary-ratings`, las de competidores y `extraSections`, cada una garantizada como objeto; `decisions = { controls, objectives }` son las secciones `risk-controls` y `risk-objectives` de `plan_answers`. Las páginas la consumen a través del hook `useStrategyInputs`.                                   |
 | `Initiative.list`            | `list(planId)`                                   | Filas completas, con `source_key` y `strategy_label` (`NULL` en las manuales). El estado de la pantalla de iniciativas nace **siempre** de aquí.                                                                                                                                                       |
 | `Initiative.createFromSource` | `createFromSource(planId, rows)`                | **Única vía** por la que una iniciativa nace con `source_key`. Hace `upsert` con `onConflict: "plan_id,source_key"` e `ignoreDuplicates: true`: repetir el clic no duplica ni pisa ediciones. Exige `source_key` y `strategy_id` en cada fila.                                                        |
 | `Initiative.upsertMany`      | `upsertMany(planId, rows)`                       | Autosave. Manda `source_key`/`strategy_label` solo si la fila trae la propiedad (supabase-js arma las columnas con la unión de claves de todas las filas: una fila sin la propiedad se guarda con `NULL`). Por eso las filas del estado deben venir de `list()`.                                   |
@@ -169,6 +169,26 @@ Cualquier otro valor se trata como no confirmado. Si el riesgo cambia a Reducir/
 #### `plan_answers` sección `risk-controls` (`RISK_CONTROLS_SECTION`)
 
 **Reservada: no se usa en la Fase 2.** La fuente de verdad de "este control ya es iniciativa" es `strategic_initiatives.source_key`. No escribir nada en esa sección.
+
+#### Secciones de `plan_answers` del módulo estratégico
+
+`plan_answers (plan_id, section, question_key, answer TEXT, updated_at)` con índice único `(plan_id, section, question_key)`. Métodos de `StrategicPlan`: `getAnswers(planId, section)`, `getAnswersForSections(planId, [sections])` → `{ [section]: { key: answer } }`, `saveAnswers(planId, section, answers)` y `saveSections(planId, { [section]: answers })`, ambos `upsert` por esa llave: **guardar un subconjunto de claves no borra las demás** (así `MarketOpportunities` guarda solo `bo_*` sin tocar `rs_propia`); desmarcar se guarda como `""`. Las constantes viven en `src/config/strategicCatalog.js`; `PLAN_SOURCE_SECTIONS` reúne las seis de catálogo que leen `collectStrategies` y `buildFoda` (la app, el MCP y la función IA la usan tal cual).
+
+| Sección (`section`) | Constante | `question_key` | `answer` | Pantalla |
+| --- | --- | --- | --- | --- |
+| `customer` | `CUSTOMER_SECTION` | claves de `CUSTOMER_QUESTIONS` | texto libre | Análisis del cliente |
+| `market` | `MARKET_SECTION` | `bo_eliminar`, `bo_reducir`, `bo_crear`, `bo_incrementar`, `rs_propia` | texto libre (una oportunidad por línea en `bo_crear` / `bo_incrementar`); `rs_propia` "Sí" / "No" | Oportunidades del mercado (`bo_*`) y Análisis del mercado (`rs_propia`) |
+| `market-comp:<competitorId>` | `compSection(id)` | claves de `COMP_GROUPS` | opciones de cada pregunta (`Mayor/Menor/Igual`, `Sí/No`, …) o texto | Análisis del mercado |
+| `market-conclusions` | `MKT_CONCL_SECTION` | claves de `MKT_CATALOG` | `"F"` (voy a mantener) / `"D"` (voy a cambiar) | Conclusiones del mercado |
+| `opportunities` | `OPP_SECTION` | claves de `OPP_GROUPS` | `"Sí"` / `"No"` | Análisis de oportunidades |
+| `opportunity-conclusions` | `OPP_CONCL_SECTION` | claves de `OPP_GROUPS` | `"F"` / `"D"` **solo los ajustes manuales** (lo automático se recalcula con `effectiveConclusions`) | Conclusión de oportunidades |
+| `financial-situations` (**nueva, nov-2026**) | `FIN_SIT_SECTION` | claves de `ALL_FIN_SITUATIONS` (`sit_*`) | `"Sí"` marcada / `""` desmarcada | Estrategias financieras, paso 1 |
+| `financial-strategies` | `FIN_SECTION` | claves de `FIN_GROUPS` | `"D"` marcada / `""` | Estrategias financieras, paso 2 |
+| `external-diagnosis` (**nueva, nov-2026**) | `EXT_SECTION` | claves de `EXT_GROUPS` (`ext_*`) | `"Sí"` / `"No"` | Diagnóstico externo |
+| `summary-ratings` | `RATING_SECTION` | `<strategyId>:costo` / `:riesgo` / `:complejidad` / `:beneficio` (p. ej. `mkt:precio_valor:costo`, `ext:ext_sustitutos:riesgo`) | `Alto/Medio/Bajo`, `Alta/Media/Baja`, `Ingresos/Ahorros` | Resumen y priorización |
+| `risk-objectives` | `RISK_OBJECTIVES_SECTION` | `<risk.id>` | `'acknowledged'` | Iniciativas (ver arriba) |
+| `risk-controls` | `RISK_CONTROLS_SECTION` | — | — | Reservada (ver arriba) |
+
 
 #### Patrón "anexar, no reemplazar" tras `createFromSource`
 

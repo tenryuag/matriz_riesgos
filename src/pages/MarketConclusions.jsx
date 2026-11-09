@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan, Competitor } from "@/api/entities";
@@ -273,9 +273,9 @@ export default function MarketConclusions() {
 
       {/* Siguiente paso del recorrido */}
       <div className="flex justify-between gap-3 flex-wrap">
-        <Link to={createPageUrl("MarketAnalysis")}>
+        <Link to={createPageUrl("MarketOpportunities")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Análisis del mercado
+            <ArrowLeft className="w-4 h-4 mr-2" /> Oportunidades del mercado
           </Button>
         </Link>
         <Link to={createPageUrl("OpportunityAnalysis")}>

@@ -23,11 +23,8 @@ import {
   summarizeRatios,
 } from '../_shared/app/finCalc.js'
 import {
-  FIN_SECTION,
   MARKET_SECTION,
-  MKT_CONCL_SECTION,
-  OPP_CONCL_SECTION,
-  OPP_SECTION,
+  PLAN_SOURCE_SECTIONS,
   RATING_SECTION,
   compSection,
 } from '../_shared/app/strategicCatalog.js'
@@ -347,7 +344,7 @@ export async function answersFor(supabase: Db, planId: string, sections: string[
   return map
 }
 
-const SOURCE: Record<string, string> = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas' }
+const SOURCE: Record<string, string> = { market: 'Análisis del mercado', opportunities: 'Oportunidades', financial: 'Finanzas', external: 'Diagnóstico externo' }
 const MAX_INICIATIVAS = 40
 
 // Plan del usuario: identidad, FODA, debilidades con prioridad e iniciativas
@@ -359,7 +356,7 @@ export async function planContext(supabase: Db) {
   if (error) throw new Error(error.message)
   const [sections, { data: inits, error: e2 }] = await Promise.all([
     answersFor(supabase, plan.id, [
-      MARKET_SECTION, MKT_CONCL_SECTION, OPP_SECTION, OPP_CONCL_SECTION, FIN_SECTION, RATING_SECTION,
+      MARKET_SECTION, ...PLAN_SOURCE_SECTIONS, RATING_SECTION,
       ...((comps as Db[]) || []).map((c: Db) => compSection(c.id)),
     ]),
     supabase.from('strategic_initiatives').select('*').eq('plan_id', plan.id).order('position', { ascending: true }),
@@ -398,8 +395,10 @@ export async function planContext(supabase: Db) {
     competidores: ((comps as Db[]) || []).map((c: Db) => c.name),
     fortalezas: (foda.fortalezas as Db[]).map((f: Db) => f.label),
     debilidades,
-    oportunidades: (foda.oportunidades as Db[]).map((o: Db) => o.label ?? o),
-    amenazas: (foda.amenazas as Db[]).map((a: Db) => a.label ?? a),
+    // Las líneas que salen de la comparación con competidores traen en
+    // `detail` los nombres de los competidores que cumplen la regla.
+    oportunidades: (foda.oportunidades as Db[]).map((o: Db) => (o.detail ? `${o.label} (${o.detail})` : o.label ?? o)),
+    amenazas: (foda.amenazas as Db[]).map((a: Db) => (a.detail ? `${a.label} (${a.detail})` : a.label ?? a)),
     iniciativas: todasIniciativas.slice(0, MAX_INICIATIVAS).map((i: Db) => ({
       titulo: i.title || '(sin título)',
       objetivo: i.strategy_id?.startsWith('risk:')

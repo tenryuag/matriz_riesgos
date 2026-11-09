@@ -32,7 +32,9 @@ import {
   Gauge,
   PieChart,
   CalendarRange,
-  Sparkles
+  Sparkles,
+  Radar,
+  ShieldAlert
 } from "lucide-react";
 
 // ============================================================
@@ -128,12 +130,15 @@ export const MODULES = [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
       { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users, group: "analysis" },
       { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe, group: "analysis" },
+      { pageKey: "MarketOpportunities", nameKey: "navMarketOpportunities", icon: Waves, group: "analysis" },
       { pageKey: "MarketConclusions", nameKey: "navMarketConclusions", icon: ClipboardCheck, group: "analysis" },
       { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout, group: "analysis" },
       { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks, group: "analysis" },
       { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote, group: "analysis" },
+      { pageKey: "ExternalDiagnosis", nameKey: "navExternalDiagnosis", icon: Radar, group: "analysis" },
       { pageKey: "Foda", nameKey: "navFoda", icon: Grid2x2, group: "strategy" },
       { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered, group: "strategy" },
+      { pageKey: "StrategicRisks", nameKey: "navStrategicRisks", icon: ShieldAlert, group: "strategy" },
       { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map, group: "strategy" },
       { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter, group: "strategy" },
       { pageKey: "StrategicInitiatives", nameKey: "navStrategicInitiatives", icon: ClipboardList, group: "action" },
