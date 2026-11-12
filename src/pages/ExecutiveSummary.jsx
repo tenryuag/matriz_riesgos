@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { createPageUrl } from "@/utils";
 import {
@@ -290,6 +290,12 @@ export default function ExecutiveSummary() {
   // Si ya no hay datos que resumir, no se pinta el documento guardado: solo el
   // estado vacío.
   const showDoc = hasDoc && !sinDatosError;
+
+  // Por ahora el resumen es solo para administradores (igual que su tarjeta
+  // en el selector de módulos).
+  if (!accessLoading && !isAdmin) {
+    return <Navigate to={createPageUrl("ModuleLauncher")} replace />;
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-24 print:pb-0">
