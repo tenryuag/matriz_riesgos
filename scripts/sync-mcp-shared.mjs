@@ -8,7 +8,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dest = join(root, "supabase", "functions", "_shared", "app");
 mkdirSync(dest, { recursive: true });
-for (const f of ["finConfig.js", "finCalc.js", "strategicCatalog.js", "strategicCalc.js"]) {
+for (const f of [
+  "finConfig.js",
+  "finCalc.js",
+  "strategicCatalog.js",
+  "strategicCalc.js",
+  "perspectives.js",
+  "riskCalc.js",
+]) {
   copyFileSync(join(root, "src", "config", f), join(dest, f));
   console.log("sincronizado", f);
 }

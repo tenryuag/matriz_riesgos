@@ -164,6 +164,8 @@ WHERE email = 'admin@ejemplo.com';
 | `/AllRisks`          | `AllRisks`          | No              |
 | `/InvitationCodes`   | `InvitationCodes`   | **Sí**          |
 | `/AddInvitationCode` | `AddInvitationCode` | **Sí**          |
+| `/ExecutiveSummary`  | `ExecutiveSummary`  | No (resumen ejecutivo con IA; ver [IA.md](./IA.md)) |
+| `/IaUsage`           | `IaUsageAdmin`      | **Sí** (panel «Uso de IA») |
 
 ### Mecanismo de Protección
 
@@ -224,6 +226,41 @@ Además de la protección en el frontend, la base de datos tiene **Row Level Sec
 - Usuarios anónimos pueden validar códigos durante el registro (a través de la función RPC `validate_and_use_invitation_code` con `SECURITY DEFINER`)
 
 > Ver detalles completos de RLS en [03 - Base de Datos](./03-BASE-DE-DATOS.md)
+
+## Edge Function `ia` (asistente de IA): JWT, RLS y secretos
+
+El asistente de IA ([IA.md](./IA.md)) añade una pieza del lado del servidor que también debe respetar "cada quien ve solo lo suyo". Cómo lo consigue:
+
+```mermaid
+sequenceDiagram
+    participant App as Frontend (supabase-js)
+    participant F as Edge Function ia
+    participant SA as Supabase Auth
+    participant DB as PostgreSQL (RLS)
+    participant C as API de Claude
+
+    App->>F: POST /functions/v1/ia { action, … }<br/>Authorization: Bearer JWT del usuario
+    F->>SA: auth.getUser(token)
+    SA-->>F: user (role = authenticated) — si no, 401 sin_sesion
+    F->>DB: is_admin(), user_module_access (con el token del usuario)
+    F->>DB: ia_reserve(user, acción, estimado) con service_role → reserva o 429
+    F->>DB: contexto: fin_*, risks, strategic_* (con el token del usuario → RLS "solo el dueño")
+    F->>C: prompt + JSON Schema (ANTHROPIC_API_KEY, solo en el servidor)
+    C-->>F: JSON
+    F->>DB: INSERT ia_usage; upsert ia_resultados (service_role)
+    F-->>App: { ok, result, usage, cached, generated_at }
+```
+
+1. **Verificación del token.** `supabase.functions.invoke` manda el `access_token` de la sesión como bearer. La función lo verifica **contra el servidor de Auth** (`auth.getUser(token)`) y exige `role = 'authenticated'`; sin token válido responde `401 sin_sesion`. Por eso `supabase/config.toml` declara `[functions.ia] verify_jwt = false`: igual que el servidor MCP, la función verifica por sí misma (el gateway rechazaría los tokens HS256 del proyecto; ver la nota técnica en [MCP.md](./MCP.md)) y además debe poder responder el preflight CORS, que llega sin token.
+2. **RLS del usuario.** Con ese mismo token crea el cliente de datos: toda lectura de contexto (análisis financiero, riesgos, plan estratégico) pasa por las políticas "solo el dueño" de cada tabla. Un administrador tampoco ve datos de otros a través de la IA.
+3. **Acceso por módulo.** Antes de ejecutar, comprueba `is_admin()` y `user_module_access` con el cliente del usuario y el módulo que exige la acción (`sin_acceso`, 403). Una cuenta sin módulos solo puede llamar a la acción `estado`.
+4. **`service_role` acotado.** El cliente con `SUPABASE_SERVICE_ROLE_KEY` se usa solo para las RPC `ia_reserve` / `ia_usage_window` (topes), para completar o borrar la fila reservada en `ia_usage` y la lectura / `upsert` en `ia_resultados` **del usuario que llama**; nunca para leer datos de negocio. Desde la app esas dos tablas solo se leen (RLS: lo propio; el administrador, toda la bitácora).
+5. **La llave como secreto.** `ANTHROPIC_API_KEY` (y los opcionales `IA_MODEL`, `IA_DAILY_USD`, `IA_DAILY_CALLS`, `IA_MONTHLY_USD`) viven en Supabase → Edge Functions → Secrets (`npx supabase secrets set …`). El navegador nunca los recibe ni habla con la API de Claude; si la llave falta o es inválida, la función responde `no_configurado` (503) y la app lo muestra como aviso informativo.
+6. **Topes.** 2 USD y 40 llamadas por usuario en 24 h, 150 USD globales en 30 días (`limite_diario` / `limite_global`, 429), para que una sola cuenta no pueda disparar el gasto. La reserva es atómica (candado por usuario en la RPC), así que varias peticiones en paralelo tampoco rebasan el tope; la lectura de PDF además rechaza entradas de más de 60 000 tokens.
+
+Rutas nuevas: `/ExecutiveSummary` (protegida; cualquier usuario con al menos un módulo; se muestra sin menú de módulo) y `/IaUsage` (página del módulo de administración: solo los admins la ven en el menú y `ia_usage_by_user` devuelve vacío a los demás).
+
+---
 
 ---
 

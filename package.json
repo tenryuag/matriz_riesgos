@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mcp:sync": "node scripts/sync-mcp-shared.mjs"
+    "mcp:sync": "node scripts/sync-mcp-shared.mjs",
+    "ia:check": "cd supabase/functions/ia && npx -y deno@2 check --node-modules-dir=none index.ts && npx -y deno@2 run --node-modules-dir=none --allow-read --allow-env --allow-net ../../../scripts/check-ia-schemas.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",

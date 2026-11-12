@@ -10,3 +10,8 @@ project_id = "hcmeoducjqudokfhhvyc"
 # El servidor MCP verifica el token OAuth por sí mismo (withSupabase) y debe
 # poder responder 401 con el descubrimiento OAuth a peticiones sin token.
 verify_jwt = false
+
+[functions.ia]
+# Asistente de IA de la app. Verifica el JWT del usuario por sí misma (igual
+# que `mcp`) y responde el preflight CORS sin token.
+verify_jwt = false

@@ -54,12 +54,39 @@ export async function forceLogout() {
   }
 }
 
-// Para usar en el `catch`/manejo de error de las consultas: si el error es de
-// sesión, cierra sesión y redirige; en cualquier otro caso, relanza el error
-// para que la página lo maneje como siempre (validaciones, etc.).
+// Mensajes amigables para errores de restricciones de la BD que el usuario
+// puede llegar a ver (PostgreSQL devuelve el código SQLSTATE en error.code).
+const CONSTRAINT_MESSAGES = {
+  // CHECK violado: p. ej. una perspective_key fuera del catálogo.
+  "23514":
+    "Valor no permitido (por ejemplo, una perspectiva que no existe). Recarga la página e inténtalo de nuevo.",
+  // UNIQUE violado.
+  "23505": "Ya existe un registro igual.",
+};
+
+// Para usar en el `catch`/manejo de error de las consultas:
+// - si el error es de sesión, cierra sesión, redirige y relanza el error
+//   original (las páginas lo reconocen con isAuthError);
+// - si es una restricción conocida de la BD (CHECK, UNIQUE), relanza un Error
+//   con mensaje en español, conservando `code`, `details` y `hint` del
+//   original (y el original en `cause`) para quien quiera inspeccionarlo;
+// - en cualquier otro caso, relanza el error tal cual para que la página lo
+//   maneje como siempre (validaciones, etc.).
 export function handleQueryError(error) {
   if (isAuthError(error)) {
     forceLogout();
+    throw error;
   }
+
+  const friendly = CONSTRAINT_MESSAGES[error?.code];
+  if (friendly) {
+    const err = new Error(friendly);
+    err.code = error.code;
+    err.details = error.details;
+    err.hint = error.hint;
+    err.cause = error;
+    throw err;
+  }
+
   throw error;
 }

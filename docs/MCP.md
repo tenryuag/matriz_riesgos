@@ -4,8 +4,10 @@ La app expone un **servidor MCP** (Model Context Protocol) para que un cliente d
 
 - **Solo lectura** (versión 1): ninguna herramienta modifica datos.
 - **Cada quien ve solo lo suyo**: el cliente MCP se autentica con la cuenta del usuario (OAuth 2.1) y cada herramienta corre con las mismas políticas "solo el dueño" de la base de datos.
-- **Mismos cálculos que la app**: prioridades, FODA y estados financieros salen de los módulos de `src/config/` copiados a la función con `npm run mcp:sync`.
+- **Mismos cálculos que la app**: prioridades, FODA y estados financieros (modelo MP-AFH1: Estado de Resultados, Balance, Estado de cambios, EBITDA, 41 razones y análisis opcionales) salen de los módulos de `src/config/` copiados a la función con `npm run mcp:sync`.
 - **Costo para nosotros**: solo la invocación de la Edge Function (despreciable). La conversación la paga el usuario con su propia cuenta de Claude.
+
+> **Nota:** el **asistente de IA dentro de la app** (botones «Explicar con IA», «Importar desde PDF», «Sugerir con IA», «Sugerir iniciativa con IA» y el Resumen ejecutivo) es **otra pieza**: la Edge Function `ia`, que llama a Claude con la llave de la consultoría y sin chat; está documentada en [IA.md](./IA.md). Las dos funciones comparten los módulos de `supabase/functions/_shared/app/` (copias de `src/config/` hechas con `npm run mcp:sync`), pero cada una se despliega por separado: desplegar `ia` no toca a `mcp`.
 
 URL del servidor (la que se registra en Claude): **`https://app.mara-perez.online/mcp`**
 
@@ -64,7 +66,7 @@ npx supabase functions deploy mcp --no-verify-jwt
 npx supabase functions list             # debe aparecer "mcp"
 ```
 
-Cada vez que cambie algo en `src/config/finCalc.js`, `finConfig.js`, `strategicCatalog.js` o `strategicCalc.js`, hay que volver a correr `npm run mcp:sync` y desplegar.
+Cada vez que cambie algo en `src/config/finCalc.js`, `finConfig.js`, `strategicCatalog.js`, `strategicCalc.js`, `perspectives.js` o `riskCalc.js` (los seis archivos que copia `scripts/sync-mcp-shared.mjs`), hay que volver a correr `npm run mcp:sync` y desplegar las dos funciones que los usan: `mcp` y la `ia` del asistente ([IA.md](./IA.md)).
 
 ### 3. Probar
 
@@ -96,27 +98,49 @@ Las herramientas se ofrecen **según los módulos a los que el usuario tiene acc
 | (siempre) | `resumen_general` |
 | Gestión del Riesgo (`risk`) | `listar_departamentos`, `listar_riesgos`, `obtener_riesgo`, `resumen_riesgos` |
 | Planeación Estratégica (`strategic`) | `resumen_plan`, `prioridades`, `foda`, `iniciativas`, `analisis_cliente`, `competidores` |
-| Análisis Financiero (`fin-analysis`) | `empresa_financiera`, `estado_resultados`, `balance_general`, `flujo_efectivo` |
+| Análisis Financiero (`fin-analysis`) | `empresa_financiera`, `estado_resultados`, `balance_general`, `flujo_efectivo`, `razones_financieras`, `analisis_opcionales` |
 
 | Herramienta | Qué devuelve |
 |---|---|
-| `resumen_general` | Vista rápida de los tres módulos: riesgos críticos, prioridades, iniciativas vencidas, últimas cifras |
+| `resumen_general` | Vista rápida de los tres módulos: riesgos críticos, prioridades, iniciativas vencidas y, en `analisis_financiero`, el último periodo (`empresa`, `moneda`, `unidad`, `ultimo_periodo`, `parcial`, `ventas`, `crecimiento_ventas`, `margen_operativo`, `liquidez` como texto de `formatRatio` y `semaforo_razones` = { verde, ambar, rojo }) |
 | `listar_departamentos` | Departamentos con conteo de riesgos |
 | `listar_riesgos` | Riesgos (compactos) con filtros por nivel inherente/residual, tipo de amenaza, departamento y texto |
 | `obtener_riesgo` | Detalle completo de un riesgo: calificación, estrategia, controles con su evaluación, residual |
 | `resumen_riesgos` | Conteos por nivel y departamento; críticos sin controles o con residual aún alto |
 | `resumen_plan` | Visión, misión, valores y avance de cada paso de la planeación estratégica |
-| `prioridades` | Debilidades con puntaje, prioridad (Alta/Media/Baja), perspectiva e iniciativas |
-| `foda` | FODA automático |
+| `prioridades` | Estrategias a priorizar con puntaje, prioridad (Alta/Media/Baja), perspectiva, `fuente` (Análisis del mercado / Oportunidades / Finanzas / Diagnóstico externo) e iniciativas |
+| `foda` | FODA automático con la redacción de la metodología (Excel v2_FODA, nov-2026): fortalezas y debilidades (con prioridad) de las conclusiones del mercado, las palancas y las situaciones financieras; oportunidades y amenazas del diagnóstico externo, de la comparación con competidores (mejor que la empresa = amenaza, peor = oportunidad; `detail` con los nombres) y del Blue Ocean. Items `{ id, label, strategy?, source, tag?, detail?, kind?, priority?, score? }` |
 | `iniciativas` | Plan de acción con responsable, fechas, presupuesto y estado (vencidas, próximas, sin responsable) |
 | `analisis_cliente` | Las 9 preguntas del cliente con sus respuestas |
 | `competidores` | Comparación con cada competidor y respuestas Blue Ocean |
-| `empresa_financiera` | Datos de la empresa, años y líneas de negocio |
-| `estado_resultados` | Estado de resultados por año con márgenes y variaciones |
-| `balance_general` | Totales del balance y si cuadra (opción `detalle` para todas las cuentas) |
-| `flujo_efectivo` | Estado de cambios (indirecto) y flujo directo |
+| `empresa_financiera` | Datos de la empresa, periodos (con `parcial`) y segmentos de negocio con ventas y costo por periodo |
+| `estado_resultados` | Estado de Resultados por periodo con % sobre ventas, partidas que no son efectivo y EBITDA |
+| `balance_general` | Totales del Balance con el resultado del periodo calculado y si cuadra (opción `detalle` para las cuentas con su % del activo) |
+| `flujo_efectivo` | Estado de cambios en la situación financiera "(+) fuentes (−) aplicaciones", bloque por bloque, con la conciliación de caja |
+| `razones_financieras` | Las 41 razones por periodo en 6 grupos: 25 con semáforo (etiqueta y motivo cuando no aplica) y 16 informativas |
+| `analisis_opcionales` | Segmentos, desglose del gasto y estacionalidad, cada uno con su diferencia contra el Estado de Resultados (parámetro `analisis`) |
 
-Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen neto entre 2024 y 2025?"*.
+### Herramientas del Análisis Financiero (modelo MP-AFH1, servidor v1.1.0)
+
+Todas devuelven `moneda`, `unidad: 'miles'` y una lista `periodos` con `periodo` (`yearLabel`, p. ej. "2025" o "jun 2026") y `parcial` ("6 meses" o `null`). Los costos, gastos e impuestos van en positivo y ya están restados en los totales; `utilidad_cambiaria` y `otros_productos` llevan signo. `cuadra` = |diferencia| ≤ 0.5. Los porcentajes (`pct_*`, `*_pct`) van con un decimal (31.9 = 31.9 %) o `null` cuando no hay base.
+
+| Herramienta | Entrada | Qué devuelve por periodo |
+|---|---|---|
+| `empresa_financiera` | — | `empresa { nombre, pais, actividad_principal, actividades_secundarias, moneda, unidad }`, `periodos [{ id, etiqueta, anio, meses, parcial }]`, `segmentos [{ nombre, ventas_por_periodo, costo_por_periodo }]` (mapas etiqueta → cifra). |
+| `estado_resultados` | — | Los 17 renglones del estado (`ventas`, `costo_de_ventas`, `utilidad_bruta`, `gasto_de_venta`, `gasto_de_administracion`, `gastos_operativos_en_general`, `gasto_operativo`, `resultado_de_operacion`, `productos_financieros`, `gastos_financieros`, `utilidad_cambiaria`, `resultado_integral_de_financiamiento`, `otros_productos`, `resultado_antes_de_impuestos`, `isr`, `ptu`, `utilidad_neta`), `pct_sobre_ventas` con las mismas claves, `partidas_no_efectivo { depreciacion_y_amortizacion, reserva_cuentas_por_cobrar, reserva_inventarios }`, `ebitda` y `margen_ebitda_pct`. Cifras reales del periodo, sin anualizar. |
+| `balance_general` | `detalle` (bool, default `false`) | `activo_circulante`, `activo_no_circulante`, `total_activo`, `pasivo_circulante`, `pasivo_largo_plazo`, `total_pasivo`, `resultado_del_periodo` (utilidad neta del Estado de Resultados, no capturado), `total_capital_contable`, `total_pasivo_mas_capital`, `diferencia`, `cuadra`; con `detalle`, `cuentas [{ grupo, clave, nombre, valor, pct_total_activo }]` solo de las cuentas con cifra. |
+| `flujo_efectivo` | — | Solo periodos con periodo anterior (`periodo_anterior`); si hay menos de dos periodos devuelve `mensaje`. Bloques: `ebitda { resultado_de_operacion, depreciacion_y_amortizacion, reservas_cartera_e_inventarios, total }`, `capital_de_trabajo { clientes, inventarios, proveedores, pagos_anticipados, cuentas_por_cobrar_relacionadas, cuentas_por_pagar_relacionadas, anticipos_de_clientes, gastos_acumulados, total }`, `flujo_de_operacion`, `impuestos { impuestos_por_recuperar, impuestos_por_pagar, isr_y_ptu, total }`, `costo_integral_financiamiento_pagado`, `efectivo_generado_por_la_operacion`, `inversion { capex, otros_activos, total }`, `flujo_neto_de_inversion`, `financiamiento_externo { porcion_circulante_anterior, deuda_bancaria_corto_plazo, deuda_bancaria_largo_plazo, otros_activos_circulantes, otras_cuentas_por_cobrar, otras_cuentas_por_pagar, acreedores, otros_ingresos, cargos_diferidos, creditos_diferidos, total }`, `accionistas { aportaciones, dividendos, total }`, `flujo_de_financiamiento`, `flujo_del_periodo`, `caja_inicial`, `caja_final_calculada`, `caja_final_balance`, `diferencia`, `cuadra`. Signo: positivo = fuente, negativo = aplicación. |
+| `razones_financieras` | — | `grupos [{ clave, nombre, pregunta }]` y por periodo `meses`, `indicadores [{ clave, nombre, grupo, informativo, valor, valor_texto, semaforo, etiqueta, motivo }]` (41, en el orden del catálogo; `informativo: true` = sin semáforo, `etiqueta` `null`), `semaforo { verde, ambar, rojo, na }` (solo los 25 con semáforo) y `atencion [{ clave, nombre, valor_texto, semaforo }]` (rojos y luego ámbar). Saldos al cierre; días sobre meses × 30; crecimiento, ROA y ROE anualizados en parciales. |
+| `analisis_opcionales` | `analisis`: `todos` (default), `segmentos`, `desglose_gasto`, `estacionalidad` | `segmentos { capturado, periodos [{ segmentos [{ nombre, ventas, pct_ventas, costo, pct_costo, utilidad_bruta, margen_bruto_pct }], total_ventas, total_costo, total_utilidad_bruta, margen_bruto_pct, ventas_segun_estado_resultados, costo_segun_estado_resultados, diferencia_ventas, diferencia_costo, cuadra }] }`; `desglose_gasto { capturado, periodos [{ conceptos [{ clave, nombre, valor, pct_total }] (20), gastos_de_operacion, partidas_virtuales { depreciacion_y_amortizacion, amortizaciones, reserva_cuentas_por_cobrar, reserva_inventarios, otras_partidas_virtuales }, total, gasto_operativo_segun_estado_resultados, diferencia, cuadra }] }`; `estacionalidad { capturado, periodos [{ meses [{ mes, ventas, pct }] (solo los meses del periodo), total, ventas_segun_estado_resultados, diferencia, cuadra }] }`. |
+
+Las fórmulas, los motivos de N/A y las bandas del semáforo son las de [02 - Reglas de Negocio §7](./02-REGLAS-DE-NEGOCIO.md); `index.ts` no las repite: llama a `computeIncome`, `computeBalance`, `computeEbitda`, `computeCashflow`, `computeRatios`, `summarizeRatios`, `computeSegments`, `computeExpenseBreakdown` y `computeSeasonality` de `_shared/app/finCalc.js`.
+
+> **Nota (FODA v2, 9-nov-2026):** `index.ts` lee las secciones del plan con `PLAN_SOURCE_SECTIONS` (incluye `financial-situations` y `external-diagnosis`), `prioridades` / `resumen_plan` traducen `source: 'external'` como "Diagnóstico externo" y la descripción de `foda` cambió; las copias de `_shared/app/` ya traen el catálogo y el motor nuevos (`npm run mcp:sync` corrido). **Hay que redesplegar `mcp`** para que el conector devuelva el FODA con la redacción nueva (reglas PE1–PE14 en [02 - Reglas de Negocio §9](./02-REGLAS-DE-NEGOCIO.md)); hasta entonces responde con el FODA anterior, sin romperse.
+
+> **Nota (Fase 2 de perspectivas — riesgos críticos en el plan):** las funciones nuevas de `src/config/strategicCalc.js` (`riskObjectivesFrom`, `riskInitiativeWarnings`, `focusItems`, `mergeFodaWithRisks`, plantillas de `strategicCatalog.js`, etc.) ya están **sincronizadas** a `supabase/functions/_shared/app/` con `npm run mcp:sync`, pero el servidor **aún no las expone**: `resumen_plan`, `prioridades`, `foda` e `iniciativas` siguen respondiendo solo con debilidades y no incluyen los riesgos críticos que la app ya muestra como objetivos de prioridad alta. Incorporarlos a las herramientas estratégicas (y a `resumen_general`) queda para una fase posterior; `index.ts` no cambió y la función no se redesplegó por esta fase.
+
+
+Ejemplos de preguntas en Claude: *"¿Cuáles son mis riesgos intolerables sin controles?"*, *"Resume mi plan estratégico y dime qué iniciativas vencen este mes"*, *"¿Cómo cambió mi margen operativo entre 2024 y 2025?"*, *"¿Qué razones financieras tengo en rojo y qué significan?"*, *"¿Cuánto efectivo generó la operación el año pasado y a dónde se fue?"*, *"¿Mis segmentos suman lo mismo que el Estado de Resultados?"*.
 
 ## Nota técnica: verificación del token (llaves HS256)
 
@@ -137,4 +161,4 @@ Para probar sin pasar por Claude: crear un usuario de prueba con `POST /auth/v1/
 
 - Herramientas de escritura con confirmación (crear riesgo como borrador, agregar iniciativa, marcar control como implementado).
 - Perspectivas en lugar de departamentos cuando se apruebe esa propuesta (la herramienta `listar_departamentos` pasará a `listar_perspectivas`).
-- Razones financieras cuando exista esa pantalla.
+- **Redesplegar la función por FODA v2** (9-nov-2026): `npm run mcp:sync` ya corrido; falta `npx supabase functions deploy mcp --no-verify-jwt --project-ref hcmeoducjqudokfhhvyc`. La versión desplegada el 2-nov-2026 (modelo MP-AFH1) sigue funcionando, pero devuelve el FODA con la redacción anterior y sin las secciones nuevas. Desplegar la función `ia` **no** resuelve este pendiente: cada Edge Function se empaqueta por separado.

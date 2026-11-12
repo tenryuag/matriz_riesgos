@@ -67,8 +67,33 @@ CREATE POLICY "auth all fin_lines"
   ON fin_lines FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- 4. Cifras capturadas. Una fila por (año, sección, concepto), en miles.
---    Secciones: 'sales' (concepto = id de la línea), 'cost:<line_id>',
---    'expenses', 'income', 'balance', 'cashflow-annex', 'cashflow-direct'.
+--    Costos, gastos e impuestos del Estado de Resultados van SIEMPRE en
+--    positivo (la app los resta); llevan signo la utilidad cambiaria, otros
+--    productos y los efectos cambiarios del estado de cambios. Las cuentas
+--    del Balance llevan su signo contable (reservas y resultados acumulados
+--    en negativo con déficit o pérdidas acumuladas).
+--    Secciones del modelo MP-AFH1 (catálogo en src/config/finConfig.js):
+--      'income'      Estado de Resultados: 11 capturas (ventas, costo,
+--                    gasto_venta, gasto_admin, gasto_general,
+--                    productos_financieros, gastos_financieros,
+--                    utilidad_cambiaria, otros_productos, isr, ptu) + memo
+--                    de partidas que no son efectivo (depreciacion,
+--                    reserva_cxc, reserva_inventarios).
+--      'balance'     27 cuentas del Balance General. resultado_periodo NO
+--                    se guarda: es la utilidad neta del Estado de Resultados.
+--      'cashflow'    5 capturas complementarias del Estado de cambios
+--                    (venta_activo_fijo, cambiaria_deuda_cp,
+--                    cambiaria_deuda_lp, cambiaria_clientes,
+--                    ajuste_revaluacion); solo años con año anterior.
+--      'sales'       ventas por segmento (concepto = id de fin_lines).
+--      'segcost'     costo por segmento (concepto = id de fin_lines).
+--      'expenses'    desglose del gasto: 20 conceptos + amortizaciones y
+--                    otras_virtuales.
+--      'seasonality' ventas por mes (m01 … m12; en parciales solo los
+--                    meses del periodo).
+--    Las secciones del modelo anterior ('cost:<line_id>', 'cashflow-annex',
+--    'cashflow-direct') y sus claves se convierten con
+--    supabase-fin-model-afh1.sql. Datos demo: supabase-seed-fin-demo.sql.
 CREATE TABLE IF NOT EXISTS fin_values (
   analysis_id UUID NOT NULL REFERENCES fin_analyses(id) ON DELETE CASCADE,
   year_id     UUID NOT NULL REFERENCES fin_years(id) ON DELETE CASCADE,

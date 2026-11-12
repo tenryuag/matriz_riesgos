@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Department } from "@/api/entities";
 import { Risk } from "@/api/entities";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertTriangle } from "lucide-react";
 import { useLanguage } from '@/components/LanguageContext';
 import { normalizeRiskLevel, getRiskLevelColorClasses } from '@/lib/utils';
+import { PERSPECTIVES } from "@/config/perspectives";
+import { LEVEL_KEYS, currentLevelKey, labelForLevelKey } from "@/config/riskCalc";
+import {
+  UNASSIGNED,
+  NO_DEPARTMENT,
+  perspectiveOf,
+  inherentScoreOf,
+  isUnscored,
+  sortRisks,
+  riskExportRow,
+  migrationProgress,
+} from "@/lib/perspectiveView";
+import PerspectiveBadge from "@/components/perspectives/PerspectiveBadge";
+import MigrationBanner from "@/components/perspectives/MigrationBanner";
 
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -23,12 +37,16 @@ export default function AllRisks() {
   const [departments, setDepartments] = useState([]);
   const [risks, setRisks] = useState([]);
   const [filteredRisks, setFilteredRisks] = useState([]);
-  const [selectedRisks, setSelectedRisks] = new useState(new Set());
+  const [selectedRisks, setSelectedRisks] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [riskLevelFilter, setRiskLevelFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  // Filtro de perspectiva: "all" | clave | UNASSIGNED ("Sin asignar").
+  const [perspectiveFilter, setPerspectiveFilter] = useState("all");
+  // Orden: "recent" conserva el orden actual (más recientes primero).
+  const [sortMode, setSortMode] = useState("recent");
   const [departmentMap, setDepartmentMap] = useState({});
   const { t } = useLanguage();
 
@@ -53,14 +71,18 @@ export default function AllRisks() {
 
   const filterRisks = useCallback(() => {
     let filtered = risks.filter(risk =>
-      (departmentFilter === "all" || risk.department_id === departmentFilter) &&
-      (searchTerm === "" || risk.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (riskLevelFilter === "all" || (risk.residual_level || risk.inherent_level) === riskLevelFilter)
+      (departmentFilter === "all" ||
+        (departmentFilter === NO_DEPARTMENT ? !risk.department_id : risk.department_id === departmentFilter)) &&
+      (searchTerm === "" || (risk.description || "").toLowerCase().includes(searchTerm.toLowerCase())) &&
+      // Nivel vigente por clave (residual si lo capturó, si no inherente): igual en ES y EN.
+      (riskLevelFilter === "all" || currentLevelKey(risk) === riskLevelFilter) &&
+      (perspectiveFilter === "all" ||
+        (perspectiveFilter === UNASSIGNED ? perspectiveOf(risk) == null : perspectiveOf(risk) === perspectiveFilter))
     );
-    setFilteredRisks(filtered);
+    setFilteredRisks(sortRisks(filtered, sortMode));
     const visibleRiskIds = new Set(filtered.map(risk => risk.id));
     setSelectedRisks(prev => new Set([...prev].filter(id => visibleRiskIds.has(id))));
-  }, [risks, searchTerm, riskLevelFilter, departmentFilter, setSelectedRisks]);
+  }, [risks, searchTerm, riskLevelFilter, departmentFilter, perspectiveFilter, sortMode, setSelectedRisks]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { filterRisks(); }, [filterRisks]);
@@ -142,36 +164,13 @@ export default function AllRisks() {
 
   const exportToExcel = useCallback(() => {
     if (!filteredRisks || filteredRisks.length === 0) {
-      alert(t('noRisksToExport') || 'No hay riesgos para exportar');
+      alert(t('noRisksToExport'));
       return;
     }
 
     // Transformar los datos al formato que queremos exportar
-    const exportData = filteredRisks.map((r) => ({
-      'Departamento': departmentMap[r.department_id] || '',
-      'Tipo de amenaza': r.threat_type || '',
-      'Descripción': r.description || '',
-      'Prob. inherente': r.inherent_probability || '',
-      'Impacto inherente': r.inherent_impact || '',
-      'Nivel inherente': r.inherent_level || '',
-      'Estrategia': r.risk_strategy || '',
-      'Mitigante 1': r.mitigant_1 || '',
-      'Impacto mitigante 1': r.mitigant_impact_1 || '',
-      'Tipo Control 1': r.control_type_1 || '',
-      'Grado Control 1': r.control_grade_1 || '',
-      'Mitigante 2': r.mitigant_2 || '',
-      'Impacto mitigante 2': r.mitigant_impact_2 || '',
-      'Tipo Control 2': r.control_type_2 || '',
-      'Grado Control 2': r.control_grade_2 || '',
-      'Mitigante 3': r.mitigant_3 || '',
-      'Impacto mitigante 3': r.mitigant_impact_3 || '',
-      'Tipo Control 3': r.control_type_3 || '',
-      'Grado Control 3': r.control_grade_3 || '',
-      'Prob. residual': r.residual_probability || '',
-      'Impacto residual': r.residual_impact || '',
-      'Nivel residual': r.residual_level || '',
-      'Fecha creación': r.created_at || r.created_date || ''
-    }));
+    // Mismas 23 columnas de siempre más "Perspectiva" (1.ª) y "Puntaje inherente".
+    const exportData = filteredRisks.map((r) => riskExportRow(r, departmentMap));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -194,12 +193,15 @@ export default function AllRisks() {
   }
 
   const allFilteredSelected = filteredRisks.length > 0 && selectedRisks.size === filteredRisks.length;
-  const RISK_LEVELS_OPTIONS = [t('intolerable'), t('high'), t('medium'), t('low'), t('tolerable')];
+  // Niveles por clave, del más grave al más leve.
+  const LEVEL_OPTIONS = [...LEVEL_KEYS].reverse();
+  const unassignedCount = migrationProgress(risks).unassigned;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+        {/* En móvil el botón ☰ del Layout es fijo arriba a la izquierda: dejarle espacio */}
+        <div className="pl-12 lg:pl-0">
           <h1 className="text-3xl font-title mb-2">{t('allRisksTitle')}</h1>
           <p className="text-muted">{t('allRisksSubtitle')}</p>
         </div>
@@ -225,7 +227,7 @@ export default function AllRisks() {
             </Button>
           )}
           <Button onClick={exportToExcel} variant="outline" className="glass hover:border-accent" disabled={deleting}>
-            📥 {t('exportExcel') || 'Exportar Excel'}
+            📥 {t('exportExcel')}
           </Button>
           <Button onClick={() => navigate(createPageUrl(`AddRisk`))} variant="outline" className="glass hover:border-accent" disabled={deleting}>
             <Plus className="w-4 h-4 mr-2" />
@@ -234,18 +236,31 @@ export default function AllRisks() {
         </div>
       </div>
 
+      <MigrationBanner count={unassignedCount} />
+
       <Card className="glass">
         <CardHeader><CardTitle className="font-subtitle flex items-center gap-2"><Filter className="w-5 h-5" />{t('filtersAndSearch')}</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative md:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
               <Input placeholder={t('searchAllPlaceholder')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 input-glass" disabled={deleting} />
             </div>
+            <Select value={perspectiveFilter} onValueChange={setPerspectiveFilter} disabled={deleting}>
+              <SelectTrigger className="input-glass"><SelectValue placeholder={t('perspLabel')} /></SelectTrigger>
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                <SelectItem value="all">{t('perspAllPerspectives')}</SelectItem>
+                {PERSPECTIVES.map((p) => (
+                  <SelectItem key={p.key} value={p.key}><PerspectiveBadge perspectiveKey={p.key} /></SelectItem>
+                ))}
+                <SelectItem value={UNASSIGNED}>{t('perspUnassigned')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={deleting}>
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('departmentLabel')} /></SelectTrigger>
               <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allDepartments')}</SelectItem>
+                <SelectItem value={NO_DEPARTMENT}>{t('departmentNone')}</SelectItem>
                 {departments.map((dept) => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -253,7 +268,15 @@ export default function AllRisks() {
               <SelectTrigger className="input-glass"><SelectValue placeholder={t('riskLevelLabel')} /></SelectTrigger>
               <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
                 <SelectItem value="all">{t('allLevels')}</SelectItem>
-                {RISK_LEVELS_OPTIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                {LEVEL_OPTIONS.map((k) => <SelectItem key={k} value={k}>{labelForLevelKey(k, t)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sortMode} onValueChange={setSortMode} disabled={deleting}>
+              <SelectTrigger className="input-glass"><SelectValue placeholder={t('perspSortLabel')} /></SelectTrigger>
+              <SelectContent className="glass dark:bg-zinc-900 dark:text-white">
+                <SelectItem value="recent">{t('perspSortRecent')}</SelectItem>
+                <SelectItem value="scoreDesc">{t('perspSortScoreDesc')}</SelectItem>
+                <SelectItem value="scoreAsc">{t('perspSortScoreAsc')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -272,11 +295,14 @@ export default function AllRisks() {
                       <Checkbox checked={allFilteredSelected} onCheckedChange={handleSelectAll} disabled={deleting} />
                     </TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">
+                      {t('tablePerspective')}
+                    </TableHead>
+                    <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">
                       {t('tableDepartment')}
                     </TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableThreatType')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableDescription')}</TableHead>
-                    <TableHead colSpan={3} className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('inherentRiskEval')}</TableHead>
+                    <TableHead colSpan={4} className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('inherentRiskEval')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableHandling')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableMitigant1')}</TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">{t('tableImpact1')}</TableHead>
@@ -296,6 +322,7 @@ export default function AllRisks() {
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableInherentProb')}</TableHead>
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableInherentImp')}</TableHead>
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableInherentLvl')}</TableHead>
+                    <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableScore')}</TableHead>
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableResidualProb')}</TableHead>
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableResidualImp')}</TableHead>
                     <TableHead className="text-center border-r border-card-border text-accent font-subtitle text-xs uppercase tracking-wider p-2">{t('tableResidualLvl')}</TableHead>
@@ -307,8 +334,13 @@ export default function AllRisks() {
                       <TableCell className="align-top text-center border-l border-r border-card-border">
                         <Checkbox checked={selectedRisks.has(risk.id)} onCheckedChange={(c) => handleSelectRisk(risk.id, c)} disabled={deleting} />
                       </TableCell>
+                      <TableCell className="align-top whitespace-nowrap border-r border-card-border">
+                        <PerspectiveBadge perspectiveKey={perspectiveOf(risk)} />
+                      </TableCell>
                       <TableCell className="align-top max-w-[150px] whitespace-normal border-r border-card-border">
-                        <span className="font-subtitle">{departmentMap[risk.department_id] || 'N/A'}</span>
+                        <span className="font-subtitle">
+                          {departmentMap[risk.department_id] || <span className="text-muted">{t('perspNoDepartment')}</span>}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted align-top border-r border-card-border">{risk.threat_type ? t(risk.threat_type === 'Interna' ? 'threatInternal' : 'threatExternal') : ''}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.description}</TableCell>
@@ -319,6 +351,11 @@ export default function AllRisks() {
                         {risk.inherent_impact && <span className={`px-2 py-1 rounded-full text-xs border ${getImpactColor(t(risk.inherent_impact))}`}>{t(risk.inherent_impact)}</span>}
                       </TableCell>
                       <TableCell className="text-center border-r border-card-border align-top">{risk.inherent_level && <span className={`px-2 py-1 rounded-full text-xs border-transparent ${getRiskLevelColor(risk.inherent_level)}`}>{risk.inherent_level}</span>}</TableCell>
+                      <TableCell className="text-center border-r border-card-border align-top">
+                        {isUnscored(risk)
+                          ? <span className="text-xs text-muted italic">{t('perspUnscored')}</span>
+                          : <span className="font-subtitle">{inherentScoreOf(risk)}</span>}
+                      </TableCell>
                       <TableCell className="text-muted align-top border-r border-card-border">{risk.risk_strategy ? t(`strategy${risk.risk_strategy}`) : ''}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_1}</TableCell>
                       <TableCell className="max-w-[280px] whitespace-normal text-muted align-top border-r border-card-border">{risk.mitigant_impact_1}</TableCell>

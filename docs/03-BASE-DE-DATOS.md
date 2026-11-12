@@ -229,6 +229,67 @@ Estas tablas usan las políticas por defecto de Supabase para usuarios autentica
 
 ---
 
+## Asistente de IA (`supabase-ia.sql`)
+
+Dos tablas de apoyo para la Edge Function `ia` del asistente de IA ([IA.md](./IA.md)). Las escribe **solo la función** con `service_role`; desde la app únicamente se leen. Requiere `public.is_admin()` (`supabase-fix-role-security.sql`). El script es idempotente (`IF NOT EXISTS`, `DROP POLICY IF EXISTS`, `CREATE OR REPLACE`).
+
+### `ia_usage` — bitácora de llamadas
+
+Una fila por cada llamada a Claude (correcta, o fallida). Alimenta los topes de gasto y el panel «Uso de IA».
+
+| Columna | Tipo | Restricciones | Descripción |
+| --- | --- | --- | --- |
+| `id` | `UUID` | PK, `gen_random_uuid()` | Identificador |
+| `user_id` | `UUID` | NOT NULL | Usuario que llamó (`auth.users.id`, sin FK) |
+| `action` | `TEXT` | NOT NULL | `interpretar_informe`, `extraer_estados`, `sugerir_riesgo`, `sugerir_iniciativa`, `resumen_ejecutivo` |
+| `model` | `TEXT` | nullable | Modelo que respondió (p. ej. `claude-opus-5-5`) |
+| `input_tokens`, `output_tokens` | `INT` | NOT NULL, DEFAULT 0 | Tokens de entrada y salida (la salida incluye el razonamiento del modelo) |
+| `cache_read_tokens`, `cache_write_tokens` | `INT` | NOT NULL, DEFAULT 0 | Tokens leídos / escritos en el caché de prompts |
+| `cost_usd` | `NUMERIC(10,6)` | NOT NULL, DEFAULT 0 | Costo calculado con la tabla de precios de `claude.ts` |
+| `duration_ms` | `INT` | nullable | Duración de la acción |
+| `ok` | `BOOLEAN` | NOT NULL, DEFAULT true | `false` si la llamada falló |
+| `error_code` | `TEXT` | nullable | Código de `IaError` cuando `ok = false` |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Fecha |
+
+Índices: `idx_ia_usage_user_created (user_id, created_at DESC)` e `idx_ia_usage_created (created_at DESC)`.
+
+### `ia_resultados` — resultados guardados
+
+Uno por usuario y tipo (`UNIQUE (user_id, kind)`): la interpretación del Informe financiero y el Resumen ejecutivo, con la huella de los datos con que se generaron. Si la huella no cambia, la función devuelve el guardado sin volver a gastar.
+
+| Columna | Tipo | Restricciones | Descripción |
+| --- | --- | --- | --- |
+| `id` | `UUID` | PK, `gen_random_uuid()` | Identificador |
+| `user_id` | `UUID` | NOT NULL | Dueño |
+| `kind` | `TEXT` | NOT NULL | `'informe'` o `'resumen_ejecutivo'` |
+| `input_hash` | `TEXT` | NOT NULL | SHA-256 (hex) del JSON canónico de los datos de entrada |
+| `model` | `TEXT` | nullable | Modelo que lo generó |
+| `result` | `JSONB` | NOT NULL | El `result` tal como lo recibe la app |
+| `cost_usd` | `NUMERIC(10,6)` | NOT NULL, DEFAULT 0 | Costo de esa generación |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | Lo fija la función en cada `upsert`; la app lo muestra como `generated_at` |
+
+### Funciones RPC del asistente
+
+| Función | Quién la llama | Devuelve |
+| --- | --- | --- |
+| `ia_usage_window(p_user UUID)` | Solo `service_role` (la Edge Function, antes de cada petición); `REVOKE` para `PUBLIC` y `authenticated` | `(user_24h_usd NUMERIC, user_24h_calls BIGINT, global_30d_usd NUMERIC)`: gasto y llamadas del usuario en las últimas 24 h y gasto global en los últimos 30 días |
+| `ia_reserve(p_user UUID, p_action TEXT, p_est NUMERIC, p_daily_usd NUMERIC, p_daily_calls INT, p_monthly_usd NUMERIC)` | Solo `service_role` (la Edge Function, antes de cada llamada a Claude) | `(id UUID, motivo TEXT)`: bajo un candado por usuario compara el uso con los topes sumando el costo estimado y, si cabe, inserta la fila `en_curso` en `ia_usage` y devuelve su `id`; si no, `motivo` = `limite_diario` / `limite_global` |
+| `ia_usage_by_user()` | `authenticated` (panel «Uso de IA») | Una fila por usuario con `email` y `full_name` (de `auth.users`, que la app no puede leer directamente), `calls`, `calls_30d`, `cost_usd`, `cost_30d_usd`, `last_call`, ordenadas por gasto. Su `WHERE public.is_admin()` devuelve vacío a quien no es administrador |
+
+Ambas son `LANGUAGE sql STABLE SECURITY DEFINER` con `SET search_path = public`.
+
+### RLS de las tablas de IA
+
+| Tabla | Política | Operación | Rol | Condición |
+| --- | --- | --- | --- | --- |
+| `ia_usage` | `read own ia usage` | `SELECT` | `authenticated` | `user_id = auth.uid()` |
+| `ia_usage` | `admin read all ia usage` | `SELECT` | `authenticated` | `(SELECT public.is_admin())` |
+| `ia_resultados` | `read own ia results` | `SELECT` | `authenticated` | `user_id = auth.uid()` |
+
+No hay políticas de `INSERT` / `UPDATE` / `DELETE` para `authenticated`: solo escribe `service_role` (la Edge Function). Los administradores leen toda la bitácora pero **no** los resultados guardados de otros usuarios.
+
+---
+
 ## Scripts SQL del Proyecto
 
 | Archivo                             | Propósito                                                                       |
@@ -236,6 +297,7 @@ Estas tablas usan las políticas por defecto de Supabase para usuarios autentica
 | `supabase-invitation-codes.sql`     | Crear tabla `invitation_codes`, índices, políticas RLS iniciales, funciones RPC |
 | `supabase-admin-rls-policies.sql`   | Actualizar políticas RLS para restringir acceso solo a admins                   |
 | `supabase-fix-invitation-codes.sql` | Eliminar foreign key constraints problemáticos                                  |
+| `supabase-ia.sql`                   | Tablas `ia_usage` e `ia_resultados`, RPC `ia_reserve` / `ia_usage_window` / `ia_usage_by_user` y RLS del asistente de IA (ver [IA.md](./IA.md)) |
 
 ---
 

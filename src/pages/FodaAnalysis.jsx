@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { StrategicPlan, Competitor } from "@/api/entities";
 import {
   ArrowLeft,
   Grid2x2,
@@ -14,30 +13,27 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CATALOG as MKT_CATALOG, SECTION as MKT_CONCL_SECTION } from "./MarketConclusions";
-import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
-import { SECTION as OPP_CONCL_SECTION, effectiveConclusions } from "./OpportunityConclusions";
-import {
-  RATING_SECTION,
-  SUMMARY_SOURCE_SECTIONS,
-  collectStrategies,
-  scoreFor,
-  priorityFor,
-} from "./StrategicSummary";
+import { useStrategyInputs, LOAD_ERROR_TEXT } from "@/hooks/useStrategyInputs";
+import RiskLevelChip from "@/components/strategy/RiskLevelChip";
 
 // ============================================================
-// FODA automático: se genera 100% de lo ya capturado en el módulo.
-// - Fortalezas: lo marcado "voy a mantener" (mercado + oportunidades).
-// - Debilidades: lo marcado "voy a cambiar" en las 3 fuentes (+ prioridad).
-// - Oportunidades: las respuestas Blue Ocean (crear / incrementar).
-// - Amenazas: señales calculadas de tus competidores.
+// FODA automático: se genera 100% de lo ya capturado en el módulo, con la
+// redacción de la metodología (Excel v2_FODA); el detalle vive en buildFoda.
+// - Fortalezas: "voy a mantener" (mercado + palancas) y situaciones
+//   financieras favorables.
+// - Debilidades: "voy a cambiar" (mercado + palancas, con prioridad),
+//   situaciones financieras y decisiones financieras sin situación marcada.
+// - Oportunidades: diagnóstico externo, competidores peores que la empresa
+//   y las respuestas Blue Ocean (crear / incrementar).
+// - Amenazas: diagnóstico externo y competidores mejores que la empresa.
+// - Riesgos críticos de la matriz (Fase 2): los internos entran como
+//   debilidades y los externos como amenazas, con su chip de nivel.
 // ============================================================
 
 // Motor compartido con el servidor MCP.
 export { MARKET_SECTION } from "@/config/strategicCatalog";
 export { buildFoda } from "@/config/strategicCalc";
-import { MARKET_SECTION } from "@/config/strategicCatalog";
-import { buildFoda } from "@/config/strategicCalc";
+import { buildFoda, mergeFodaWithRisks, riskObjectivesFrom } from "@/config/strategicCalc";
 
 const PRIORITY_CHIP = {
   Alta: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40",
@@ -46,41 +42,28 @@ const PRIORITY_CHIP = {
 };
 
 export default function FodaAnalysis() {
-  const [foda, setFoda] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { inputs, loading, error } = useStrategyInputs();
+  const riskObjectives = useMemo(
+    () => (inputs ? riskObjectivesFrom(inputs.risks, inputs.decisions) : []),
+    [inputs]
+  );
+  const foda = useMemo(
+    () =>
+      inputs
+        ? mergeFodaWithRisks(
+            buildFoda({
+              sections: inputs.sections,
+              competitors: inputs.competitors,
+              ratings: inputs.ratings,
+            }),
+            riskObjectives
+          )
+        : null,
+    [inputs, riskObjectives]
+  );
+  const hasRisks = riskObjectives.length > 0;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const plan = await StrategicPlan.getOrCreate();
-      const comps = await Competitor.list(plan.id);
-      const sections = await StrategicPlan.getAnswersForSections(plan.id, [
-        ...SUMMARY_SOURCE_SECTIONS,
-        RATING_SECTION,
-        MARKET_SECTION,
-        ...comps.map((c) => compSection(c.id)),
-      ]);
-      setFoda(
-        buildFoda({
-          sections,
-          competitors: comps,
-          ratings: sections[RATING_SECTION] || {},
-        })
-      );
-    } catch (err) {
-      console.error("Error al cargar el FODA:", err);
-      setError("No pudimos cargar la información. Intenta recargar la página.");
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  if (loading || !foda) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="glass rounded-3xl p-8 animate-pulse h-24" />
@@ -88,6 +71,24 @@ export default function FodaAnalysis() {
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="glass rounded-3xl p-6 animate-pulse h-48" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!foda) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-4">
+          <Link to={createPageUrl("StrategicPlanning")}>
+            <Button variant="ghost" size="icon" className="glass">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-title">FODA</h1>
+        </div>
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+          {error || LOAD_ERROR_TEXT}
         </div>
       </div>
     );
@@ -103,48 +104,54 @@ export default function FodaAnalysis() {
       bg: "bg-green-500/15",
       border: "border-green-500/40",
       items: foda.fortalezas,
-      empty: "Marca fortalezas ('voy a mantener') en las conclusiones.",
+      empty: "Marca fortalezas ('voy a mantener') en las conclusiones, o situaciones favorables en Estrategias financieras.",
       editHref: "MarketConclusions",
       editLabel: "Editar en Conclusiones",
+      links: [{ href: "FinancialStrategies", label: "Situaciones financieras" }],
     },
     {
       key: "oportunidades",
       title: "Oportunidades",
-      friendly: "Lo que el mercado no aprovecha",
+      friendly: "Lo que el entorno te ofrece",
       icon: Sprout,
       accent: "text-blue-600 dark:text-blue-500",
       bg: "bg-blue-500/15",
       border: "border-blue-500/40",
       items: foda.oportunidades,
-      empty: "Responde las preguntas de 'Oportunidades del mercado' (crear e incrementar) en el análisis del mercado.",
-      editHref: "MarketAnalysis",
-      editLabel: "Editar en Análisis del mercado",
+      empty:
+        "Responde el Diagnóstico externo, compara a tus competidores o escribe en 'Crear' e 'Incrementar' de Oportunidades del mercado.",
+      editHref: "ExternalDiagnosis",
+      editLabel: "Responder el Diagnóstico externo",
+      links: [{ href: "MarketOpportunities", label: "Oportunidades del mercado" }],
     },
     {
       key: "debilidades",
       title: "Debilidades",
-      friendly: "Qué vamos a cambiar",
+      friendly: hasRisks ? "Qué vamos a cambiar · incluye riesgos internos" : "Qué vamos a cambiar",
       icon: Wrench,
       accent: "text-orange-600 dark:text-orange-500",
       bg: "bg-orange-500/15",
       border: "border-orange-500/40",
       items: foda.debilidades,
-      empty: "Marca debilidades ('voy a cambiar') en las conclusiones.",
+      empty: "Marca debilidades ('voy a cambiar') en las conclusiones, o situaciones a resolver en Estrategias financieras.",
       editHref: "StrategicSummary",
       editLabel: "Priorizar en el Resumen",
     },
     {
       key: "amenazas",
       title: "Amenazas",
-      friendly: "Señales de tus competidores",
+      friendly: hasRisks
+        ? "Lo que te amenaza desde afuera · incluye riesgos externos"
+        : "Lo que te amenaza desde afuera",
       icon: ShieldAlert,
       accent: "text-red-600 dark:text-red-500",
       bg: "bg-red-500/15",
       border: "border-red-500/40",
       items: foda.amenazas,
-      empty: "Registra competidores y responde su comparación en el análisis del mercado.",
-      editHref: "MarketAnalysis",
-      editLabel: "Editar competidores",
+      empty: "Responde el Diagnóstico externo y compara a tus competidores en el análisis del mercado.",
+      editHref: "ExternalDiagnosis",
+      editLabel: "Responder el Diagnóstico externo",
+      links: [{ href: "MarketAnalysis", label: "Editar competidores" }],
     },
   ];
 
@@ -173,9 +180,14 @@ export default function FodaAnalysis() {
         <CardContent className="p-5 flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
           <p className="text-sm text-muted">
-            Este FODA se genera automáticamente con lo que ya capturaste: tus conclusiones,
-            tus respuestas Blue Ocean y la comparación con tus competidores. Si cambias algo
-            en esas pantallas, aquí se actualiza solo.
+            Este FODA se genera automáticamente con lo que ya capturaste, redactado como
+            diagnóstico de tu empresa: tus conclusiones del mercado y de las palancas, tus
+            situaciones financieras, tu diagnóstico externo, la comparación con tus
+            competidores (si son mejores que tú es una amenaza; si son peores, una
+            oportunidad) y tus respuestas Blue Ocean. Si cambias algo en esas pantallas,
+            aquí se actualiza solo.
+            {hasRisks &&
+              " Tus riesgos Alto o Intolerable de la matriz también entran: los internos como debilidades y los externos como amenazas."}
           </p>
         </CardContent>
       </Card>
@@ -203,8 +215,30 @@ export default function FodaAnalysis() {
               ) : (
                 <ul className="space-y-2 mb-3 max-h-64 overflow-y-auto pr-1">
                   {q.items.map((item, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 p-2.5 glass rounded-lg text-sm">
-                      <span className="flex-grow">{item.label}</span>
+                    <li
+                      key={item.id || i}
+                      className="flex items-center justify-between gap-2 p-2.5 glass rounded-lg text-sm"
+                      title={item.strategy ? `Estrategia: ${item.strategy}` : undefined}
+                    >
+                      <span className="flex-grow min-w-0">
+                        {item.label}
+                        {item.detail && (
+                          <span className="block text-xs text-muted mt-0.5">{item.detail}</span>
+                        )}
+                      </span>
+                      {item.tag && item.source !== "risk" && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-subtitle border border-[var(--card-border)] text-muted flex-shrink-0">
+                          {item.tag}
+                        </span>
+                      )}
+                      {item.source === "risk" && (
+                        <>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-subtitle border bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40 flex-shrink-0">
+                            Riesgo crítico
+                          </span>
+                          <RiskLevelChip levelKey={item.level} />
+                        </>
+                      )}
                       {item.priority && (
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-subtitle border flex-shrink-0 ${PRIORITY_CHIP[item.priority]}`}>
                           {item.priority}
@@ -220,28 +254,33 @@ export default function FodaAnalysis() {
                 </ul>
               )}
 
-              <Link
-                to={createPageUrl(q.editHref)}
-                className="inline-flex items-center gap-1.5 text-xs text-accent font-subtitle hover:underline"
-              >
-                <ExternalLink className="w-3 h-3" /> {q.editLabel}
-              </Link>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <Link
+                  to={createPageUrl(q.editHref)}
+                  className="inline-flex items-center gap-1.5 text-xs text-accent font-subtitle hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" /> {q.editLabel}
+                </Link>
+                {(q.links || []).map((l) => (
+                  <Link
+                    key={l.href}
+                    to={createPageUrl(l.href)}
+                    className="inline-flex items-center gap-1.5 text-xs text-accent font-subtitle hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" /> {l.label}
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-          {error}
-        </div>
-      )}
-
       {/* Navegación */}
       <div className="flex justify-between gap-3 flex-wrap">
-        <Link to={createPageUrl("FinancialStrategies")}>
+        <Link to={createPageUrl("ExternalDiagnosis")}>
           <Button variant="outline" className="glass hover:border-accent font-subtitle">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Estrategias financieras
+            <ArrowLeft className="w-4 h-4 mr-2" /> Diagnóstico externo
           </Button>
         </Link>
         <Link to={createPageUrl("StrategicSummary")}>

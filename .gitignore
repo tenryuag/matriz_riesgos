@@ -28,3 +28,6 @@ dist-ssr
 supabase/.temp/
 supabase/.env.local
 supabase/.branches/
+
+# Deno (type-check local de Edge Functions)
+deno.lock

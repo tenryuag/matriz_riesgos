@@ -28,6 +28,8 @@ Esta configuración asegura que todas las rutas del SPA sean manejadas por `inde
 | `build`   | `npm run build`   | Compilar para producción          |
 | `preview` | `npm run preview` | Previsualizar build de producción |
 | `lint`    | `npm run lint`    | Ejecutar ESLint                   |
+| `mcp:sync` | `npm run mcp:sync` | Copiar los módulos compartidos de `src/config/` a `supabase/functions/_shared/app` (antes de desplegar `mcp` o `ia`) |
+| `ia:check` | `npm run ia:check` | `deno check` de la Edge Function `ia` + verificación de sus schemas y enums (`scripts/check-ia-schemas.ts`) |
 
 ---
 
@@ -129,6 +131,37 @@ Si no hay códigos, se puede crear directamente en la tabla `invitation_codes`:
 INSERT INTO invitation_codes (code, used, expires_at)
 VALUES ('ABCD-EFGH-JKLM', false, NOW() + INTERVAL '30 days');
 ```
+
+---
+
+## Edge Functions de Supabase (servidor MCP y asistente de IA)
+
+Además de la app estática, el proyecto despliega dos Edge Functions (Deno) en el proyecto Supabase `hcmeoducjqudokfhhvyc`: `mcp` (servidor MCP; pasos completos en [MCP.md](./MCP.md)) e `ia` (asistente de IA; [IA.md](./IA.md)). Ambas verifican el JWT del usuario por sí mismas (`supabase/config.toml`: `verify_jwt = false`) y comparten los módulos de `supabase/functions/_shared/app/`, que se generan con `npm run mcp:sync` a partir de `src/config/`. No corras `supabase config push`: el `config.toml` del repo es mínimo y sobreescribiría la configuración de Auth del panel.
+
+### Asistente de IA (`ia`)
+
+```bash
+npx supabase login                                   # abre el navegador (una vez)
+npx supabase link --project-ref hcmeoducjqudokfhhvyc # una vez por laptop
+
+# 1. Secreto con la llave de la API de Claude (creada en console.anthropic.com → API Keys)
+npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-… --project-ref hcmeoducjqudokfhhvyc
+# opcionales (se muestran sus valores por omisión): modelo y topes de gasto
+npx supabase secrets set IA_MODEL=claude-opus-5-5 IA_DAILY_USD=2 IA_DAILY_CALLS=40 IA_MONTHLY_USD=150 --project-ref hcmeoducjqudokfhhvyc
+
+# 2. Tablas y RPC (una vez, idempotente): ejecutar supabase-ia.sql en Supabase → SQL Editor
+#    (requiere public.is_admin() de supabase-fix-role-security.sql)
+
+# 3. Desplegar
+npm run mcp:sync                                     # la función importa de _shared/app
+npm run ia:check                                     # deno check + schemas; debe imprimir TODO OK
+npx supabase functions deploy ia --no-verify-jwt
+npx supabase functions list                          # debe aparecer "ia"
+```
+
+Comprobación: en la app, Administración → «Uso de IA» muestra el chip «Configurado», el modelo y los topes. Sin la llave, la función responde `no_configurado` y los botones de IA muestran un aviso ámbar; el resto de la app no depende de ella.
+
+Cada Edge Function se empaqueta por separado: desplegar `ia` **no** redespliega `mcp` (ni al revés). Si cambia algo en `src/config/finConfig.js`, `finCalc.js`, `riskCalc.js`, `perspectives.js`, `strategicCalc.js` o `strategicCatalog.js`, hay que correr `npm run mcp:sync` y desplegar las dos. Las variables `VITE_*` de la app no intervienen en las funciones; los secretos de las funciones viven en Supabase → Edge Functions → Secrets, no en el panel del hosting.
 
 ---
 

@@ -5,6 +5,12 @@ import Dashboard from "./Dashboard";
 
 import Departments from "./Departments";
 
+import Perspectives from "./Perspectives";
+
+import PerspectiveRisks from "./PerspectiveRisks";
+
+import PerspectiveMigration from "./PerspectiveMigration";
+
 import AddDepartment from "./AddDepartment";
 
 import AddRisk from "./AddRisk";
@@ -38,6 +44,9 @@ import StrategicInitiatives from "./StrategicInitiatives";
 import ScoreCard from "./ScoreCard";
 
 import MarketConclusions from "./MarketConclusions";
+import MarketOpportunities from "./MarketOpportunities";
+import ExternalDiagnosis from "./ExternalDiagnosis";
+import StrategicRisks from "./StrategicRisks";
 
 import OpportunityAnalysis from "./OpportunityAnalysis";
 
@@ -67,19 +76,21 @@ import FinAnalysisHome from "./FinAnalysisHome";
 
 import FinAnalysisData from "./FinAnalysisData";
 
-import FinAnalysisSales from "./FinAnalysisSales";
-
-import FinAnalysisCosts from "./FinAnalysisCosts";
-
-import FinAnalysisExpenses from "./FinAnalysisExpenses";
-
 import FinAnalysisIncome from "./FinAnalysisIncome";
 
 import FinAnalysisBalance from "./FinAnalysisBalance";
 
 import FinAnalysisCashflow from "./FinAnalysisCashflow";
 
-import FinAnalysisCashflowDirect from "./FinAnalysisCashflowDirect";
+import FinAnalysisRatios from "./FinAnalysisRatios";
+
+import FinAnalysisReport from "./FinAnalysisReport";
+
+import FinAnalysisSegments from "./FinAnalysisSegments";
+
+import FinAnalysisExpenses from "./FinAnalysisExpenses";
+
+import FinAnalysisSeasonality from "./FinAnalysisSeasonality";
 
 import OAuthConsent from "./OAuthConsent";
 
@@ -89,9 +100,13 @@ import ModuleInDevelopment from "./ModuleInDevelopment";
 
 import ModuleAccessAdmin from "./ModuleAccessAdmin";
 
+import ExecutiveSummary from "./ExecutiveSummary";
+
+import IaUsageAdmin from "./IaUsageAdmin";
+
 import { ModuleAccessProvider } from "@/components/ModuleAccessContext";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
 const PAGES = {
 
@@ -101,9 +116,19 @@ const PAGES = {
 
     ModuleAccess: ModuleAccessAdmin,
 
+    ExecutiveSummary: ExecutiveSummary,
+
+    IaUsage: IaUsageAdmin,
+
     Dashboard: Dashboard,
 
     Departments: Departments,
+
+    Perspectives: Perspectives,
+
+    PerspectiveRisks: PerspectiveRisks,
+
+    PerspectiveMigration: PerspectiveMigration,
 
     AddDepartment: AddDepartment,
 
@@ -128,6 +153,9 @@ const PAGES = {
     MarketAnalysis: MarketAnalysis,
 
     MarketConclusions: MarketConclusions,
+    MarketOpportunities: MarketOpportunities,
+    ExternalDiagnosis: ExternalDiagnosis,
+    StrategicRisks: StrategicRisks,
 
     OpportunityAnalysis: OpportunityAnalysis,
 
@@ -155,19 +183,21 @@ const PAGES = {
 
     FinAnalysisData: FinAnalysisData,
 
-    FinAnalysisSales: FinAnalysisSales,
-
-    FinAnalysisCosts: FinAnalysisCosts,
-
-    FinAnalysisExpenses: FinAnalysisExpenses,
-
     FinAnalysisIncome: FinAnalysisIncome,
 
     FinAnalysisBalance: FinAnalysisBalance,
 
     FinAnalysisCashflow: FinAnalysisCashflow,
 
-    FinAnalysisCashflowDirect: FinAnalysisCashflowDirect,
+    FinAnalysisRatios: FinAnalysisRatios,
+
+    FinAnalysisReport: FinAnalysisReport,
+
+    FinAnalysisSegments: FinAnalysisSegments,
+
+    FinAnalysisExpenses: FinAnalysisExpenses,
+
+    FinAnalysisSeasonality: FinAnalysisSeasonality,
 
     FinancialHistory: FinancialHistory,
 
@@ -238,6 +268,16 @@ function PagesContent() {
                     <ModuleAccessAdmin />
                 </Layout>
             } />
+            <Route path="/ExecutiveSummary" element={
+                <Layout currentPageName={currentPage}>
+                    <ExecutiveSummary />
+                </Layout>
+            } />
+            <Route path="/IaUsage" element={
+                <Layout currentPageName={currentPage}>
+                    <IaUsageAdmin />
+                </Layout>
+            } />
             <Route path="/Dashboard" element={
                 <Layout currentPageName={currentPage}>
                     <Dashboard />
@@ -246,6 +286,21 @@ function PagesContent() {
             <Route path="/Departments" element={
                 <Layout currentPageName={currentPage}>
                     <Departments />
+                </Layout>
+            } />
+            <Route path="/Perspectives" element={
+                <Layout currentPageName={currentPage}>
+                    <Perspectives />
+                </Layout>
+            } />
+            <Route path="/PerspectiveRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <PerspectiveRisks />
+                </Layout>
+            } />
+            <Route path="/PerspectiveMigration" element={
+                <Layout currentPageName={currentPage}>
+                    <PerspectiveMigration />
                 </Layout>
             } />
             <Route path="/AddDepartment" element={
@@ -301,6 +356,21 @@ function PagesContent() {
             <Route path="/MarketAnalysis" element={
                 <Layout currentPageName={currentPage}>
                     <MarketAnalysis />
+                </Layout>
+            } />
+            <Route path="/MarketOpportunities" element={
+                <Layout currentPageName={currentPage}>
+                    <MarketOpportunities />
+                </Layout>
+            } />
+            <Route path="/ExternalDiagnosis" element={
+                <Layout currentPageName={currentPage}>
+                    <ExternalDiagnosis />
+                </Layout>
+            } />
+            <Route path="/StrategicRisks" element={
+                <Layout currentPageName={currentPage}>
+                    <StrategicRisks />
                 </Layout>
             } />
             <Route path="/MarketConclusions" element={
@@ -373,21 +443,6 @@ function PagesContent() {
                     <FinAnalysisData />
                 </Layout>
             } />
-            <Route path="/FinAnalysisSales" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisSales />
-                </Layout>
-            } />
-            <Route path="/FinAnalysisCosts" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisCosts />
-                </Layout>
-            } />
-            <Route path="/FinAnalysisExpenses" element={
-                <Layout currentPageName={currentPage}>
-                    <FinAnalysisExpenses />
-                </Layout>
-            } />
             <Route path="/FinAnalysisIncome" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisIncome />
@@ -403,9 +458,29 @@ function PagesContent() {
                     <FinAnalysisCashflow />
                 </Layout>
             } />
-            <Route path="/FinAnalysisCashflowDirect" element={
+            <Route path="/FinAnalysisRatios" element={
                 <Layout currentPageName={currentPage}>
-                    <FinAnalysisCashflowDirect />
+                    <FinAnalysisRatios />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisReport" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisReport />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSegments" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSegments />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisExpenses" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisExpenses />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisSeasonality" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisSeasonality />
                 </Layout>
             } />
             <Route path="/FinancialHistory" element={
@@ -423,6 +498,8 @@ function PagesContent() {
                     <FinancialCurrent />
                 </Layout>
             } />
+            {/* Cualquier ruta desconocida (por ejemplo, pantallas que ya no existen) vuelve al inicio. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }

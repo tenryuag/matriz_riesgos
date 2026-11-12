@@ -4,7 +4,6 @@ import {
   ShieldCheck,
   Plus,
   Compass,
-  Search,
   Map,
   TrendingUp,
   FileText,
@@ -30,7 +29,12 @@ import {
   Receipt,
   Scale,
   Waves,
-  ArrowLeftRight
+  Gauge,
+  PieChart,
+  CalendarRange,
+  Sparkles,
+  Radar,
+  ShieldAlert
 } from "lucide-react";
 
 // ============================================================
@@ -61,11 +65,14 @@ export const MODULES = [
     home: "Dashboard",
     pages: [
       { pageKey: "Dashboard", nameKey: "dashboard", icon: LayoutDashboard },
-      { pageKey: "Departments", nameKey: "departments", icon: Building2 },
+      { pageKey: "Perspectives", nameKey: "perspectives", icon: Layers },
       { pageKey: "AllRisks", nameKey: "allRisks", icon: ShieldCheck },
       { pageKey: "AddRisk", nameKey: "addRisk", icon: Plus },
-      // Páginas del módulo que no aparecen en el menú (se llega a ellas desde
-      // otras pantallas), pero deben mantener el menú del módulo activo.
+      // Accesibles por URL y desde Perspectivas/asistente, sin aparecer en el menú.
+      // Deben seguir registradas aquí para que mantengan el menú del módulo activo.
+      { pageKey: "Departments", hidden: true },
+      { pageKey: "PerspectiveRisks", hidden: true },
+      { pageKey: "PerspectiveMigration", hidden: true },
       { pageKey: "DepartmentRisks", hidden: true },
       { pageKey: "AddDepartment", hidden: true },
     ],
@@ -82,16 +89,25 @@ export const MODULES = [
     bg: "bg-cyan-500/15",
     status: "ready",
     home: "FinAnalysisHome",
+    // Modelo MP-AFH1: captura (estados financieros), resultados (razones e
+    // informe) y análisis opcionales (segmentos, desglose del gasto,
+    // estacionalidad). El grupo de la página activa se abre solo.
+    groups: [
+      { key: "captura", nameKey: "navGroupFinCapture" },
+      { key: "resultados", nameKey: "navGroupFinResults" },
+      { key: "opcionales", nameKey: "navGroupFinOptional" },
+    ],
     pages: [
       { pageKey: "FinAnalysisHome", nameKey: "navFinAnalysisHome", icon: Calculator },
-      { pageKey: "FinAnalysisData", nameKey: "navFinAnalysisData", icon: Building2 },
-      { pageKey: "FinAnalysisSales", nameKey: "navFinAnalysisSales", icon: TrendingUp },
-      { pageKey: "FinAnalysisCosts", nameKey: "navFinAnalysisCosts", icon: Layers },
-      { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt },
-      { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText },
-      { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale },
-      { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves },
-      { pageKey: "FinAnalysisCashflowDirect", nameKey: "navFinAnalysisCashflowDirect", icon: ArrowLeftRight },
+      { pageKey: "FinAnalysisData", nameKey: "navFinAnalysisData", icon: Building2, group: "captura" },
+      { pageKey: "FinAnalysisIncome", nameKey: "navFinAnalysisIncome", icon: FileText, group: "captura" },
+      { pageKey: "FinAnalysisBalance", nameKey: "navFinAnalysisBalance", icon: Scale, group: "captura" },
+      { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves, group: "captura" },
+      { pageKey: "FinAnalysisRatios", nameKey: "navFinAnalysisRatios", icon: Gauge, group: "resultados" },
+      { pageKey: "FinAnalysisReport", nameKey: "navFinAnalysisReport", icon: BarChart3, group: "resultados" },
+      { pageKey: "FinAnalysisSegments", nameKey: "navFinAnalysisSegments", icon: PieChart, group: "opcionales" },
+      { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt, group: "opcionales" },
+      { pageKey: "FinAnalysisSeasonality", nameKey: "navFinAnalysisSeasonality", icon: CalendarRange, group: "opcionales" },
     ],
   },
   {
@@ -114,12 +130,15 @@ export const MODULES = [
       { pageKey: "StrategicPlanning", nameKey: "navStrategicHome", icon: Compass },
       { pageKey: "CustomerAnalysis", nameKey: "navCustomerAnalysis", icon: Users, group: "analysis" },
       { pageKey: "MarketAnalysis", nameKey: "navMarketAnalysis", icon: Globe, group: "analysis" },
+      { pageKey: "MarketOpportunities", nameKey: "navMarketOpportunities", icon: Waves, group: "analysis" },
       { pageKey: "MarketConclusions", nameKey: "navMarketConclusions", icon: ClipboardCheck, group: "analysis" },
       { pageKey: "OpportunityAnalysis", nameKey: "navOpportunityAnalysis", icon: Sprout, group: "analysis" },
       { pageKey: "OpportunityConclusions", nameKey: "navOpportunityConclusions", icon: ListChecks, group: "analysis" },
       { pageKey: "FinancialStrategies", nameKey: "navFinancialStrategies", icon: Banknote, group: "analysis" },
+      { pageKey: "ExternalDiagnosis", nameKey: "navExternalDiagnosis", icon: Radar, group: "analysis" },
       { pageKey: "Foda", nameKey: "navFoda", icon: Grid2x2, group: "strategy" },
       { pageKey: "StrategicSummary", nameKey: "navStrategicSummary", icon: ListOrdered, group: "strategy" },
+      { pageKey: "StrategicRisks", nameKey: "navStrategicRisks", icon: ShieldAlert, group: "strategy" },
       { pageKey: "StrategicMap", nameKey: "navStrategicMap", icon: Map, group: "strategy" },
       { pageKey: "StrategicMapCalibrated", nameKey: "navStrategicMapCalibrated", icon: Filter, group: "strategy" },
       { pageKey: "StrategicInitiatives", nameKey: "navStrategicInitiatives", icon: ClipboardList, group: "action" },
@@ -159,6 +178,7 @@ export const MODULES = [
       { pageKey: "InvitationCodes", nameKey: "invitationCodes", icon: Ticket },
       { pageKey: "UserManagement", nameKey: "userManagement", icon: Users },
       { pageKey: "ModuleAccess", nameKey: "moduleAccessNav", icon: LayoutGrid },
+      { pageKey: "IaUsage", nameKey: "navIaUsage", icon: Sparkles },
       { pageKey: "Documentation", nameKey: "documentation", icon: BookOpen, external: "/documentacion.html" },
       { pageKey: "AddInvitationCode", hidden: true },
     ],
