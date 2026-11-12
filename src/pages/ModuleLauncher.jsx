@@ -134,8 +134,9 @@ export default function ModuleLauncher() {
 
       {/* Resumen ejecutivo con IA: junta los módulos del usuario en un
           documento. Vive fuera de los módulos (el Layout lo muestra en modo
-          launcher), por eso va como tarjeta aparte debajo del grid. */}
-      {modules.length > 0 && (
+          launcher), por eso va como tarjeta aparte debajo del grid. Por ahora
+          solo para administradores: los clientes ven únicamente sus módulos. */}
+      {isAdmin && modules.length > 0 && (
         <Card className="glass border-accent/30">
           <CardContent className="p-6 flex flex-wrap items-center gap-4">
             <div className="w-12 h-12 bg-accent/15 rounded-2xl flex items-center justify-center flex-shrink-0">
