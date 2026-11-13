@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { createPageUrl } from "@/utils";
@@ -146,9 +149,11 @@ function groupNote(group, defs) {
 
 // Una tarjeta por grupo (eficiencia, flujo, liquidez, …) con su tabla.
 function RatioGroupCard({ group, defs, years, ratios, expanded, onToggle }) {
-  const hasTrend = years.length >= 2;
+  // La tendencia compara el último periodo contra su base: el cierre del
+  // año anterior (con un periodo por año, la columna anterior).
   const last = years[years.length - 1];
-  const prev = hasTrend ? years[years.length - 2] : null;
+  const prev = basePeriod(years, last);
+  const hasTrend = !!prev;
   const colSpan = years.length + 1 + (hasTrend ? 1 : 0);
   const lastRatios = ratios[last?.id];
   const note = groupNote(group, defs);
@@ -367,7 +372,9 @@ QuickRead.propTypes = {
 };
 
 export default function FinAnalysisRatios() {
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
   const [sections, setSections] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -509,6 +516,8 @@ export default function FinAnalysisRatios() {
           </CardContent>
         </Card>
       )}
+
+      <CutsToggle periods={periods} />
 
       {!error && years.length > 0 && !noData && (
         <>

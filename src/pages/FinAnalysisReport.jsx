@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import CutsToggle from "@/components/fin/CutsToggle";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { createPageUrl } from "@/utils";
@@ -502,7 +504,9 @@ function buildModel({ sections, years }) {
 
 export default function FinAnalysisReport() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
   const [sections, setSections] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -618,6 +622,8 @@ export default function FinAnalysisReport() {
       {error && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">{error}</div>
       )}
+
+      <CutsToggle periods={periods} />
 
       {!error && years.length === 0 && (
         <Card className="glass">

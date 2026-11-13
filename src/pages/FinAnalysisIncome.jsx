@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { incomeComparison } from "@/lib/finIncomeCompare";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -25,29 +29,6 @@ import { computeIncome, computeEbitda } from "@/config/finCalc";
 import { Delta, DeltaPP } from "@/components/fin/Delta";
 import MoneyInput from "@/components/fin/MoneyInput";
 import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
-
-// Renglones de costo o gasto: menos es mejor, tanto en monto como en su peso
-// sobre ventas. Cada variación lleva su propio color (lámina 2 del mentor):
-// un gasto puede subir en monto (rojo) y aun así pesar menos sobre las ventas
-// (verde), que es la señal de que la empresa es más eficiente.
-const COST_ROWS = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
-
-// Cómo se comparan dos periodos de un renglón calculado. Devuelve los valores
-// a comparar y qué dirección es buena para el monto y para el % sobre ventas.
-//  - Costos y gastos: menos es mejor en monto y en puntos porcentuales.
-//  - Resultado integral de financiamiento cuando es un costo neto (negativo)
-//    en ambos periodos: se compara como costo, por su tamaño; si baja, verde.
-//  - Utilidades y resultados: más es mejor en monto y en puntos.
-function comparison(calc, curr, prev, currPct, prevPct) {
-  if (COST_ROWS.has(calc)) {
-    return { curr, prev, currPct, prevPct, amountBetter: "lower", pctBetter: "lower" };
-  }
-  if (calc === "rif" && curr <= 0 && prev < 0) {
-    const neg = (v) => (v == null ? null : -v);
-    return { curr: -curr, prev: -prev, currPct: neg(currPct), prevPct: neg(prevPct), amountBetter: "lower", pctBetter: "lower" };
-  }
-  return { curr, prev, currPct, prevPct, amountBetter: "higher", pctBetter: "higher" };
-}
 
 // Estado de Resultados (modelo MP-AFH1). Aquí se capturan las 11 cifras del
 // estado financiero y las 3 partidas que no son efectivo (depreciación y
@@ -86,10 +67,10 @@ AmountInput.propTypes = {
 
 // Celda calculada: cifra en miles, su % sobre ventas y, contra el periodo
 // anterior, dos variaciones: la del monto (%) y la del % sobre ventas (en
-// puntos porcentuales). Ver `comparison` para los colores.
+// puntos porcentuales). Ver `incomeComparison` para los colores.
 function ComputedCell({ calc, value, pct, prev, prevPct, year, prevYear }) {
   const v = clean(value);
-  const c = prev != null ? comparison(calc, value ?? 0, prev, pct, prevPct) : null;
+  const c = prev != null ? incomeComparison(calc, value ?? 0, prev, pct, prevPct) : null;
   return (
     <td className="p-2 text-right whitespace-nowrap align-top">
       <span className={v < 0 ? "text-red-500" : ""}>{fmtMiles.format(v)}</span>
@@ -130,7 +111,11 @@ SectionRow.propTypes = {
 
 export default function FinAnalysisIncome() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
+  // Periodo contra el que se compara cada columna (ver basePeriod).
+  const baseOf = (y) => basePeriod(years, y);
   const [balance, setBalance] = useState({}); // sección balance tal cual viene de la BD
   const [values, setValues] = useState({}); // { [conceptKey]: { [yearId]: "texto" } }
   const [loading, setLoading] = useState(true);
@@ -304,6 +289,8 @@ export default function FinAnalysisIncome() {
         </CardContent>
       </Card>
 
+      <CutsToggle periods={periods} />
+
       {years.length === 0 ? (
         <Card className="glass">
           <CardContent className="p-6 text-center space-y-3">
@@ -408,16 +395,16 @@ export default function FinAnalysisIncome() {
                             </span>
                           )}
                         </td>
-                        {years.map((y, i) => (
+                        {years.map((y) => (
                           <ComputedCell
                             key={y.id}
                             calc={row.calc}
                             value={computed[y.id]?.[row.calc]}
                             pct={computed[y.id]?.pct?.[row.calc]}
-                            prev={i > 0 ? computed[years[i - 1].id]?.[row.calc] : null}
-                            prevPct={i > 0 ? computed[years[i - 1].id]?.pct?.[row.calc] : null}
+                            prev={baseOf(y) ? computed[baseOf(y).id]?.[row.calc] : null}
+                            prevPct={baseOf(y) ? computed[baseOf(y).id]?.pct?.[row.calc] : null}
                             year={y}
-                            prevYear={i > 0 ? years[i - 1] : null}
+                            prevYear={baseOf(y)}
                           />
                         ))}
                       </tr>

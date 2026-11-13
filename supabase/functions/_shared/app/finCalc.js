@@ -54,6 +54,60 @@ export const DAYS_BASE = 360;
 // Días del periodo para las rotaciones: meses × 30 (180 en un semestre).
 export const periodDays = (y) => monthsOf(y) * 30;
 
+// ---------- Periodos y cortes ----------
+// Un año puede tener varios CORTES: parciales acumulados (ene–jun, ene–oct)
+// y, al cerrar, el de 12 meses. Cada corte es una fila de fin_years con su
+// propio id y sus propias cifras; nunca se pisa al capturar el siguiente.
+// El orden natural es por año y, dentro del año, por meses.
+export const comparePeriods = (a, b) => a.year - b.year || monthsOf(a) - monthsOf(b);
+export const sortPeriods = (years) => [...(years || [])].sort(comparePeriods);
+
+// Periodo BASE de un corte: el último corte del año anterior más cercano
+// (su cierre de 12 meses si existe). Contra él se calculan el Estado de
+// cambios, el crecimiento en ventas, los diferidos y las variaciones. Los
+// cortes de un mismo año comparten base: jun 2026 y oct 2026 se miden contra
+// el cierre de 2025, no uno contra otro. Con un solo periodo por año (el
+// caso de siempre) la base es simplemente la columna anterior. No depende
+// del orden en que llegue la lista.
+export function basePeriod(years, y) {
+  if (!y) return null;
+  let best = null;
+  (years || []).forEach((p) => {
+    if (p.year < y.year && (!best || comparePeriods(p, best) > 0)) best = p;
+  });
+  return best;
+}
+
+// Corte anterior del MISMO año (oct 2026 → jun 2026), o null.
+export function previousCut(years, y) {
+  if (!y) return null;
+  let best = null;
+  (years || []).forEach((p) => {
+    if (p.year === y.year && monthsOf(p) < monthsOf(y) && (!best || monthsOf(p) > monthsOf(best))) best = p;
+  });
+  return best;
+}
+
+// El mismo corte del año anterior (oct 2026 → oct 2025), o null.
+export function sameCutPriorYear(years, y) {
+  if (!y) return null;
+  return (years || []).find((p) => p.year === y.year - 1 && monthsOf(p) === monthsOf(y)) || null;
+}
+
+// Un periodo por año: el corte más reciente de cada uno (su cierre si ya
+// existe), en orden. Es la vista normal de las tablas.
+export function latestCuts(years) {
+  const byYear = new Map();
+  (years || []).forEach((p) => {
+    const cur = byYear.get(p.year);
+    if (!cur || monthsOf(p) > monthsOf(cur)) byYear.set(p.year, p);
+  });
+  return sortPeriods([...byYear.values()]);
+}
+
+// ¿Algún año tiene más de un corte?
+export const hasMultipleCuts = (years) => latestCuts(years).length < (years || []).length;
+
 // Variación porcentual entre dos valores (null si no se puede calcular).
 // Se mide sobre el valor absoluto del anterior para que el signo diga hacia
 // dónde se movió la cifra también cuando la base es negativa: de −100 a −50
@@ -124,7 +178,7 @@ const groupKeys = (gk) => BALANCE_GROUPS.find((g) => g.key === gk).items.map((i)
 export function computeBalance({ sections, years }) {
   const income = computeIncome({ sections, years });
   const out = {};
-  (years || []).forEach((y, i) => {
+  (years || []).forEach((y) => {
     const bal = (k, yearId = y.id) => cell(sections, BALANCE_SECTION, k, yearId);
     const g = (gk) => sumKeys(sections, BALANCE_SECTION, groupKeys(gk), y.id);
     const activoCirculante = g("activo_circulante");
@@ -136,7 +190,7 @@ export function computeBalance({ sections, years }) {
     const totalActivo = activoCirculante + activoNoCirculante;
     const totalPasivo = pasivoCirculante + pasivoLargoPlazo;
     const totalPasivoCapital = totalPasivo + totalCapital;
-    const prev = i > 0 ? years[i - 1] : null;
+    const prev = basePeriod(years, y);
     const acumuladosSugerido = prev
       ? bal("resultados_acumulados", prev.id) + (income[prev.id]?.utilidadNeta ?? 0)
       : null;
@@ -188,8 +242,8 @@ const ebitdaOf = (inc, adj) =>
 export function computeEbitda({ sections, years }) {
   const income = computeIncome({ sections, years });
   const out = {};
-  (years || []).forEach((y, i) => {
-    const adj = deferredAdjustments(sections, y, i > 0 ? years[i - 1] : null);
+  (years || []).forEach((y) => {
+    const adj = deferredAdjustments(sections, y, basePeriod(years, y));
     out[y.id] = ebitdaOf(income[y.id], adj);
   });
   return out;
@@ -204,9 +258,9 @@ export function computeCashflow({ sections, years }) {
   const income = computeIncome({ sections, years });
   const bal = (k, yearId) => cell(sections, BALANCE_SECTION, k, yearId);
   const out = {};
-  (years || []).forEach((y, i) => {
-    if (i === 0) return;
-    const p = years[i - 1];
+  (years || []).forEach((y) => {
+    const p = basePeriod(years, y);
+    if (!p) return;
     const inc = income[y.id];
     const bp = (k) => bal(k, p.id); // saldo anterior
     const bc = (k) => bal(k, y.id); // saldo actual
@@ -385,7 +439,7 @@ export function computeRatios({ sections, years }) {
   const ebitdaByYear = computeEbitda({ sections, years });
   const cashflow = computeCashflow({ sections, years });
   const out = {};
-  (years || []).forEach((y, i) => {
+  (years || []).forEach((y) => {
     const months = monthsOf(y);
     const dayBase = months * 30;
     const annual = 12 / months;
@@ -393,7 +447,7 @@ export function computeRatios({ sections, years }) {
     const b = balance[y.id];
     const ebitda = ebitdaByYear[y.id];
     const cf = cashflow[y.id] ?? null;
-    const prev = i > 0 ? years[i - 1] : null;
+    const prev = basePeriod(years, y);
     const bal = (k) => cell(sections, BALANCE_SECTION, k, y.id);
 
     const { ventas, costo, resultadoOp, rif, gastosFin, prodFin, utilidadNeta } = inc;
@@ -427,7 +481,9 @@ export function computeRatios({ sections, years }) {
     // Eficiencia
     if (!prev) skip("crecimiento_ventas", NA_REASON.sinAnioAnterior);
     else {
-      const ventasPrev = income[prev.id].ventas;
+      // Ambas ventas llevadas a 12 meses (la base casi siempre es un cierre
+      // anual; si el año anterior solo tiene un corte parcial, también se anualiza).
+      const ventasPrev = income[prev.id].ventas * (12 / monthsOf(prev));
       if (ventasPrev <= 0) skip("crecimiento_ventas", NA_REASON.sinVentasAnterior);
       else values.crecimiento_ventas = (ventas * annual) / ventasPrev - 1;
     }

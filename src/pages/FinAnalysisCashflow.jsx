@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -157,7 +160,11 @@ YearHead.propTypes = { year: yearShape.isRequired, prev: yearShape };
 
 export default function FinAnalysisCashflow() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
+  // Periodo contra el que se compara cada columna (ver basePeriod).
+  const baseOf = (y) => basePeriod(years, y);
   const [sections, setSections] = useState({}); // income y balance tal como están guardados
   const [values, setValues] = useState({}); // capturas de cashflow: { [key]: { [yearId]: "" } }
   const [showCapex, setShowCapex] = useState(false);
@@ -223,8 +230,9 @@ export default function FinAnalysisCashflow() {
   );
 
   // Solo los años con año anterior tienen estado de cambios.
-  const flowYears = years.slice(1);
-  const prevOf = (y) => years[years.indexOf(y) - 1];
+  // Solo los periodos con base (año anterior) tienen Estado de cambios.
+  const flowYears = years.filter((y) => baseOf(y));
+  const prevOf = baseOf;
 
   // Años sin Estado de Resultados o sin Balance: el estado se calcula con ceros.
   const missing = useMemo(
@@ -289,7 +297,9 @@ export default function FinAnalysisCashflow() {
         </CardContent>
       </Card>
 
-      {years.length < 2 ? (
+      <CutsToggle periods={periods} />
+
+      {flowYears.length === 0 ? (
         <Card className="glass">
           <CardContent className="p-6 text-center space-y-3">
             <p className="text-sm text-muted">
