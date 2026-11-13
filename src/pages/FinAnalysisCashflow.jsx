@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   INCOME_SECTION,
   BALANCE_SECTION,
@@ -342,11 +343,9 @@ export default function FinAnalysisCashflow() {
                       </td>
                       {flowYears.map((y) => (
                         <td key={y.id} className="p-1.5 align-top">
-                          <input
-                            type="text"
-                            inputMode="decimal"
+                          <MoneyInput
                             value={values[it.key]?.[y.id] ?? ""}
-                            onChange={(e) => handleCell(it.key, y.id, e.target.value)}
+                            onChange={(v) => handleCell(it.key, y.id, v)}
                             placeholder="0"
                             aria-label={`${it.label}, ${yearLabel(y)}`}
                             className={inputCls}

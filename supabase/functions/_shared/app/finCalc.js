@@ -55,8 +55,11 @@ export const DAYS_BASE = 360;
 export const periodDays = (y) => monthsOf(y) * 30;
 
 // Variación porcentual entre dos valores (null si no se puede calcular).
+// Se mide sobre el valor absoluto del anterior para que el signo diga hacia
+// dónde se movió la cifra también cuando la base es negativa: de −100 a −50
+// es +50 % (mejoró), no −150 %.
 export const pctChange = (curr, prev) =>
-  prev == null || prev === 0 || curr == null ? null : curr / Math.abs(prev) - 1;
+  prev == null || prev === 0 || curr == null ? null : (curr - prev) / Math.abs(prev);
 
 // ---------- Estado de Resultados ----------
 // Devuelve { [yearId]: { ventas, costo, utilidadBruta, gastoVenta, gastoAdmin,
@@ -554,13 +557,25 @@ export function computeRatios({ sections, years }) {
   return out;
 }
 
+// Distancia de un valor a la banda verde [min, max] (0 si está dentro).
+const distToBand = (v, [min, max]) => (v < min ? min - v : v > max ? v - max : 0);
+
 // Tendencia del último periodo contra el anterior:
-// 'mejora' | 'empeora' | 'igual' | null (sin alguno de los dos valores, o
-// indicador de rango o sin `better`, donde "más" no es mejor ni peor).
+// 'mejora' | 'empeora' | 'igual' | 'neutral' | null (sin alguno de los dos
+// valores, o sin `better`, donde "más" no es mejor ni peor). En los
+// indicadores de rango (días proveedores) mejora si se acerca a la banda
+// verde, empeora si se aleja y es 'neutral' si se mueve dentro de ella.
 export function ratioTrend(def, curr, prev) {
   if (!def || curr == null || prev == null) return null;
-  if (def.better !== "higher" && def.better !== "lower") return null;
   const diff = curr - prev;
+  if (def.better === "range" && def.bands?.green) {
+    if (Math.abs(diff) < 1e-9) return "igual";
+    const dc = distToBand(curr, def.bands.green);
+    const dp = distToBand(prev, def.bands.green);
+    if (Math.abs(dc - dp) < 1e-9) return "neutral";
+    return dc < dp ? "mejora" : "empeora";
+  }
+  if (def.better !== "higher" && def.better !== "lower") return null;
   if (Math.abs(diff) < 1e-9) return "igual";
   const sube = diff > 0;
   return (def.better === "higher") === sube ? "mejora" : "empeora";

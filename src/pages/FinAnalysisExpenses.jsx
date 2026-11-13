@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   EXPENSES_SECTION,
   INCOME_SECTION,
@@ -273,11 +274,9 @@ export default function FinAnalysisExpenses() {
                     <td className="p-2 min-w-[220px] align-top">{c.label}</td>
                     {years.map((y) => (
                       <td key={y.id} className="p-1.5 align-top">
-                        <input
-                          type="text"
-                          inputMode="decimal"
+                        <MoneyInput
                           value={values[c.key]?.[y.id] ?? ""}
-                          onChange={(e) => handleCell(c.key, y.id, e.target.value)}
+                          onChange={(v) => handleCell(c.key, y.id, v)}
                           placeholder="0"
                           className={INPUT_CLASS}
                         />
@@ -329,11 +328,9 @@ export default function FinAnalysisExpenses() {
                             {fmtMiles.format(breakdown[y.id]?.[row.calc] ?? 0)}
                           </span>
                         ) : (
-                          <input
-                            type="text"
-                            inputMode="decimal"
+                          <MoneyInput
                             value={values[row.key]?.[y.id] ?? ""}
-                            onChange={(e) => handleCell(row.key, y.id, e.target.value)}
+                            onChange={(v) => handleCell(row.key, y.id, v)}
                             placeholder="0"
                             className={INPUT_CLASS}
                           />

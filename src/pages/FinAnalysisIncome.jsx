@@ -22,11 +22,31 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeIncome, computeEbitda } from "@/config/finCalc";
-import { Delta } from "@/components/fin/Delta";
+import { Delta, DeltaPP } from "@/components/fin/Delta";
+import MoneyInput from "@/components/fin/MoneyInput";
 import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
 
-// Renglones donde subir es malo (costos, gastos e impuestos): su ▲ va en rojo.
-const LOWER_IS_BETTER = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
+// Renglones de costo o gasto. Su variación en monto va en gris (gastar más
+// no es malo si las ventas crecen más) y lo que se juzga con color es su peso
+// sobre ventas, en puntos porcentuales: si baja, la empresa es más eficiente.
+const COST_ROWS = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
+
+// Cómo se comparan dos periodos de un renglón calculado. Devuelve los valores
+// a comparar y qué dirección es buena para el monto y para el % sobre ventas.
+//  - Costos y gastos: monto en gris, puntos porcentuales con "menos es mejor".
+//  - Resultado integral de financiamiento cuando es un costo neto (negativo)
+//    en ambos periodos: se compara como costo, por su tamaño; si baja, verde.
+//  - Utilidades y resultados: más es mejor en monto y en puntos.
+function comparison(calc, curr, prev, currPct, prevPct) {
+  if (COST_ROWS.has(calc)) {
+    return { curr, prev, currPct, prevPct, amountBetter: "neutral", pctBetter: "lower" };
+  }
+  if (calc === "rif" && curr <= 0 && prev < 0) {
+    const neg = (v) => (v == null ? null : -v);
+    return { curr: -curr, prev: -prev, currPct: neg(currPct), prevPct: neg(prevPct), amountBetter: "lower", pctBetter: "lower" };
+  }
+  return { curr, prev, currPct, prevPct, amountBetter: "higher", pctBetter: "higher" };
+}
 
 // Estado de Resultados (modelo MP-AFH1). Aquí se capturan las 11 cifras del
 // estado financiero y las 3 partidas que no son efectivo (depreciación y
@@ -35,8 +55,8 @@ const LOWER_IS_BETTER = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGene
 // productos (gastos)" llevan signo. Subtotales, utilidades y % sobre ventas
 // se calculan en vivo con computeIncome; el EBITDA de la lectura rápida sale
 // de computeEbitda (por eso también se carga el Balance: los diferidos lo
-// ajustan). No hay columna anualizada ni variación anual, igual que en el
-// Excel: esas comparaciones viven en Razones financieras.
+// ajustan). No hay columna anualizada; bajo cada renglón calculado van la
+// variación del monto y la de su % sobre ventas en puntos porcentuales.
 
 // Claves que se guardan en la sección `income` (captura + memo).
 const CAPTURE_KEYS = [...INCOME_INPUT_KEYS, ...INCOME_MEMO.map((m) => m.key)];
@@ -54,14 +74,7 @@ const clean = (v) => (v == null || Number.isNaN(v) ? 0 : v || 0);
 // Celda de captura de una cifra.
 function AmountInput({ value, onChange }) {
   return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="0"
-      className={INPUT_CLASS}
-    />
+<MoneyInput value={value} onChange={onChange} className={INPUT_CLASS} />
   );
 }
 
@@ -70,26 +83,30 @@ AmountInput.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
-// Celda calculada: cifra en miles y, debajo, su % sobre ventas y la variación
-// contra el periodo anterior (▲ verde / ▼ rojo según convenga al renglón).
-function ComputedCell({ value, pct, prev, year, prevYear, better }) {
+// Celda calculada: cifra en miles, su % sobre ventas y, contra el periodo
+// anterior, dos variaciones: la del monto (%) y la del % sobre ventas (en
+// puntos porcentuales). Ver `comparison` para los colores.
+function ComputedCell({ calc, value, pct, prev, prevPct, year, prevYear }) {
   const v = clean(value);
+  const c = prev != null ? comparison(calc, value ?? 0, prev, pct, prevPct) : null;
   return (
     <td className="p-2 text-right whitespace-nowrap align-top">
       <span className={v < 0 ? "text-red-500" : ""}>{fmtMiles.format(v)}</span>
       <span className="block text-[11px] text-muted font-normal">{fmtPct(pct)}</span>
-      {prev != null && <Delta curr={value ?? 0} prev={prev} currYear={year} prevYear={prevYear} better={better} className="font-normal" />}
+      {c && <Delta curr={c.curr} prev={c.prev} currYear={year} prevYear={prevYear} better={c.amountBetter} className="font-normal" />}
+      {c && <DeltaPP curr={c.currPct} prev={c.prevPct} better={c.pctBetter} className="font-normal" />}
     </td>
   );
 }
 
 ComputedCell.propTypes = {
+  calc: PropTypes.string.isRequired,
   value: PropTypes.number,
   pct: PropTypes.number,
   prev: PropTypes.number,
+  prevPct: PropTypes.number,
   year: PropTypes.object,
   prevYear: PropTypes.object,
-  better: PropTypes.oneOf(["higher", "lower", "neutral"]),
 };
 
 // Encabezado de un bloque dentro de la tabla (ocupa todas las columnas).
@@ -384,12 +401,13 @@ export default function FinAnalysisIncome() {
                         {years.map((y, i) => (
                           <ComputedCell
                             key={y.id}
+                            calc={row.calc}
                             value={computed[y.id]?.[row.calc]}
                             pct={computed[y.id]?.pct?.[row.calc]}
                             prev={i > 0 ? computed[years[i - 1].id]?.[row.calc] : null}
+                            prevPct={i > 0 ? computed[years[i - 1].id]?.pct?.[row.calc] : null}
                             year={y}
                             prevYear={i > 0 ? years[i - 1] : null}
-                            better={LOWER_IS_BETTER.has(row.calc) ? "lower" : "higher"}
                           />
                         ))}
                       </tr>
@@ -419,7 +437,11 @@ export default function FinAnalysisIncome() {
           <p className="text-xs text-muted flex items-start gap-2">
             <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
             <span>
-              Cifras en miles. La columna de un periodo parcial muestra sus cifras reales, sin
+              Cifras en miles. Bajo cada subtotal van su porcentaje sobre ventas, cuánto cambió el
+              monto contra el periodo anterior y cuánto cambió ese porcentaje, en puntos
+              porcentuales (pp). En costos y gastos el color lo da el porcentaje: si pesan menos
+              sobre las ventas van en verde aunque el monto haya subido. La columna de un periodo
+              parcial muestra sus cifras reales, sin
               anualizar; las comparaciones anualizadas (crecimiento, ROA, ROE) están en Razones
               financieras. EBITDA = Resultado de operación + depreciación y amortización + reservas.
             </span>

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   SEASONALITY_SECTION,
   INCOME_SECTION,
@@ -297,11 +298,9 @@ export default function FinAnalysisSeasonality() {
                         const enabled = inPeriod(m, y);
                         return (
                           <td key={y.id} className="p-1.5 align-top">
-                            <input
-                              type="text"
-                              inputMode="decimal"
+                            <MoneyInput
                               value={enabled ? values[m.key]?.[y.id] ?? "" : ""}
-                              onChange={(e) => handleCell(m.key, y.id, e.target.value)}
+                              onChange={(v) => handleCell(m.key, y.id, v)}
                               disabled={!enabled}
                               placeholder={enabled ? "0" : "—"}
                               title={enabled ? undefined : `Fuera del periodo de ${yearLabel(y)}`}

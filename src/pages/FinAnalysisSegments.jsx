@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   SALES_SECTION,
   SEGCOST_SECTION,
@@ -322,11 +323,9 @@ export default function FinAnalysisSegments() {
                   <td className="p-2 min-w-[180px] align-top">{renderName(line, manage)}</td>
                   {years.map((y) => (
                     <td key={y.id} className="p-1.5 align-top">
-                      <input
-                        type="text"
-                        inputMode="decimal"
+                      <MoneyInput
                         value={values[section]?.[line.id]?.[y.id] ?? ""}
-                        onChange={(e) => handleCell(section, line.id, y.id, e.target.value)}
+                        onChange={(v) => handleCell(section, line.id, y.id, v)}
                         placeholder="0"
                         className={INPUT_CLASS}
                       />

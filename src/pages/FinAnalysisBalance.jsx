@@ -21,6 +21,7 @@ import {
 } from "@/config/finConfig";
 import { computeBalance } from "@/config/finCalc";
 import { Delta } from "@/components/fin/Delta";
+import MoneyInput from "@/components/fin/MoneyInput";
 import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
 
 // Variación anual de los totales: más activo o capital es bueno (verde); más pasivo, no (rojo).
@@ -315,11 +316,9 @@ export default function FinAnalysisBalance() {
                               const differs = suggested != null && cur != null && Math.abs(cur - suggested) > TOLERANCE;
                               return (
                                 <td key={y.id} className="p-1.5 align-top">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
+                                  <MoneyInput
                                     value={raw}
-                                    onChange={(e) => handleCell(item.key, y.id, e.target.value)}
+                                    onChange={(v) => handleCell(item.key, y.id, v)}
                                     placeholder="0"
                                     aria-label={`${item.label} ${yearLabel(y)}`}
                                     className={`w-full min-w-[90px] p-2 rounded-lg glass text-foreground placeholder:text-muted/60 outline-none focus:border-accent text-right ${differs ? "border-amber-400/60" : ""}`}
