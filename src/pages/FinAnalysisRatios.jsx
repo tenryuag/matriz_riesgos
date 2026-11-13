@@ -54,6 +54,7 @@ const defShape = PropTypes.shape({
   label: PropTypes.string,
   format: PropTypes.string,
   semaforo: PropTypes.bool,
+  trendBetter: PropTypes.oneOf(["higher", "lower"]),
   what: PropTypes.string,
   how: PropTypes.string,
   formula: PropTypes.string,
@@ -95,8 +96,8 @@ function TrendCell({ def, trend, curr, prev }) {
   // Si el valor formateado no cambia (6.6% → 6.6%), una flecha confundiría:
   // se muestra como "sin cambio apreciable".
   const sameText = both && formatRatio(def, curr) === formatRatio(def, prev);
-  if (!def.semaforo) {
-    // Informativo: solo dirección, sin color.
+  if (!def.semaforo && !def.trendBetter) {
+    // Informativo sin dirección buena definida: solo dirección, sin color.
     if (both && (sameText || Math.abs(curr - prev) < 1e-9)) {
       glyph = "=";
       title = "Sin cambio apreciable";
@@ -107,12 +108,6 @@ function TrendCell({ def, trend, curr, prev }) {
   } else if (trend === "igual" || (trend != null && sameText)) {
     glyph = "=";
     title = trend === "igual" ? "Sin cambio" : "Sin cambio apreciable";
-  } else if (trend === "neutral") {
-    // Indicador de rango que se movió dentro de su banda sana: se muestra
-    // hacia dónde se movió, sin juzgarlo.
-    const up = (curr ?? 0) >= (prev ?? 0);
-    glyph = up ? "▲" : "▼";
-    title = `${up ? "Subió" : "Bajó"} respecto al periodo anterior y sigue dentro del rango sano`;
   } else if (trend === "mejora" || trend === "empeora") {
     const up = (curr ?? 0) >= (prev ?? 0);
     glyph = up ? "▲" : "▼";
@@ -134,7 +129,7 @@ function TrendCell({ def, trend, curr, prev }) {
 
 TrendCell.propTypes = {
   def: defShape.isRequired,
-  trend: PropTypes.oneOf(["mejora", "empeora", "igual", "neutral"]),
+  trend: PropTypes.oneOf(["mejora", "empeora", "igual"]),
   curr: PropTypes.number,
   prev: PropTypes.number,
 };
@@ -282,7 +277,7 @@ function QuickRead({ year, ratios, hasBalance }) {
   const summary = summarizeRatios(ratios);
   const counters = [
     { status: "verde", label: "Sanos", n: summary.verde },
-    { status: "ambar", label: "Por vigilar", n: summary.ambar },
+    { status: "ambar", label: "En vigilancia", n: summary.ambar },
     { status: "rojo", label: "Por atender", n: summary.rojo },
   ];
   const top = (summary.atencion || []).slice(0, 3);

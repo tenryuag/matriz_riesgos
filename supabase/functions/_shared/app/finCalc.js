@@ -557,28 +557,19 @@ export function computeRatios({ sections, years }) {
   return out;
 }
 
-// Distancia de un valor a la banda verde [min, max] (0 si está dentro).
-const distToBand = (v, [min, max]) => (v < min ? min - v : v > max ? v - max : 0);
-
 // Tendencia del último periodo contra el anterior:
-// 'mejora' | 'empeora' | 'igual' | 'neutral' | null (sin alguno de los dos
-// valores, o sin `better`, donde "más" no es mejor ni peor). En los
-// indicadores de rango (días proveedores) mejora si se acerca a la banda
-// verde, empeora si se aleja y es 'neutral' si se mueve dentro de ella.
+// 'mejora' | 'empeora' | 'igual' | null (sin alguno de los dos valores, o sin
+// dirección definida, donde "más" no es mejor ni peor). La dirección buena
+// es `trendBetter` si el indicador la define (días proveedores: su semáforo
+// es de rango, pero para la tendencia más días es mejor) y si no `better`.
 export function ratioTrend(def, curr, prev) {
   if (!def || curr == null || prev == null) return null;
+  const better = def.trendBetter || def.better;
+  if (better !== "higher" && better !== "lower") return null;
   const diff = curr - prev;
-  if (def.better === "range" && def.bands?.green) {
-    if (Math.abs(diff) < 1e-9) return "igual";
-    const dc = distToBand(curr, def.bands.green);
-    const dp = distToBand(prev, def.bands.green);
-    if (Math.abs(dc - dp) < 1e-9) return "neutral";
-    return dc < dp ? "mejora" : "empeora";
-  }
-  if (def.better !== "higher" && def.better !== "lower") return null;
   if (Math.abs(diff) < 1e-9) return "igual";
   const sube = diff > 0;
-  return (def.better === "higher") === sube ? "mejora" : "empeora";
+  return (better === "higher") === sube ? "mejora" : "empeora";
 }
 
 // Resumen del semáforo de un periodo (una entrada de computeRatios):

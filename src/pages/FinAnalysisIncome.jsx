@@ -26,20 +26,21 @@ import { Delta, DeltaPP } from "@/components/fin/Delta";
 import MoneyInput from "@/components/fin/MoneyInput";
 import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
 
-// Renglones de costo o gasto. Su variación en monto va en gris (gastar más
-// no es malo si las ventas crecen más) y lo que se juzga con color es su peso
-// sobre ventas, en puntos porcentuales: si baja, la empresa es más eficiente.
+// Renglones de costo o gasto: menos es mejor, tanto en monto como en su peso
+// sobre ventas. Cada variación lleva su propio color (lámina 2 del mentor):
+// un gasto puede subir en monto (rojo) y aun así pesar menos sobre las ventas
+// (verde), que es la señal de que la empresa es más eficiente.
 const COST_ROWS = new Set(["costo", "gastoVenta", "gastoAdmin", "gastoGeneral", "gastoOperativo", "gastosFin", "isr", "ptu"]);
 
 // Cómo se comparan dos periodos de un renglón calculado. Devuelve los valores
 // a comparar y qué dirección es buena para el monto y para el % sobre ventas.
-//  - Costos y gastos: monto en gris, puntos porcentuales con "menos es mejor".
+//  - Costos y gastos: menos es mejor en monto y en puntos porcentuales.
 //  - Resultado integral de financiamiento cuando es un costo neto (negativo)
 //    en ambos periodos: se compara como costo, por su tamaño; si baja, verde.
 //  - Utilidades y resultados: más es mejor en monto y en puntos.
 function comparison(calc, curr, prev, currPct, prevPct) {
   if (COST_ROWS.has(calc)) {
-    return { curr, prev, currPct, prevPct, amountBetter: "neutral", pctBetter: "lower" };
+    return { curr, prev, currPct, prevPct, amountBetter: "lower", pctBetter: "lower" };
   }
   if (calc === "rif" && curr <= 0 && prev < 0) {
     const neg = (v) => (v == null ? null : -v);
@@ -397,7 +398,16 @@ export default function FinAnalysisIncome() {
                         key={row.key}
                         className={`border-b border-card-border/50 ${isTotal ? "bg-accent/5 font-subtitle" : ""}`}
                       >
-                        <td className="p-2">{row.label}</td>
+                        <td className="p-2 align-top">
+                          {row.label}
+                          {years.length > 1 && (
+                            <span className="block text-[11px] text-muted font-normal" aria-hidden="true">
+                              <span className="block">% de ventas</span>
+                              <span className="block">Cambio en monto</span>
+                              <span className="block">Cambio % de ventas</span>
+                            </span>
+                          )}
+                        </td>
                         {years.map((y, i) => (
                           <ComputedCell
                             key={y.id}
@@ -439,8 +449,8 @@ export default function FinAnalysisIncome() {
             <span>
               Cifras en miles. Bajo cada subtotal van su porcentaje sobre ventas, cuánto cambió el
               monto contra el periodo anterior y cuánto cambió ese porcentaje, en puntos
-              porcentuales (pp). En costos y gastos el color lo da el porcentaje: si pesan menos
-              sobre las ventas van en verde aunque el monto haya subido. La columna de un periodo
+              porcentuales (pp). Cada cambio lleva su color: un gasto puede subir en monto (rojo) y
+              pesar menos sobre las ventas (verde), señal de que la empresa es más eficiente. La columna de un periodo
               parcial muestra sus cifras reales, sin
               anualizar; las comparaciones anualizadas (crecimiento, ROA, ROE) están en Razones
               financieras. EBITDA = Resultado de operación + depreciación y amortización + reservas.

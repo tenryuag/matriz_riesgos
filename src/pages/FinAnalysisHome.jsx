@@ -631,7 +631,7 @@ export default function FinAnalysisHome() {
                   <>
                     <div className="flex items-center gap-6 flex-wrap">
                       <StatusCounter status="verde" count={summary.verde} label="Sanos" />
-                      <StatusCounter status="ambar" count={summary.ambar} label="Por vigilar" />
+                      <StatusCounter status="ambar" count={summary.ambar} label="En vigilancia" />
                       <StatusCounter status="rojo" count={summary.rojo} label="Por atender" />
                       {summary.na > 0 && (
                         <span className="text-xs text-muted">
