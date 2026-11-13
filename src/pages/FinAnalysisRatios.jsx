@@ -107,11 +107,18 @@ function TrendCell({ def, trend, curr, prev }) {
   } else if (trend === "igual" || (trend != null && sameText)) {
     glyph = "=";
     title = trend === "igual" ? "Sin cambio" : "Sin cambio apreciable";
+  } else if (trend === "neutral") {
+    // Indicador de rango que se movió dentro de su banda sana: se muestra
+    // hacia dónde se movió, sin juzgarlo.
+    const up = (curr ?? 0) >= (prev ?? 0);
+    glyph = up ? "▲" : "▼";
+    title = `${up ? "Subió" : "Bajó"} respecto al periodo anterior y sigue dentro del rango sano`;
   } else if (trend === "mejora" || trend === "empeora") {
     const up = (curr ?? 0) >= (prev ?? 0);
     glyph = up ? "▲" : "▼";
     cls = `${trend === "mejora" ? STATUS_STYLES.verde.text : STATUS_STYLES.rojo.text} font-subtitle`;
-    title = trend === "mejora" ? "Mejora respecto al periodo anterior" : "Empeora respecto al periodo anterior";
+    const dir = up ? "Subió" : "Bajó";
+    title = trend === "mejora" ? `${dir}: mejora respecto al periodo anterior` : `${dir}: empeora respecto al periodo anterior`;
   }
   return (
     // `relative`: el texto sr-only es absoluto y sin ancestro posicionado se
@@ -127,7 +134,7 @@ function TrendCell({ def, trend, curr, prev }) {
 
 TrendCell.propTypes = {
   def: defShape.isRequired,
-  trend: PropTypes.oneOf(["mejora", "empeora", "igual"]),
+  trend: PropTypes.oneOf(["mejora", "empeora", "igual", "neutral"]),
   curr: PropTypes.number,
   prev: PropTypes.number,
 };

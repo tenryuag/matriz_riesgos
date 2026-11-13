@@ -220,7 +220,7 @@ check("annualizeFactor", [annualizeFactor(YEARS[0]), annualizeFactor(YEARS[3]), 
 check("toNumber", [toNumber("1,234.5"), toNumber(""), toNumber(null), toNumber("abc"), toNumber(-7)], [1234.5, null, null, null, -7]);
 check("sumValues ignora vacíos", sumValues(["10", "", null, 5, "x"]), 15);
 check("fmtPct", [fmtPct(0.1234), fmtPct(null), fmtPct(NaN)], ["12.3%", "—", "—"]);
-check("pctChange", [pctChange(110, 100), pctChange(50, -100), pctChange(10, 0), pctChange(null, 5)], [0.10000000000000009, -0.5, null, null]);
+check("pctChange", [pctChange(110, 100), pctChange(50, -100), pctChange(-50, -100), pctChange(-150, -100), pctChange(10, 0), pctChange(null, 5)], [0.1, 1.5, 0.5, -0.5, null, null]);
 
 // ---------- (a) computeIncome ----------
 console.log("\n== (a) computeIncome: hoja Edo Res ==");
@@ -654,7 +654,11 @@ check("liquidez 1.2 → 1.5 mejora", tr("liquidez", 1.5, 1.2), "mejora");
 check("liquidez 1.5 → 1.2 empeora", tr("liquidez", 1.2, 1.5), "empeora");
 check("dias_clientes 40 → 50 empeora", tr("dias_clientes", 50, 40), "empeora");
 check("dias_clientes 50 → 40 mejora", tr("dias_clientes", 40, 50), "mejora");
-check("dias_proveedores (rango) → null", tr("dias_proveedores", 40, 20), null);
+check("dias_proveedores (rango 30–90): 20 → 40 se acerca, mejora", tr("dias_proveedores", 40, 20), "mejora");
+check("dias_proveedores: 80 → 130 se sale por arriba, empeora", tr("dias_proveedores", 130, 80), "empeora");
+check("dias_proveedores: 130 → 100 se acerca, mejora", tr("dias_proveedores", 100, 130), "mejora");
+check("dias_proveedores: 40 → 60 dentro de la banda, neutral", tr("dias_proveedores", 60, 40), "neutral");
+check("dias_proveedores: igual", tr("dias_proveedores", 60, 60), "igual");
 check("informativo sin better → null", [tr("dias_anticipos", 5, 1), tr("efectivo_inversion", -100, -500), tr("deuda_total", 100, 500), tr("accionistas", 10, 0)], [null, null, null, null]);
 check("informativo con better: ebitda sube mejora, dias_otras_cxc sube empeora", [tr("ebitda", 6394, -2570), tr("dias_otras_cxc", 4.08, 1.01)], ["mejora", "empeora"]);
 check("igual", tr("liquidez", 1.2, 1.2), "igual");
