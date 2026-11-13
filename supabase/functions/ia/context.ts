@@ -111,7 +111,7 @@ export async function finContext(supabase: Db): Promise<FinContext | null> {
   const analysis = await getAnalysis(supabase)
   if (!analysis) return null
   const [{ data: years, error: e1 }, { data: lines, error: e2 }, { data: values, error: e3 }] = await Promise.all([
-    supabase.from('fin_years').select('*').eq('analysis_id', analysis.id).order('year', { ascending: true }),
+    supabase.from('fin_years').select('*').eq('analysis_id', analysis.id).order('year', { ascending: true }).order('months', { ascending: true }),
     supabase.from('fin_lines').select('*').eq('analysis_id', analysis.id).order('position', { ascending: true }),
     supabase.from('fin_values').select('year_id, section, concept_key, amount').eq('analysis_id', analysis.id),
   ])

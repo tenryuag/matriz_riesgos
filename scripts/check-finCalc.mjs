@@ -23,6 +23,13 @@ import {
   DAYS_BASE,
   periodDays,
   NA_REASON,
+  comparePeriods,
+  sortPeriods,
+  basePeriod,
+  previousCut,
+  sameCutPriorYear,
+  latestCuts,
+  hasMultipleCuts,
 } from "../src/config/finCalc.js";
 import {
   INCOME_SECTION,
@@ -220,7 +227,7 @@ check("annualizeFactor", [annualizeFactor(YEARS[0]), annualizeFactor(YEARS[3]), 
 check("toNumber", [toNumber("1,234.5"), toNumber(""), toNumber(null), toNumber("abc"), toNumber(-7)], [1234.5, null, null, null, -7]);
 check("sumValues ignora vacíos", sumValues(["10", "", null, 5, "x"]), 15);
 check("fmtPct", [fmtPct(0.1234), fmtPct(null), fmtPct(NaN)], ["12.3%", "—", "—"]);
-check("pctChange", [pctChange(110, 100), pctChange(50, -100), pctChange(10, 0), pctChange(null, 5)], [0.10000000000000009, -0.5, null, null]);
+check("pctChange", [pctChange(110, 100), pctChange(50, -100), pctChange(-50, -100), pctChange(-150, -100), pctChange(10, 0), pctChange(null, 5)], [0.1, 1.5, 0.5, -0.5, null, null]);
 
 // ---------- (a) computeIncome ----------
 console.log("\n== (a) computeIncome: hoja Edo Res ==");
@@ -654,7 +661,10 @@ check("liquidez 1.2 → 1.5 mejora", tr("liquidez", 1.5, 1.2), "mejora");
 check("liquidez 1.5 → 1.2 empeora", tr("liquidez", 1.2, 1.5), "empeora");
 check("dias_clientes 40 → 50 empeora", tr("dias_clientes", 50, 40), "empeora");
 check("dias_clientes 50 → 40 mejora", tr("dias_clientes", 40, 50), "mejora");
-check("dias_proveedores (rango) → null", tr("dias_proveedores", 40, 20), null);
+check("dias_proveedores: sube 71 → 76, mejora (mentor)", tr("dias_proveedores", 76, 71), "mejora");
+check("dias_proveedores: baja, empeora", tr("dias_proveedores", 60, 71), "empeora");
+check("dias_cxp_inter: sube mejora, baja empeora", [tr("dias_cxp_inter", 5, 1), tr("dias_cxp_inter", 1, 5)], ["mejora", "empeora"]);
+check("dias_cxc_inter y dias_otras_cxc: baja mejora", [tr("dias_cxc_inter", 1, 5), tr("dias_otras_cxc", 1, 5)], ["mejora", "mejora"]);
 check("informativo sin better → null", [tr("dias_anticipos", 5, 1), tr("efectivo_inversion", -100, -500), tr("deuda_total", 100, 500), tr("accionistas", 10, 0)], [null, null, null, null]);
 check("informativo con better: ebitda sube mejora, dias_otras_cxc sube empeora", [tr("ebitda", 6394, -2570), tr("dias_otras_cxc", 4.08, 1.01)], ["mejora", "empeora"]);
 check("igual", tr("liquidez", 1.2, 1.2), "igual");
@@ -743,6 +753,63 @@ check("null → '—'", formatRatio(RATIO_BY_KEY.liquidez, null), "—");
 check("undefined → '—'", formatRatio(RATIO_BY_KEY.roa, undefined), "—");
 check("NaN → '—'", formatRatio(RATIO_BY_KEY.roa, NaN), "—");
 check("def undefined → ratio", formatRatio(undefined, 1.5), "1.50 x");
+
+// ---------- Cortes dentro del año ----------
+console.log("\n== Cortes (varios periodos por año) ==");
+{
+  // 2024 y 2025 cerrados, jun 2025 guardado como historial, y dos cortes de 2026.
+  const P = {
+    a24: { id: "a24", year: 2024, months: 12 },
+    j25: { id: "j25", year: 2025, months: 6 },
+    a25: { id: "a25", year: 2025, months: 12 },
+    j26: { id: "j26", year: 2026, months: 6 },
+    o26: { id: "o26", year: 2026, months: 10 },
+  };
+  const ALL = [P.o26, P.a25, P.j26, P.a24, P.j25]; // a propósito desordenados
+  const ids = (arr) => arr.map((p) => p && p.id);
+  check("sortPeriods: por año y meses", ids(sortPeriods(ALL)), ["a24", "j25", "a25", "j26", "o26"]);
+  check("comparePeriods mismo año", comparePeriods(P.j26, P.o26) < 0, true);
+  check("basePeriod: cortes de 2026 → cierre 2025; cortes de 2025 → 2024; 2024 → null",
+    ids([basePeriod(ALL, P.j26), basePeriod(ALL, P.o26), basePeriod(ALL, P.j25), basePeriod(ALL, P.a25), basePeriod(ALL, P.a24)]),
+    ["a25", "a25", "a24", "a24", null]);
+  check("basePeriod sin cierre el año anterior → su último corte", ids([basePeriod([P.a24, P.j25, P.o26], P.o26)]), ["j25"]);
+  check("previousCut", ids([previousCut(ALL, P.o26), previousCut(ALL, P.j26), previousCut(ALL, P.a25), previousCut(ALL, P.a24)]), ["j26", null, "j25", null]);
+  check("sameCutPriorYear", ids([sameCutPriorYear(ALL, P.j26), sameCutPriorYear(ALL, P.o26), sameCutPriorYear(ALL, P.a25)]), ["j25", null, "a24"]);
+  check("latestCuts: uno por año, el más reciente", ids(latestCuts(ALL)), ["a24", "a25", "o26"]);
+  check("hasMultipleCuts", [hasMultipleCuts(ALL), hasMultipleCuts([P.a24, P.a25, P.o26]), hasMultipleCuts([])], [true, false, false]);
+
+  // Cifras mínimas: cada corte se calcula contra su base aunque haya otros cortes.
+  const S = {
+    [INCOME_SECTION]: {
+      ventas: { a24: 900, j25: 520, a25: 1000, j26: 600, o26: 1100 },
+      costo: { a24: 600, j25: 330, a25: 650, j26: 380, o26: 700 },
+      gasto_general: { a24: 200, j25: 110, a25: 220, j26: 120, o26: 210 },
+    },
+    [BALANCE_SECTION]: {
+      efectivo: { a24: 50, j25: 70, a25: 80, j26: 120, o26: 150 },
+      clientes: { a24: 100, j25: 110, a25: 120, j26: 130, o26: 140 },
+      proveedores: { a24: 60, j25: 65, a25: 70, j26: 75, o26: 90 },
+      capital_social: { a24: 90, j25: 90, a25: 90, j26: 90, o26: 90 },
+      resultados_acumulados: { a24: -100, j25: 0, a25: 0, j26: 130, o26: 130 },
+    },
+  };
+  const full = { sections: S, years: ALL };
+  const cfAll = computeCashflow(full);
+  check("Estado de cambios: base de cada corte", [cfAll.j26.prevYearId, cfAll.o26.prevYearId, cfAll.j25.prevYearId, cfAll.a25.prevYearId, cfAll.a24 === undefined], ["a25", "a25", "a24", "a24", true]);
+  // Un corte da lo mismo solo con su base que con todo el historial alrededor.
+  const solo = (y, base) => ({ sections: S, years: [base, y] });
+  check("oct 2026 con historial = oct 2026 solo con su base (cambios)", cfAll.o26, computeCashflow(solo(P.o26, P.a25)).o26);
+  check("jun 2026 con historial = jun 2026 solo con su base (cambios)", cfAll.j26, computeCashflow(solo(P.j26, P.a25)).j26);
+  const rAll = computeRatios(full);
+  check("oct 2026 con historial = solo con su base (razones)", rAll.o26.values, computeRatios(solo(P.o26, P.a25)).o26.values);
+  approx("crecimiento oct 2026: 1100 × 12/10 ÷ 1000 − 1", rAll.o26.values.crecimiento_ventas, 0.32);
+  approx("crecimiento jun 2026: 600 × 2 ÷ 1000 − 1", rAll.j26.values.crecimiento_ventas, 0.2);
+  approx("crecimiento 2025: contra el cierre 2024, no contra jun 2025", rAll.a25.values.crecimiento_ventas, 1000 / 900 - 1);
+  check("EBITDA y Balance no dependen del orden de la lista", [Object.entries(computeEbitda(full)).sort(), computeBalance(full).o26.acumuladosSugerido], [Object.entries(computeEbitda({ sections: S, years: sortPeriods(ALL) })).sort(), computeBalance({ sections: S, years: sortPeriods(ALL) }).o26.acumuladosSugerido]);
+  check("acumulados sugeridos de un corte: acumulados + utilidad del cierre anterior", computeBalance(full).j26.acumuladosSugerido, 0 + (1000 - 650 - 220));
+  // Base parcial (año anterior sin cierre): ambas ventas se anualizan.
+  approx("crecimiento con base parcial: (1100×12/10) ÷ (520×2) − 1", computeRatios({ sections: S, years: [P.j25, P.o26] }).o26.values.crecimiento_ventas, 1320 / 1040 - 1);
+}
 
 console.log(`\n${failures === 0 ? "TODO OK" : `${failures} FALLA(S)`}`);
 process.exit(failures === 0 ? 0 : 1);

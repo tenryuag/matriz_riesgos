@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   SALES_SECTION,
   SEGCOST_SECTION,
@@ -116,7 +120,11 @@ DiffCell.propTypes = {
 
 export default function FinAnalysisSegments() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
+  // Periodo contra el que se compara cada columna (ver basePeriod).
+  const baseOf = (y) => basePeriod(years, y);
   const [lines, setLines] = useState([]);
   const [income, setIncome] = useState({}); // sección `income` tal como viene de la BD
   // { sales: { [lineId]: { [yearId]: "monto" } }, segcost: { ... } }
@@ -322,11 +330,9 @@ export default function FinAnalysisSegments() {
                   <td className="p-2 min-w-[180px] align-top">{renderName(line, manage)}</td>
                   {years.map((y) => (
                     <td key={y.id} className="p-1.5 align-top">
-                      <input
-                        type="text"
-                        inputMode="decimal"
+                      <MoneyInput
                         value={values[section]?.[line.id]?.[y.id] ?? ""}
-                        onChange={(e) => handleCell(section, line.id, y.id, e.target.value)}
+                        onChange={(v) => handleCell(section, line.id, y.id, v)}
                         placeholder="0"
                         className={INPUT_CLASS}
                       />
@@ -348,14 +354,14 @@ export default function FinAnalysisSegments() {
               ))}
               <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                 <td className="p-2">Total</td>
-                {years.map((y, yi) => {
+                {years.map((y) => {
                   const t = seg[y.id]?.[totalKey] ?? 0;
                   return (
                     <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                       {fmtMiles.format(t)}
                       <PctHint value={t > 0 ? 1 : null} />
-                      {yi > 0 && (
-                        <Delta curr={t} prev={seg[years[yi - 1].id]?.[totalKey] ?? 0} currYear={y} prevYear={years[yi - 1]} better={totalKey === "totalCosto" ? "lower" : "higher"} className="font-normal" />
+                      {baseOf(y) && (
+                        <Delta curr={t} prev={seg[baseOf(y).id]?.[totalKey] ?? 0} currYear={y} prevYear={baseOf(y)} better={totalKey === "totalCosto" ? "lower" : "higher"} className="font-normal" />
                       )}
                     </td>
                   );
@@ -431,6 +437,8 @@ export default function FinAnalysisSegments() {
           </div>
         </CardContent>
       </Card>
+
+      <CutsToggle periods={periods} />
 
       {years.length === 0 ? (
         <Card className="glass">
@@ -516,15 +524,15 @@ export default function FinAnalysisSegments() {
                         {lines.map((line) => (
                           <tr key={line.id} className="border-b border-card-border/50">
                             <td className="p-2 min-w-[180px]">{line.name}</td>
-                            {years.map((y, yi) => {
+                            {years.map((y) => {
                               const s = seg[y.id]?.bySegment[line.id];
                               const bruto = s?.bruto ?? 0;
                               return (
                                 <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                   <span className={bruto < 0 ? "text-red-500" : ""}>{fmtMiles.format(bruto)}</span>
                                   <PctHint value={s?.margen ?? null} />
-                                  {yi > 0 && (
-                                    <Delta curr={bruto} prev={seg[years[yi - 1].id]?.bySegment[line.id]?.bruto ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" />
+                                  {baseOf(y) && (
+                                    <Delta curr={bruto} prev={seg[baseOf(y).id]?.bySegment[line.id]?.bruto ?? 0} currYear={y} prevYear={baseOf(y)} better="higher" />
                                   )}
                                 </td>
                               );
@@ -533,14 +541,14 @@ export default function FinAnalysisSegments() {
                         ))}
                         <tr className="bg-accent/5 font-subtitle">
                           <td className="p-2">Total</td>
-                          {years.map((y, yi) => {
+                          {years.map((y) => {
                             const t = seg[y.id]?.totalBruto ?? 0;
                             return (
                               <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                 <span className={t < 0 ? "text-red-500" : ""}>{fmtMiles.format(t)}</span>
                                 <PctHint value={seg[y.id]?.margenTotal ?? null} />
-                                {yi > 0 && (
-                                  <Delta curr={t} prev={seg[years[yi - 1].id]?.totalBruto ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                                {baseOf(y) && (
+                                  <Delta curr={t} prev={seg[baseOf(y).id]?.totalBruto ?? 0} currYear={y} prevYear={baseOf(y)} better="higher" className="font-normal" />
                                 )}
                               </td>
                             );

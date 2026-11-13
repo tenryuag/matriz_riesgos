@@ -51,6 +51,32 @@ export function Delta({ curr, prev, currYear, prevYear, better = "higher", class
   );
 }
 
+// Variación de un porcentaje sobre ventas (un margen o el peso de un gasto)
+// contra el periodo anterior, en puntos porcentuales: de 35.0 % a 33.2 % son
+// ▼ 1.8 pp. No se anualiza: es una proporción, no un monto. `curr` y `prev`
+// son fracciones (0.35). `better` decide el color igual que en <Delta>.
+export function DeltaPP({ curr, prev, better = "higher", className = "" }) {
+  if (curr == null || prev == null || !isFinite(curr) || !isFinite(prev)) return null;
+  const diff = curr - prev;
+  const pp = Math.abs(diff * 100);
+  const flat = pp < 0.05;
+  const title = flat
+    ? "Mismo porcentaje sobre ventas que el periodo anterior"
+    : `${diff > 0 ? "Sube" : "Baja"} ${pp.toFixed(1)} puntos porcentuales sobre ventas respecto al periodo anterior`;
+  return (
+    <span className={`block text-[11px] whitespace-nowrap ${flat ? FLAT : deltaClass(diff, better)} ${className}`} title={title}>
+      {flat ? "= 0.0 pp" : `${diff > 0 ? "▲" : "▼"} ${pp.toFixed(1)} pp`}
+    </span>
+  );
+}
+
+DeltaPP.propTypes = {
+  curr: PropTypes.number,
+  prev: PropTypes.number,
+  better: PropTypes.oneOf(["higher", "lower", "neutral"]),
+  className: PropTypes.string,
+};
+
 const yearShape = PropTypes.shape({ id: PropTypes.string, year: PropTypes.number, months: PropTypes.number });
 
 Delta.propTypes = {

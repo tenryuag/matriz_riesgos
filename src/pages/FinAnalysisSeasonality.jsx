@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -9,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
+import MoneyInput from "@/components/fin/MoneyInput";
 import {
   SEASONALITY_SECTION,
   INCOME_SECTION,
@@ -123,7 +127,11 @@ MonthTooltip.propTypes = {
 
 export default function FinAnalysisSeasonality() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
+  // Periodo contra el que se compara cada columna (ver basePeriod).
+  const baseOf = (y) => basePeriod(years, y);
   const [income, setIncome] = useState({}); // sección `income` tal como viene de la BD
   const [values, setValues] = useState({}); // { [m01..m12]: { [yearId]: "monto" } }
   const [loading, setLoading] = useState(true);
@@ -259,6 +267,8 @@ export default function FinAnalysisSeasonality() {
         </CardContent>
       </Card>
 
+      <CutsToggle periods={periods} />
+
       {years.length === 0 ? (
         <Card className="glass">
           <CardContent className="p-6 text-center space-y-3">
@@ -297,11 +307,9 @@ export default function FinAnalysisSeasonality() {
                         const enabled = inPeriod(m, y);
                         return (
                           <td key={y.id} className="p-1.5 align-top">
-                            <input
-                              type="text"
-                              inputMode="decimal"
+                            <MoneyInput
                               value={enabled ? values[m.key]?.[y.id] ?? "" : ""}
-                              onChange={(e) => handleCell(m.key, y.id, e.target.value)}
+                              onChange={(v) => handleCell(m.key, y.id, v)}
                               disabled={!enabled}
                               placeholder={enabled ? "0" : "—"}
                               title={enabled ? undefined : `Fuera del periodo de ${yearLabel(y)}`}
@@ -316,14 +324,14 @@ export default function FinAnalysisSeasonality() {
 
                   <tr className="bg-accent/5 border-b border-card-border/50 font-subtitle">
                     <td className="p-2">Total</td>
-                    {years.map((y, yi) => {
+                    {years.map((y) => {
                       const t = seasonality[y.id]?.total ?? 0;
                       return (
                         <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                           {fmtMiles.format(t)}
                           <PctHint value={t > 0 ? 1 : null} />
-                          {yi > 0 && (
-                            <Delta curr={t} prev={seasonality[years[yi - 1].id]?.total ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                          {baseOf(y) && (
+                            <Delta curr={t} prev={seasonality[baseOf(y).id]?.total ?? 0} currYear={y} prevYear={baseOf(y)} better="higher" className="font-normal" />
                           )}
                         </td>
                       );

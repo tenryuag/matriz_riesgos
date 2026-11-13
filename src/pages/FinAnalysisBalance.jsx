@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -21,6 +24,7 @@ import {
 } from "@/config/finConfig";
 import { computeBalance } from "@/config/finCalc";
 import { Delta } from "@/components/fin/Delta";
+import MoneyInput from "@/components/fin/MoneyInput";
 import ImportStatementsDialog from "@/components/fin/ImportStatementsDialog";
 
 // Variación anual de los totales: más activo o capital es bueno (verde); más pasivo, no (rojo).
@@ -57,7 +61,11 @@ PctLine.propTypes = {
 
 export default function FinAnalysisBalance() {
   const [analysis, setAnalysis] = useState(null);
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
+  // Periodo contra el que se compara cada columna (ver basePeriod).
+  const baseOf = (y) => basePeriod(years, y);
   const [incomeStored, setIncomeStored] = useState({}); // sección income tal cual está guardada
   const [values, setValues] = useState({}); // { [cuenta]: { [yearId]: "" } }
   const [loading, setLoading] = useState(true);
@@ -217,6 +225,8 @@ export default function FinAnalysisBalance() {
         </CardContent>
       </Card>
 
+      <CutsToggle periods={periods} />
+
       {years.length === 0 ? (
         <Card className="glass">
           <CardContent className="p-6 text-center space-y-3">
@@ -315,11 +325,9 @@ export default function FinAnalysisBalance() {
                               const differs = suggested != null && cur != null && Math.abs(cur - suggested) > TOLERANCE;
                               return (
                                 <td key={y.id} className="p-1.5 align-top">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
+                                  <MoneyInput
                                     value={raw}
-                                    onChange={(e) => handleCell(item.key, y.id, e.target.value)}
+                                    onChange={(v) => handleCell(item.key, y.id, v)}
                                     placeholder="0"
                                     aria-label={`${item.label} ${yearLabel(y)}`}
                                     className={`w-full min-w-[90px] p-2 rounded-lg glass text-foreground placeholder:text-muted/60 outline-none focus:border-accent text-right ${differs ? "border-amber-400/60" : ""}`}
@@ -355,7 +363,7 @@ export default function FinAnalysisBalance() {
                               ; no se captura aquí.
                             </span>
                           </td>
-                          {years.map((y, yi) => {
+                          {years.map((y) => {
                             const t = totals[y.id];
                             const v = t?.[row.key] ?? 0;
                             const withIncome = hasIncome(y.id);
@@ -367,8 +375,8 @@ export default function FinAnalysisBalance() {
                                 {withIncome ? (
                                   <>
                                     <PctLine value={t?.pct?.[row.key]} />
-                                    {yi > 0 && hasIncome(years[yi - 1].id) && (
-                                      <Delta curr={v} prev={totals[years[yi - 1].id]?.[row.key] ?? 0} currYear={y} prevYear={years[yi - 1]} better="higher" className="font-normal" />
+                                    {baseOf(y) && hasIncome(baseOf(y).id) && (
+                                      <Delta curr={v} prev={totals[baseOf(y).id]?.[row.key] ?? 0} currYear={y} prevYear={baseOf(y)} better="higher" className="font-normal" />
                                     )}
                                   </>
                                 ) : (
@@ -389,14 +397,14 @@ export default function FinAnalysisBalance() {
                           className={`bg-accent/5 border-b border-card-border/50 ${STRONG_TOTALS.has(t.key) ? "font-subtitle" : ""}`}
                         >
                           <td className="p-2">{t.label}</td>
-                          {years.map((y, yi) => {
+                          {years.map((y) => {
                             const v = totals[y.id]?.[t.key] ?? 0;
                             return (
                               <td key={y.id} className="p-2 text-right whitespace-nowrap align-top">
                                 <span className={`block ${v < 0 ? "text-red-500" : ""}`}>{fmtMiles.format(v)}</span>
                                 <PctLine value={totals[y.id]?.pct?.[t.key]} className="font-normal" />
-                                {yi > 0 && (
-                                  <Delta curr={v} prev={totals[years[yi - 1].id]?.[t.key] ?? 0} better={TOTAL_BETTER[t.key] || "neutral"} className="font-normal" />
+                                {baseOf(y) && (
+                                  <Delta curr={v} prev={totals[baseOf(y).id]?.[t.key] ?? 0} better={TOTAL_BETTER[t.key] || "neutral"} className="font-normal" />
                                 )}
                               </td>
                             );

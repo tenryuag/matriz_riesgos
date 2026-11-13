@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useFinPeriods } from "@/hooks/useFinPeriods";
+import { basePeriod } from "@/config/finCalc";
+import CutsToggle from "@/components/fin/CutsToggle";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { createPageUrl } from "@/utils";
@@ -54,6 +57,7 @@ const defShape = PropTypes.shape({
   label: PropTypes.string,
   format: PropTypes.string,
   semaforo: PropTypes.bool,
+  trendBetter: PropTypes.oneOf(["higher", "lower"]),
   what: PropTypes.string,
   how: PropTypes.string,
   formula: PropTypes.string,
@@ -95,8 +99,8 @@ function TrendCell({ def, trend, curr, prev }) {
   // Si el valor formateado no cambia (6.6% → 6.6%), una flecha confundiría:
   // se muestra como "sin cambio apreciable".
   const sameText = both && formatRatio(def, curr) === formatRatio(def, prev);
-  if (!def.semaforo) {
-    // Informativo: solo dirección, sin color.
+  if (!def.semaforo && !def.trendBetter) {
+    // Informativo sin dirección buena definida: solo dirección, sin color.
     if (both && (sameText || Math.abs(curr - prev) < 1e-9)) {
       glyph = "=";
       title = "Sin cambio apreciable";
@@ -111,7 +115,8 @@ function TrendCell({ def, trend, curr, prev }) {
     const up = (curr ?? 0) >= (prev ?? 0);
     glyph = up ? "▲" : "▼";
     cls = `${trend === "mejora" ? STATUS_STYLES.verde.text : STATUS_STYLES.rojo.text} font-subtitle`;
-    title = trend === "mejora" ? "Mejora respecto al periodo anterior" : "Empeora respecto al periodo anterior";
+    const dir = up ? "Subió" : "Bajó";
+    title = trend === "mejora" ? `${dir}: mejora respecto al periodo anterior` : `${dir}: empeora respecto al periodo anterior`;
   }
   return (
     // `relative`: el texto sr-only es absoluto y sin ancestro posicionado se
@@ -144,9 +149,11 @@ function groupNote(group, defs) {
 
 // Una tarjeta por grupo (eficiencia, flujo, liquidez, …) con su tabla.
 function RatioGroupCard({ group, defs, years, ratios, expanded, onToggle }) {
-  const hasTrend = years.length >= 2;
+  // La tendencia compara el último periodo contra su base: el cierre del
+  // año anterior (con un periodo por año, la columna anterior).
   const last = years[years.length - 1];
-  const prev = hasTrend ? years[years.length - 2] : null;
+  const prev = basePeriod(years, last);
+  const hasTrend = !!prev;
   const colSpan = years.length + 1 + (hasTrend ? 1 : 0);
   const lastRatios = ratios[last?.id];
   const note = groupNote(group, defs);
@@ -275,7 +282,7 @@ function QuickRead({ year, ratios, hasBalance }) {
   const summary = summarizeRatios(ratios);
   const counters = [
     { status: "verde", label: "Sanos", n: summary.verde },
-    { status: "ambar", label: "Por vigilar", n: summary.ambar },
+    { status: "ambar", label: "En vigilancia", n: summary.ambar },
     { status: "rojo", label: "Por atender", n: summary.rojo },
   ];
   const top = (summary.atencion || []).slice(0, 3);
@@ -365,7 +372,9 @@ QuickRead.propTypes = {
 };
 
 export default function FinAnalysisRatios() {
-  const [years, setYears] = useState([]);
+  const [allYears, setYears] = useState([]);
+  const periods = useFinPeriods(allYears);
+  const { years } = periods;
   const [sections, setSections] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -507,6 +516,8 @@ export default function FinAnalysisRatios() {
           </CardContent>
         </Card>
       )}
+
+      <CutsToggle periods={periods} />
 
       {!error && years.length > 0 && !noData && (
         <>

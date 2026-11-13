@@ -85,6 +85,7 @@ import FinAnalysisCashflow from "./FinAnalysisCashflow";
 import FinAnalysisRatios from "./FinAnalysisRatios";
 
 import FinAnalysisReport from "./FinAnalysisReport";
+import FinAnalysisCuts from "./FinAnalysisCuts";
 
 import FinAnalysisSegments from "./FinAnalysisSegments";
 
@@ -192,6 +193,7 @@ const PAGES = {
     FinAnalysisRatios: FinAnalysisRatios,
 
     FinAnalysisReport: FinAnalysisReport,
+    FinAnalysisCuts: FinAnalysisCuts,
 
     FinAnalysisSegments: FinAnalysisSegments,
 
@@ -466,6 +468,11 @@ function PagesContent() {
             <Route path="/FinAnalysisReport" element={
                 <Layout currentPageName={currentPage}>
                     <FinAnalysisReport />
+                </Layout>
+            } />
+            <Route path="/FinAnalysisCuts" element={
+                <Layout currentPageName={currentPage}>
+                    <FinAnalysisCuts />
                 </Layout>
             } />
             <Route path="/FinAnalysisSegments" element={
