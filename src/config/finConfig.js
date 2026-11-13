@@ -311,7 +311,10 @@ export const RATIO_GROUPS = [
 // `better`: 'higher' (verde si ≥ greenMin, ámbar si ≥ amberMin, si no rojo),
 // 'lower' (verde si ≤ greenMax, ámbar si ≤ amberMax, si no rojo), 'range'
 // (verde dentro de green, ámbar dentro de amber, si no rojo) o null cuando
-// "más" no es mejor ni peor. `statusFrom` hereda el semáforo de otro
+// "más" no es mejor ni peor. `trendBetter` ('higher' | 'lower') fija la
+// dirección buena de la flecha de Tendencia cuando difiere de `better` o
+// cuando el indicador es informativo pero su flecha sí lleva color (definido
+// por el mentor, nov-2026). `statusFrom` hereda el semáforo de otro
 // indicador (entonces no lleva bandas). Los informativos no llevan bandas.
 const CICLO_BANDS = { greenMax: 45, amberMax: 90 };
 const COBERTURA_BANDS = { greenMin: 3.0, amberMin: 1.5 };
@@ -372,6 +375,7 @@ export const RATIO_DEFS = [
     label: "Días proveedores",
     format: "days",
     better: "range",
+    trendBetter: "higher",
     bands: { green: [30, 90], amber: [15, 120] },
     semaforo: true,
     formula: "Proveedores ÷ (Costo de ventas ÷ días del periodo)",
@@ -396,6 +400,7 @@ export const RATIO_DEFS = [
     label: "Días otras cuentas por cobrar",
     format: "days",
     better: "lower",
+    trendBetter: "lower",
     semaforo: false,
     formula: "Otras cuentas por cobrar ÷ (Ventas ÷ días del periodo)",
     what: "Cuántos días de venta tienes prestados en cuentas por cobrar que no son de clientes (deudores, préstamos, saldos a favor).",
@@ -419,6 +424,7 @@ export const RATIO_DEFS = [
     label: "Días cuentas por cobrar intercompañías",
     format: "days",
     better: "lower",
+    trendBetter: "lower",
     semaforo: false,
     formula: "Cuentas por cobrar a compañías relacionadas ÷ (Ventas ÷ días del periodo)",
     what: "Cuántos días de venta te deben otras empresas del mismo grupo.",
@@ -430,6 +436,7 @@ export const RATIO_DEFS = [
     label: "Días cuentas por pagar intercompañías",
     format: "days",
     better: null,
+    trendBetter: "higher",
     semaforo: false,
     formula: "Compañías relacionadas (pasivo) ÷ (Costo de ventas ÷ días del periodo)",
     what: "Cuántos días de costo les debes a otras empresas del mismo grupo.",
