@@ -1018,7 +1018,8 @@ export const FinYear = {
       .from("fin_years")
       .select("*")
       .eq("analysis_id", analysisId)
-      .order("year", { ascending: true });
+      .order("year", { ascending: true })
+      .order("months", { ascending: true });
     if (error) handleQueryError(error);
     return data || [];
   },

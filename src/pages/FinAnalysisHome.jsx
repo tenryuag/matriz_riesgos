@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { basePeriod, latestCuts } from "@/config/finCalc";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -152,7 +153,7 @@ function buildModel({ analysis, years, lines, sections }) {
   const hasBalance = hasAny(balanceSection);
 
   const last = years.length ? years[years.length - 1] : null;
-  const prev = years.length > 1 ? years[years.length - 2] : null;
+  const prev = basePeriod(years, last);
   // Años con Estado de Resultados y Balance: son los que el Estado de
   // cambios puede comparar entre sí.
   const completeYears = years.filter(
@@ -440,7 +441,8 @@ export default function FinAnalysisHome() {
           EXPENSES_SECTION,
           SEASONALITY_SECTION,
         ]);
-        if (active) setData({ analysis: a, years, lines, sections });
+        // El tablero muestra un periodo por año: el corte más reciente de cada uno.
+        if (active) setData({ analysis: a, years: latestCuts(years), lines, sections });
       } catch (err) {
         console.error("Error al cargar el inicio del análisis financiero:", err);
         if (active) setError("No pudimos cargar la información. Intenta recargar la página.");

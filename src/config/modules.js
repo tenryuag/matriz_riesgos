@@ -34,7 +34,8 @@ import {
   CalendarRange,
   Sparkles,
   Radar,
-  ShieldAlert
+  ShieldAlert,
+  History,
 } from "lucide-react";
 
 // ============================================================
@@ -105,6 +106,7 @@ export const MODULES = [
       { pageKey: "FinAnalysisCashflow", nameKey: "navFinAnalysisCashflow", icon: Waves, group: "captura" },
       { pageKey: "FinAnalysisRatios", nameKey: "navFinAnalysisRatios", icon: Gauge, group: "resultados" },
       { pageKey: "FinAnalysisReport", nameKey: "navFinAnalysisReport", icon: BarChart3, group: "resultados" },
+      { pageKey: "FinAnalysisCuts", nameKey: "navFinAnalysisCuts", icon: History, group: "resultados" },
       { pageKey: "FinAnalysisSegments", nameKey: "navFinAnalysisSegments", icon: PieChart, group: "opcionales" },
       { pageKey: "FinAnalysisExpenses", nameKey: "navFinAnalysisExpenses", icon: Receipt, group: "opcionales" },
       { pageKey: "FinAnalysisSeasonality", nameKey: "navFinAnalysisSeasonality", icon: CalendarRange, group: "opcionales" },

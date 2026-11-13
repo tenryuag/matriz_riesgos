@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { sortPeriods } from "@/config/finCalc";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -57,8 +58,8 @@ const YEAR_MAX = 2100;
 // Mensaje amigable para los errores de guardado de un año.
 function yearErrorMessage(err, year) {
   const msg = String(err?.message || err || "");
-  if (/duplicate key|23505|fin_years_analysis_id_year_key/i.test(msg)) {
-    return `Ya tienes el año ${year} en la lista. Cada año puede aparecer una sola vez.`;
+  if (/duplicate key|23505|fin_years_analysis_id_year/i.test(msg)) {
+    return `Ya tienes ese mismo corte de ${year} en la lista. Cada corte puede aparecer una sola vez.`;
   }
   return "No pudimos guardar el cambio del año. Intenta de nuevo.";
 }
@@ -87,7 +88,7 @@ function YearInput({ year, takenYears, onCommit }) {
     }
     if (takenYears.includes(v)) {
       setText(String(year));
-      onCommit(null, `Ya tienes el año ${v} en la lista. Cada año puede aparecer una sola vez.`);
+      onCommit(null, `Ya tienes ese mismo corte en ${v}. Cambia primero el mes del corte.`);
       return;
     }
     onCommit(v, "");
@@ -175,11 +176,40 @@ export default function FinAnalysisData() {
         setError(`Solo se pueden registrar años entre ${YEAR_MIN} y ${YEAR_MAX}.`);
       } else {
         const created = await FinYear.add(analysis.id, newYear, 12);
-        if (created) setYears((prev) => [...prev, created].sort((a, b) => a.year - b.year));
+        if (created) setYears((prev) => sortPeriods([...prev, created]));
       }
     } catch (err) {
       console.error("Error al agregar el año:", err);
       setError("No pudimos agregar el año. Intenta de nuevo.");
+    }
+    setYearBusy(false);
+  };
+
+  // Agrega otro corte al mismo año sin tocar los que ya existen: así el
+  // parcial anterior (jun) queda como historial cuando llega el siguiente
+  // (oct) o el cierre. Propone el mes siguiente al último corte del año; si
+  // el año ya está cerrado, el parcial libre más reciente.
+  const handleAddCut = async (year) => {
+    if (!analysis || yearBusy) return;
+    const used = years.filter((y) => y.year === year).map((y) => y.months);
+    const maxUsed = Math.max(...used);
+    let months = null;
+    for (let m = maxUsed + 1; m <= 12 && months == null; m += 1) if (!used.includes(m)) months = m;
+    for (let m = 11; m >= 1 && months == null; m -= 1) if (!used.includes(m)) months = m;
+    if (months == null) {
+      setError(`El año ${year} ya tiene los 12 cortes posibles.`);
+      return;
+    }
+    setYearBusy(true);
+    setError("");
+    try {
+      const created = await FinYear.add(analysis.id, year, months);
+      if (created) setYears((prev) => sortPeriods([...prev, created]));
+    } catch (err) {
+      console.error("Error al agregar el corte:", err);
+      setError(
+        "No pudimos agregar el corte. Si vuelve a pasar, falta aplicar en la base de datos la actualización que permite varios cortes por año (supabase-fin-cortes.sql)."
+      );
     }
     setYearBusy(false);
   };
@@ -190,15 +220,14 @@ export default function FinAnalysisData() {
     const previous = years;
     const target = years.find((y) => y.id === id);
     if (!target) return;
-    if (fields.year != null && years.some((y) => y.id !== id && y.year === fields.year)) {
-      setError(`Ya tienes el año ${fields.year} en la lista. Cada año puede aparecer una sola vez.`);
+    const next = { ...target, ...fields };
+    if (years.some((y) => y.id !== id && y.year === next.year && y.months === next.months)) {
+      setError(`Ya tienes ese mismo corte de ${next.year} en la lista. Cada corte puede aparecer una sola vez.`);
       return;
     }
     setError("");
     setYears((prev) =>
-      prev
-        .map((y) => (y.id === id ? { ...y, ...fields } : y))
-        .sort((a, b) => a.year - b.year)
+      sortPeriods(prev.map((y) => (y.id === id ? { ...y, ...fields } : y)))
     );
     try {
       await FinYear.update(id, fields);
@@ -212,7 +241,7 @@ export default function FinAnalysisData() {
   const handleRemoveYear = async (id) => {
     const y = years.find((x) => x.id === id);
     const ok = window.confirm(
-      `¿Eliminar el ejercicio ${y ? yearLabel(y) : ""}? Se borrarán también todas las cifras capturadas de ese año en el módulo.`
+      `¿Eliminar el periodo ${y ? yearLabel(y) : ""}? Se borrarán también todas las cifras capturadas de ese periodo en el módulo.`
     );
     if (!ok) return;
     try {
@@ -367,10 +396,13 @@ export default function FinAnalysisData() {
           <p className="text-sm text-muted">
             Se recomiendan de 3 a 5 años para ver tendencias. Agrega años hacia atrás o hacia
             adelante con los botones, o escribe el año directamente en la casilla (el cambio se
-            aplica al salir de ella). El último puede ser un <strong>periodo parcial</strong> (por
-            ejemplo, cifras a junio): los estados financieros lo muestran tal cual, y las razones
-            que lo necesitan (crecimiento en ventas, ROA, ROE y los días) lo ajustan a los meses
-            del periodo para que la comparación sea justa.
+            aplica al salir de ella). Un año puede llevar un <strong>corte parcial</strong> (por
+            ejemplo, cifras acumuladas a junio): los estados financieros lo muestran tal cual, y las
+            razones que lo necesitan (crecimiento en ventas, ROA, ROE y los días) lo ajustan a los
+            meses del periodo para que la comparación sea justa. Cuando tengas cifras más recientes
+            del mismo año, no edites el corte: usa <strong>+ Corte</strong> para agregar el nuevo
+            (octubre, o el cierre del año) y el anterior se conserva como historial. Las tablas
+            muestran el corte más reciente de cada año y el Comparativo de cortes los pone lado a lado.
           </p>
 
           {years.length === 0 ? (
@@ -386,7 +418,7 @@ export default function FinAnalysisData() {
                   </span>
                   <YearInput
                     year={y.year}
-                    takenYears={years.filter((x) => x.id !== y.id).map((x) => x.year)}
+                    takenYears={years.filter((x) => x.id !== y.id && x.months === y.months).map((x) => x.year)}
                     onCommit={(v, message) => {
                       if (v == null) {
                         setError(message || "");
@@ -402,15 +434,28 @@ export default function FinAnalysisData() {
                     aria-label="Cobertura del año"
                   >
                     {MONTH_OPTIONS.map((m) => (
-                      <option key={m.value} value={m.value}>
+                      <option
+                        key={m.value}
+                        value={m.value}
+                        disabled={years.some((x) => x.id !== y.id && x.year === y.year && x.months === m.value)}
+                      >
                         {m.label}
                       </option>
                     ))}
                   </select>
                   <button
+                    type="button"
+                    onClick={() => handleAddCut(y.year)}
+                    disabled={yearBusy}
+                    className="px-3 py-2 rounded-lg glass hover:border-accent text-xs font-subtitle flex-shrink-0 disabled:opacity-50"
+                    title={`Agrega otro corte de ${y.year} sin borrar este: el anterior queda como historial`}
+                  >
+                    + Corte
+                  </button>
+                  <button
                     onClick={() => handleRemoveYear(y.id)}
                     className="p-2 rounded-lg hover:bg-red-500/10 text-muted hover:text-red-500 transition-colors flex-shrink-0"
-                    title="Eliminar año"
+                    title="Eliminar periodo"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
