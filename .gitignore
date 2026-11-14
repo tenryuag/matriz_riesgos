@@ -31,3 +31,6 @@ supabase/.branches/
 
 # Deno (type-check local de Edge Functions)
 deno.lock
+
+# Copia local de la base de producción (datos reales: nunca al repositorio)
+supabase/local/
