@@ -60,3 +60,14 @@ docker exec -i -e PGPASSWORD=postgres supabase_db_hcmeoducjqudokfhhvyc \
   que se pruebe en local solo se ve en esta máquina.
 - No correr `supabase config push`: sobreescribiría la configuración de Auth
   de producción con la de este archivo.
+
+## Ensayo de la migración de empresas
+
+```bash
+npm run db:local:cargar && scripts/check-empresas.sh
+```
+
+Carga la copia de producción, toma una huella de lo que ve cada usuario,
+aplica `supabase-empresas.sql`, comprueba que todos ven exactamente lo mismo y
+prueba el aislamiento entre empresas. Para deshacer las reglas:
+`supabase-empresas-rollback.sql`.
