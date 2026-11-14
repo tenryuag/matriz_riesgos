@@ -15,3 +15,30 @@ verify_jwt = false
 # Asistente de IA de la app. Verifica el JWT del usuario por sí misma (igual
 # que `mcp`) y responde el preflight CORS sin token.
 verify_jwt = false
+
+# ── Base local de pruebas (`supabase start`) ────────────────────────────────
+# Puertos propios (5434x) para no chocar con otros proyectos locales.
+# Cómo levantarla y cargarle la copia de producción: docs/BD-LOCAL.md
+[api]
+port = 54341
+
+[db]
+port = 54342
+shadow_port = 54340
+major_version = 17
+
+[studio]
+port = 54343
+
+[local_smtp]
+port = 54344
+
+[analytics]
+enabled = false
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/**"]
+
+[auth.email]
+enable_confirmations = false

@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --mode localdb",
+    "db:local:copiar": "scripts/bd-local.sh copiar",
+    "db:local:cargar": "scripts/bd-local.sh cargar",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
