@@ -31,7 +31,7 @@ function Choice({ value, options, onChange }) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => (
-        <button
+        <button data-edit-disable
           key={opt}
           type="button"
           onClick={() => onChange(value === opt ? "" : opt)}
@@ -275,7 +275,7 @@ export default function MarketAnalysis() {
                       className="flex-grow p-2.5 rounded-xl glass text-foreground text-sm outline-none focus:border-accent"
                       aria-label="Nombre del competidor"
                     />
-                    <Button
+                    <Button data-edit
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(comp)}
@@ -332,7 +332,7 @@ export default function MarketAnalysis() {
               placeholder="Nombre del competidor…"
               className="flex-grow p-3 rounded-xl glass text-foreground placeholder:text-muted outline-none focus:border-accent"
             />
-            <Button
+            <Button data-edit
               onClick={handleAdd}
               disabled={!newName.trim()}
               className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"

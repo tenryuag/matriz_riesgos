@@ -1,11 +1,12 @@
 import React from "react";
 import { CheckCircle2, AlertTriangle, Save, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hideWhenReadOnly } from "@/components/ReadOnlyContext";
 
 // Barra fija inferior que muestra el estado del autoguardado.
 // El botón "Guardar ahora" es opcional: el guardado ocurre solo, pero da
 // tranquilidad a quien quiere confirmarlo con un click.
-export default function SaveStatusBar({ status, onSaveNow }) {
+function SaveStatusBar({ status, onSaveNow }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 lg:left-80 z-30 glass-darker border-t border-[var(--card-border)]">
       <div className="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
@@ -55,3 +56,6 @@ export default function SaveStatusBar({ status, onSaveNow }) {
     </div>
   );
 }
+
+// Solo sirve para editar: en «solo ver» no se muestra.
+export default hideWhenReadOnly(SaveStatusBar);

@@ -373,7 +373,7 @@ export default function FinAnalysisData() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {years.length > 0 && (
-                <Button
+                <Button data-edit
                   onClick={() => handleAddYear("prev")}
                   disabled={yearBusy}
                   variant="outline"
@@ -383,7 +383,7 @@ export default function FinAnalysisData() {
                   <Plus className="w-4 h-4 mr-2" /> Año anterior
                 </Button>
               )}
-              <Button
+              <Button data-edit
                 onClick={() => handleAddYear("next")}
                 disabled={yearBusy}
                 className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle"
@@ -443,7 +443,7 @@ export default function FinAnalysisData() {
                       </option>
                     ))}
                   </select>
-                  <button
+                  <button data-edit
                     type="button"
                     onClick={() => handleAddCut(y.year)}
                     disabled={yearBusy}
@@ -452,7 +452,7 @@ export default function FinAnalysisData() {
                   >
                     + Corte
                   </button>
-                  <button
+                  <button data-edit
                     onClick={() => handleRemoveYear(y.id)}
                     className="p-2 rounded-lg hover:bg-red-500/10 text-muted hover:text-red-500 transition-colors flex-shrink-0"
                     title="Eliminar periodo"

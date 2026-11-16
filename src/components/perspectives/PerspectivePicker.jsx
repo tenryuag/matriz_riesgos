@@ -34,7 +34,7 @@ export default function PerspectivePicker({
           const selected = value === p.key;
           const Icon = iconForPerspective(p.key);
           return (
-            <button
+            <button data-edit-disable
               key={p.key}
               type="button"
               aria-pressed={selected}
@@ -60,7 +60,7 @@ export default function PerspectivePicker({
           const selected = value === p.key;
           const Icon = iconForPerspective(p.key);
           return (
-            <button
+            <button data-edit-disable
               key={p.key}
               type="button"
               aria-pressed={selected}

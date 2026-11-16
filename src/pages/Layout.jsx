@@ -10,6 +10,8 @@ import { SESSION_EXPIRED_KEY } from "@/api/authHelpers";
 import { useIdleTimeout, resetIdleTimer } from "@/hooks/useIdleTimeout";
 import { findModuleByPage, canAccessModule } from "@/config/modules";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { ReadOnlyZone, READ_ONLY_CSS } from "@/components/ReadOnlyContext";
+import { getActingCompany } from "@/api/supabaseClient";
 import {
   LayoutDashboard,
   Building2,
@@ -38,6 +40,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
+
+// Pantallas de consulta: sus campos son filtros y buscadores, así que en
+// «solo ver» se quedan activos (los botones de edición sí se ocultan).
+const FILTER_ONLY_PAGES = new Set(["AllRisks", "PerspectiveRisks", "DepartmentRisks", "FinAnalysisCuts"]);
+
+// Pantallas que solo sirven para capturar: fuera del menú en «solo ver».
+const EDIT_ONLY_PAGES = new Set(["AddRisk", "AddDepartment", "PerspectiveMigration"]);
 
 const LoginScreen = ({ theme, toggleTheme, onLoginSuccess }) => {
   const { language, changeLanguage, t } = useLanguage();
@@ -692,8 +701,11 @@ const AppLayout = ({ children, currentPageName }) => {
   const navStructure = [];
   if (activeModule) {
     const groupIndex = {};
+    // En «solo ver» no se ofrecen las pantallas que solo sirven para capturar.
+    const navReadOnly =
+      !accessLoading && !actingCompany && !(isAdmin || hasAdminAccess) && !canEditModule(activeModule.key);
     activeModule.pages
-      .filter((p) => !p.hidden)
+      .filter((p) => !p.hidden && !(navReadOnly && EDIT_ONLY_PAGES.has(p.pageKey)))
       .forEach((p) => {
         if (!p.group) {
           navStructure.push({ type: "link", ...toNavItem(p) });
@@ -729,6 +741,22 @@ const AppLayout = ({ children, currentPageName }) => {
   // Módulo en «solo ver» para este usuario: se avisa arriba de la página.
   const readOnlyModule =
     !!activeModule && accessChecked && !effectiveAdmin && !canEditModule(activeModule.key);
+
+  // Modo mentor recién abierto: hasta confirmar que el acceso sigue vigente
+  // no se pinta la página, para que no intente cargar datos que ya no puede ver.
+  if (accessLoading && getActingCompany()) {
+    return (
+      <div className={`min-h-screen font-body ${theme}`}>
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ background: `linear-gradient(135deg, var(--background-start), var(--background-end))` }}
+        >
+          <style>{themeStyles}</style>
+          <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   if (deniedModuleAccess) {
     return (
@@ -1019,14 +1047,17 @@ const AppLayout = ({ children, currentPageName }) => {
             <div className="max-w-7xl mx-auto">
               {readOnlyModule && (
                 <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm print:hidden">
+                  <style>{READ_ONLY_CSS}</style>
                   <EyeIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
                   <span>
                     <strong className="font-subtitle">Solo lectura.</strong>{' '}
-                    Tu empresa te dio permiso para ver este módulo, no para editarlo. Los cambios que hagas no se guardan.
+                    Tu empresa te dio permiso para consultar este módulo. Si necesitas editarlo, pídeselo al administrador de tu empresa.
                   </span>
                 </div>
               )}
-              {children}
+              <ReadOnlyZone active={readOnlyModule} keepInputs={FILTER_ONLY_PAGES.has(currentPageName)}>
+                {children}
+              </ReadOnlyZone>
             </div>
           </main>
         </div>

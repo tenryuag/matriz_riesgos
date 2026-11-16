@@ -6,8 +6,9 @@ import { Wand2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createPageUrl } from "@/utils";
 import { useLanguage } from "@/components/LanguageContext";
+import { hideWhenReadOnly } from "@/components/ReadOnlyContext";
 
-export default function MigrationBanner({ count }) {
+function MigrationBanner({ count }) {
   const { t } = useLanguage();
   if (!count) return null;
 
@@ -35,3 +36,6 @@ export default function MigrationBanner({ count }) {
 MigrationBanner.propTypes = {
   count: PropTypes.number,
 };
+
+// Solo sirve para editar: en «solo ver» no se muestra.
+export default hideWhenReadOnly(MigrationBanner);

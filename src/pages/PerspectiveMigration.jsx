@@ -257,7 +257,7 @@ export default function PerspectiveMigration() {
         {/* Derecha: acción */}
         <div className="w-full md:w-auto md:flex-shrink-0 flex flex-col items-stretch md:items-end gap-1">
           {row.status === "pending" && (
-            <Button
+            <Button data-edit
               onClick={() => handleAssign(row)}
               disabled={!value || !!state}
               className="bg-accent text-accent-foreground hover:bg-accent/90 w-full md:w-auto"
@@ -274,7 +274,7 @@ export default function PerspectiveMigration() {
           )}
           {row.status === "done" && (
             <>
-              <Button
+              <Button data-edit
                 variant="outline"
                 onClick={() => handleUndo(row)}
                 disabled={!!state}

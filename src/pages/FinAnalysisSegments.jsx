@@ -280,7 +280,7 @@ export default function FinAnalysisSegments() {
             onKeyDown={(e) => e.key === "Enter" && handleRename(line.id)}
             className="w-full p-1.5 rounded-lg glass text-foreground outline-none focus:border-accent"
           />
-          <button
+          <button data-edit
             onClick={() => handleRename(line.id)}
             className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-500"
             title="Guardar nombre"
@@ -293,7 +293,7 @@ export default function FinAnalysisSegments() {
     return (
       <div className="flex items-center gap-1.5 group">
         <span>{line.name}</span>
-        <button
+        <button data-edit
           onClick={() => {
             setEditingLine(line.id);
             setEditingName(line.name);
@@ -341,7 +341,7 @@ export default function FinAnalysisSegments() {
                   ))}
                   {manage && (
                     <td className="p-1.5 align-top">
-                      <button
+                      <button data-edit
                         onClick={() => handleRemoveLine(line)}
                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted hover:text-red-500 transition-colors"
                         title="Eliminar segmento"
@@ -463,7 +463,7 @@ export default function FinAnalysisSegments() {
               placeholder="Nombre del segmento, ej. Piezas automotrices"
               className="flex-grow p-3 rounded-xl glass text-foreground placeholder:text-muted outline-none focus:border-accent"
             />
-            <Button
+            <Button data-edit
               onClick={handleAddLine}
               disabled={!newLine.trim()}
               className="bg-accent text-accent-foreground hover:bg-accent/90 font-subtitle flex-shrink-0"

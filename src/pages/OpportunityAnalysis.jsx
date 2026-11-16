@@ -143,7 +143,7 @@ export default function OpportunityAnalysis() {
                     >
                       <p className="text-sm flex-grow">{item.q}</p>
                       <div className="flex gap-2 flex-shrink-0">
-                        <button
+                        <button data-edit-disable
                           type="button"
                           onClick={() => setAnswer(item.key, "Sí")}
                           className={`px-4 py-1.5 rounded-full text-sm font-subtitle border transition-all ${
@@ -154,7 +154,7 @@ export default function OpportunityAnalysis() {
                         >
                           Sí
                         </button>
-                        <button
+                        <button data-edit-disable
                           type="button"
                           onClick={() => setAnswer(item.key, "No")}
                           className={`px-4 py-1.5 rounded-full text-sm font-subtitle border transition-all ${

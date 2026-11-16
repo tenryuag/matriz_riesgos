@@ -167,7 +167,7 @@ export default function Departments() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button
+                      <Button data-edit
                         variant="ghost"
                         size="icon"
                         onClick={() => navigate(createPageUrl(`AddDepartment?id=${department.id}`))}
@@ -177,7 +177,7 @@ export default function Departments() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button
+                      <Button data-edit
                         variant="ghost"
                         size="icon"
                         onClick={() => requestDelete(department, riskStats.total)}

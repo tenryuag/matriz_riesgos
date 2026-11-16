@@ -166,7 +166,7 @@ export default function PerspectiveRisks() {
             <p className="text-muted">{perspective.help}</p>
           </div>
         </div>
-        <Button onClick={() => navigate(addUrl)} className="bg-accent text-accent-foreground hover:bg-accent/90 w-full md:w-auto">
+        <Button data-edit onClick={() => navigate(addUrl)} className="bg-accent text-accent-foreground hover:bg-accent/90 w-full md:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           {t("newRisk")}
         </Button>
@@ -193,11 +193,11 @@ export default function PerspectiveRisks() {
             </div>
             <p className="text-muted mb-6">{t("perspNoRisksIn")}</p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
-              <Button onClick={() => navigate(addUrl)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button data-edit onClick={() => navigate(addUrl)} className="bg-accent text-accent-foreground hover:bg-accent/90">
                 <Plus className="w-4 h-4 mr-2" />
                 {t("newRisk")}
               </Button>
-              <Button
+              <Button data-edit
                 variant="outline"
                 onClick={() => navigate(createPageUrl(`AddRisk?perspective=${perspective.key}&example=0`))}
                 className="glass hover:border-accent"

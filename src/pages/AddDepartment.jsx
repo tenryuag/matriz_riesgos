@@ -184,7 +184,7 @@ export default function AddDepartment() {
               >
                 {t('cancel')}
               </Button>
-              <Button
+              <Button data-edit
                 type="submit"
                 variant="outline"
                 className="glass hover:border-accent flex-1"

@@ -107,7 +107,7 @@ export default function DepartmentRisks() {
           </div>
           <p className="text-muted">{department.description || t('departmentRiskManagement')}</p>
         </div>
-        <Button onClick={() => navigate(createPageUrl(`AddRisk?department=${department.id}`))} className="bg-accent text-accent-foreground hover:bg-accent/90">
+        <Button data-edit onClick={() => navigate(createPageUrl(`AddRisk?department=${department.id}`))} className="bg-accent text-accent-foreground hover:bg-accent/90">
           <Plus className="w-4 h-4 mr-2" />
           {t('newRisk')}
         </Button>

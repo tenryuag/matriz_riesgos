@@ -505,7 +505,7 @@ export default function AddRisk() {
 
         <div className="flex gap-3">
           <Button type="button" variant="outline" onClick={() => navigate(-1)} className="glass hover:border-accent" disabled={loading}>{t('cancel')}</Button>
-          <Button type="submit" variant="outline" className="glass hover:border-accent flex-1" disabled={loading}>
+          <Button data-edit type="submit" variant="outline" className="glass hover:border-accent flex-1" disabled={loading}>
             {loading ? <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             {loading ? t('saving') : (editingRisk ? t('saveChanges') : t('registerRisk'))}
           </Button>

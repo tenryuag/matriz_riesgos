@@ -365,6 +365,39 @@ BEGIN
 END;
 $$;
 
+-- Registro raíz del módulo (plan estratégico / análisis financiero) de la
+-- empresa activa: lo devuelve y, si la empresa aún no lo tiene, lo crea vacío.
+-- Basta con poder VER el módulo: así quien tiene «solo ver» encuentra el
+-- módulo vacío en lugar de un error. Crear el contenedor no es editar datos.
+CREATE OR REPLACE FUNCTION public.ensure_module_root(p_module text) RETURNS uuid
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE
+  cid uuid := public.active_company_id();
+  rid uuid;
+BEGIN
+  IF cid IS NULL OR NOT (cid = ANY (public.accessible_companies(p_module, false))) THEN
+    RETURN NULL;
+  END IF;
+  IF p_module = 'strategic' THEN
+    SELECT id INTO rid FROM public.strategic_plans WHERE company_id = cid ORDER BY created_at LIMIT 1;
+    IF rid IS NULL THEN
+      INSERT INTO public.strategic_plans (company_id, owner_id, created_by_id)
+      VALUES (cid, auth.uid(), auth.uid()) RETURNING id INTO rid;
+    END IF;
+  ELSIF p_module = 'fin-analysis' THEN
+    SELECT id INTO rid FROM public.fin_analyses WHERE company_id = cid ORDER BY created_at LIMIT 1;
+    IF rid IS NULL THEN
+      INSERT INTO public.fin_analyses (company_id, owner_id, created_by_id)
+      VALUES (cid, auth.uid(), auth.uid()) RETURNING id INTO rid;
+    END IF;
+  END IF;
+  RETURN rid;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.ensure_module_root(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ensure_module_root(text) TO authenticated;
+
 -- ── 5. Administración de la plataforma ───────────────────────────────────────
 
 -- Roles: se agrega «mentor».

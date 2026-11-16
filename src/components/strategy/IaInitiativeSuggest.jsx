@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { callIa, IaError } from "@/api/ia";
 import IaDisclaimer from "@/components/ia/IaDisclaimer";
 import { localISODate, addDays } from "@/config/strategicCalc";
+import { hideWhenReadOnly } from "@/components/ReadOnlyContext";
 
 // ============================================================
 // Iniciativas sugeridas con IA para un objetivo de prioridad alta (una
@@ -66,7 +67,7 @@ const initiativeFieldsFrom = (ini) => {
 
 const FALLBACK_ERROR = "No pudimos completar la petición. Inténtalo de nuevo.";
 
-export default function IaInitiativeSuggest({ objective, existingTitles = [], onAdd }) {
+function IaInitiativeSuggest({ objective, existingTitles = [], onAdd }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // { code, message }
   const [response, setResponse] = useState(null); // { result, usage, cached, generated_at }
@@ -243,3 +244,6 @@ IaInitiativeSuggest.propTypes = {
   existingTitles: PropTypes.arrayOf(PropTypes.string),
   onAdd: PropTypes.func.isRequired,
 };
+
+// Solo sirve para editar: en «solo ver» no se muestra.
+export default hideWhenReadOnly(IaInitiativeSuggest);

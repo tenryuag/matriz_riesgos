@@ -185,7 +185,7 @@ export default function FinAnalysisBalance() {
           </div>
         </div>
         {years.length > 0 && (
-          <Button
+          <Button data-edit
             variant="outline"
             className="glass hover:border-accent font-subtitle"
             onClick={openImport}
@@ -333,7 +333,7 @@ export default function FinAnalysisBalance() {
                                     className={`w-full min-w-[90px] p-2 rounded-lg glass text-foreground placeholder:text-muted/60 outline-none focus:border-accent text-right ${differs ? "border-amber-400/60" : ""}`}
                                   />
                                   {suggested != null && (
-                                    <button
+                                    <button data-edit
                                       type="button"
                                       onClick={() => handleCell(item.key, y.id, String(suggested))}
                                       title="Usar este valor"

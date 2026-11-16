@@ -212,16 +212,16 @@ export default function SwotAnalysis() {
                     <div key={i} className="flex items-center justify-between gap-2 p-3 glass rounded-xl group">
                       <span className="text-sm flex-grow">{item}</span>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 rounded-lg hover:bg-accent/20" title="Editar">
+                        <button data-edit className="p-1.5 rounded-lg hover:bg-accent/20" title="Editar">
                           <Pencil className="w-3.5 h-3.5 text-accent" />
                         </button>
-                        <button className="p-1.5 rounded-lg hover:bg-red-500/20" title="Quitar">
+                        <button data-edit className="p-1.5 rounded-lg hover:bg-red-500/20" title="Quitar">
                           <Trash2 className="w-3.5 h-3.5 text-red-500" />
                         </button>
                       </div>
                     </div>
                   ))}
-                  <button className="w-full flex items-center justify-center gap-2 p-3 glass rounded-xl text-accent hover:bg-accent/10 transition-colors">
+                  <button data-edit className="w-full flex items-center justify-center gap-2 p-3 glass rounded-xl text-accent hover:bg-accent/10 transition-colors">
                     <Plus className="w-4 h-4" />
                     <span className="text-sm font-subtitle">Agregar</span>
                   </button>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Clock, Sparkles, GraduationCap, Building2 } from "lucide-react";
+import { ArrowRight, Clock, Sparkles, GraduationCap, Building2, ShieldOff, X } from "lucide-react";
+import { getMentorAccessLost, setMentorAccessLost } from "@/api/supabaseClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/components/LanguageContext";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
@@ -42,6 +43,13 @@ export default function ModuleLauncher() {
     (user?.user_metadata?.full_name || user?.full_name || "")
       .trim()
       .split(" ")[0] || "";
+
+  // Aviso de «la empresa retiró tu acceso» (lo deja el modo mentor al salir).
+  const [lostAccess, setLostAccess] = useState(() => getMentorAccessLost());
+  const dismissLostAccess = () => {
+    setMentorAccessLost(null);
+    setLostAccess(null);
+  };
 
   // Rota las frases de carga cada 1.8 s mientras se cargan los módulos.
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -88,6 +96,33 @@ export default function ModuleLauncher() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-10 py-6">
+      {lostAccess && (
+        <div
+          role="status"
+          className="rounded-3xl border border-indigo-500/30 bg-indigo-500/10 p-5 flex items-start gap-4"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+            <ShieldOff className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div className="flex-grow min-w-0">
+            <h2 className="font-subtitle">Ya no tienes acceso a {lostAccess}</h2>
+            <p className="text-sm text-muted mt-0.5">
+              La empresa retiró tu acceso como mentor, así que saliste de sus datos y volviste a tu propio
+              espacio. Lo que ya habías guardado se conserva. Si fue un error, pídele a su administrador que
+              te lo devuelva desde «Mi empresa».
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={dismissLostAccess}
+            aria-label="Cerrar aviso"
+            className="w-8 h-8 rounded-full inline-flex items-center justify-center text-muted hover:bg-indigo-500/15"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Bienvenida */}
       <div className="text-center space-y-3">
         <h1 className="text-3xl md:text-4xl font-title">

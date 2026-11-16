@@ -207,7 +207,7 @@ export default function AllRisks() {
         </div>
         <div className="flex gap-3">
           {selectedRisks.size === 1 && (
-            <Button 
+            <Button data-edit 
               onClick={() => {
                 const selectedRiskId = [...selectedRisks][0];
                 navigate(createPageUrl(`AddRisk?id=${selectedRiskId}`));
@@ -221,7 +221,7 @@ export default function AllRisks() {
             </Button>
           )}
           {selectedRisks.size > 0 && (
-            <Button onClick={() => confirmAndDelete(selectedRisks)} disabled={deleting} variant="destructive" className="bg-red-500/80 hover:bg-red-500/90 text-white">
+            <Button data-edit onClick={() => confirmAndDelete(selectedRisks)} disabled={deleting} variant="destructive" className="bg-red-500/80 hover:bg-red-500/90 text-white">
               {deleting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
               {deleting ? t('deleting') : t('deleteSelected', { count: selectedRisks.size })}
             </Button>
@@ -229,7 +229,7 @@ export default function AllRisks() {
           <Button onClick={exportToExcel} variant="outline" className="glass hover:border-accent" disabled={deleting}>
             📥 {t('exportExcel')}
           </Button>
-          <Button onClick={() => navigate(createPageUrl(`AddRisk`))} variant="outline" className="glass hover:border-accent" disabled={deleting}>
+          <Button data-edit onClick={() => navigate(createPageUrl(`AddRisk`))} variant="outline" className="glass hover:border-accent" disabled={deleting}>
             <Plus className="w-4 h-4 mr-2" />
             {t('newRisk')}
           </Button>
@@ -292,7 +292,7 @@ export default function AllRisks() {
                 <TableHeader>
                   <TableRow className="border-card-border hover:bg-transparent">
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-l border-r border-card-border w-12">
-                      <Checkbox checked={allFilteredSelected} onCheckedChange={handleSelectAll} disabled={deleting} />
+                      <Checkbox data-edit checked={allFilteredSelected} onCheckedChange={handleSelectAll} disabled={deleting} />
                     </TableHead>
                     <TableHead rowSpan={2} className="align-middle text-accent font-subtitle text-xs uppercase tracking-wider p-2 border-r border-card-border">
                       {t('tablePerspective')}
@@ -332,7 +332,7 @@ export default function AllRisks() {
                   {filteredRisks.map((risk) => (
                     <TableRow key={risk.id} className={`border-card-border hover:bg-gray-500/5 ${deleting && selectedRisks.has(risk.id) ? 'opacity-50' : ''}`}>
                       <TableCell className="align-top text-center border-l border-r border-card-border">
-                        <Checkbox checked={selectedRisks.has(risk.id)} onCheckedChange={(c) => handleSelectRisk(risk.id, c)} disabled={deleting} />
+                        <Checkbox data-edit checked={selectedRisks.has(risk.id)} onCheckedChange={(c) => handleSelectRisk(risk.id, c)} disabled={deleting} />
                       </TableCell>
                       <TableCell className="align-top whitespace-nowrap border-r border-card-border">
                         <PerspectiveBadge perspectiveKey={perspectiveOf(risk)} />

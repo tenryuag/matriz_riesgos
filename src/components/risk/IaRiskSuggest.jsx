@@ -9,6 +9,7 @@ import IaDisclaimer from "@/components/ia/IaDisclaimer";
 import { riskScore, levelKeyFromScore, labelForLevelKey } from "@/config/riskCalc";
 import { PERSPECTIVE_BY_KEY } from "@/config/perspectives";
 import { getRiskLevelColorClasses } from "@/lib/utils";
+import { hideWhenReadOnly } from "@/components/ReadOnlyContext";
 
 // ============================================================
 // Asistente de IA al capturar un riesgo (acción `sugerir_riesgo`).
@@ -35,7 +36,7 @@ const THREAT_KEY = { Interna: "threatInternal", Externa: "threatExternal" };
 
 const SPINNER = <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />;
 
-export default function IaRiskSuggest({ formData, onApply, disabled = false, departmentName = "" }) {
+function IaRiskSuggest({ formData, onApply, disabled = false, departmentName = "" }) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // { code, message }
@@ -365,3 +366,6 @@ Chip.propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
 };
+
+// Solo sirve para editar: en «solo ver» no se muestra.
+export default hideWhenReadOnly(IaRiskSuggest);

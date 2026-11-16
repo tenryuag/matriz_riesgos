@@ -249,7 +249,7 @@ export default function FinAnalysisIncome() {
           </div>
         </div>
         {years.length > 0 && (
-          <Button
+          <Button data-edit
             variant="outline"
             className="glass hover:border-accent font-subtitle"
             onClick={openImport}

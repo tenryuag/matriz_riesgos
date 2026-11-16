@@ -184,7 +184,7 @@ export default function OpportunityConclusions() {
                     <div key={item.key} className="p-4 glass rounded-xl">
                       <p className="text-sm mb-3">{item.strategy}</p>
                       <div className="flex flex-wrap items-center gap-2">
-                        <button
+                        <button data-edit-disable
                           type="button"
                           onClick={() => setChoice(item.key, "F")}
                           className={`px-4 py-1.5 rounded-full text-sm font-subtitle border transition-all inline-flex items-center gap-1.5 ${
@@ -195,7 +195,7 @@ export default function OpportunityConclusions() {
                         >
                           <Award className="w-3.5 h-3.5" /> Voy a mantener
                         </button>
-                        <button
+                        <button data-edit-disable
                           type="button"
                           onClick={() => setChoice(item.key, "D")}
                           className={`px-4 py-1.5 rounded-full text-sm font-subtitle border transition-all inline-flex items-center gap-1.5 ${
@@ -207,7 +207,7 @@ export default function OpportunityConclusions() {
                           <Wrench className="w-3.5 h-3.5" /> Voy a cambiar
                         </button>
                         {overridden && (
-                          <button
+                          <button data-edit
                             type="button"
                             onClick={() => restoreAuto(item.key)}
                             className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors"

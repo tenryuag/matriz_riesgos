@@ -5,7 +5,12 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { supabase, getActingCompany, setActingCompany } from "@/api/supabaseClient";
+import {
+  supabase,
+  getActingCompany,
+  setActingCompany,
+  setMentorAccessLost,
+} from "@/api/supabaseClient";
 import { ModuleAccess, Company } from "@/api/entities";
 
 // Contexto de acceso por módulo.
@@ -31,6 +36,14 @@ const EMPTY = {
   mentorCompanies: [], // empresas que acompaña como mentor
   actingCompany: null, // { id, name }: empresa del cliente que está viendo
 };
+
+// El mentor perdió el acceso a la empresa que estaba viendo: se limpia el modo
+// mentor, se deja el aviso y se le lleva al inicio de su propio espacio.
+function leaveLostCompany(companyName) {
+  setActingCompany(null);
+  setMentorAccessLost(companyName || "La empresa");
+  if (window.location.pathname !== "/") window.location.replace("/");
+}
 
 const ModuleAccessContext = createContext({
   ...EMPTY,
@@ -98,7 +111,10 @@ export function ModuleAccessProvider({ children }) {
           modules = match.modules || [];
           moduleLevels = Object.fromEntries(modules.map((k) => [k, "edit"]));
         } else if (wanted) {
-          setActingCompany(null); // ya no la acompaña o le retiraron el acceso
+          // Ya no la acompaña o la empresa le retiró el acceso: vuelve a su
+          // propio espacio y la pantalla de inicio le explica qué pasó.
+          leaveLostCompany(wanted.name);
+          if (window.location.pathname !== "/") return;
         }
       }
       setState({
@@ -119,6 +135,35 @@ export function ModuleAccessProvider({ children }) {
       setState({ ...EMPTY, loading: false });
     }
   }, []);
+
+  // En modo mentor, se vuelve a comprobar el acceso cada minuto y al regresar
+  // a la pestaña: si la empresa lo retiró, el mentor sale con un aviso claro
+  // en vez de toparse con errores al guardar.
+  const actingId = state.actingCompany?.id;
+  const actingName = state.actingCompany?.name;
+  useEffect(() => {
+    if (!actingId) return undefined;
+    let busy = false;
+    const check = async () => {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        const list = await Company.mentorCompanies();
+        const still = list.find((c) => c.id === actingId && c.active && c.modules.length > 0);
+        if (!still) leaveLostCompany(actingName);
+      } catch {
+        /* sin red: se reintenta en la siguiente vuelta */
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = setInterval(check, 60000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [actingId, actingName]);
 
   useEffect(() => {
     load();

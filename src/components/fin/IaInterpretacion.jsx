@@ -184,7 +184,7 @@ export default function IaInterpretacion({ ready = false }) {
               </p>
             </div>
           </div>
-          <Button
+          <Button data-edit
             onClick={() => generate()}
             disabled={loading || checking}
             variant="outline"
@@ -209,7 +209,7 @@ export default function IaInterpretacion({ ready = false }) {
         {notice && (
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <p className="text-xs text-muted">{notice}</p>
-            <Button variant="ghost" size="sm" onClick={() => generate(true)} disabled={loading} className="font-subtitle">
+            <Button data-edit variant="ghost" size="sm" onClick={() => generate(true)} disabled={loading} className="font-subtitle">
               <RefreshCw className="w-4 h-4" /> Generar de nuevo de todos modos
             </Button>
           </div>

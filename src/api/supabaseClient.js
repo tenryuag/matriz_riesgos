@@ -31,6 +31,27 @@ export function setActingCompany(company) {
   }
 }
 
+// Aviso pendiente de mostrar: «X retiró tu acceso». Lo deja quien detecta la
+// pérdida de acceso y lo consume la pantalla de inicio.
+const LOST_KEY = 'mentor-access-lost'
+
+export function setMentorAccessLost(companyName) {
+  try {
+    if (companyName) sessionStorage.setItem(LOST_KEY, companyName)
+    else sessionStorage.removeItem(LOST_KEY)
+  } catch {
+    /* sin aviso */
+  }
+}
+
+export function getMentorAccessLost() {
+  try {
+    return sessionStorage.getItem(LOST_KEY)
+  } catch {
+    return null
+  }
+}
+
 // Agrega el encabezado solo a las peticiones de datos (REST), no a Auth.
 const fetchWithCompany = (input, init = {}) => {
   const acting = getActingCompany()

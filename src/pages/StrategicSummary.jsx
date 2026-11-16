@@ -275,7 +275,7 @@ export default function StrategicSummary() {
                           {d.options.map((opt) => {
                             const on = ratings[`${w.id}:${d.dim}`] === opt;
                             return (
-                              <button
+                              <button data-edit-disable
                                 key={opt}
                                 type="button"
                                 onClick={() => setRating(w.id, d.dim, opt)}

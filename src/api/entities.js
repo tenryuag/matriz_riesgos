@@ -830,6 +830,22 @@ export const StrategicPlan = {
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
+    // La empresa aún no lo tiene: lo crea la base (también para quien solo
+    // puede ver el módulo, que así lo encuentra vacío en vez de un error).
+    if (companyId) {
+      const { data: rootId, error: rootError } = await supabase.rpc("ensure_module_root", {
+        p_module: "strategic",
+      });
+      if (!rootError && rootId) {
+        const { data: root, error: readError } = await supabase
+          .from("strategic_plans")
+          .select("*")
+          .eq("id", rootId)
+          .limit(1);
+        if (readError) handleQueryError(readError);
+        if (root && root.length > 0) return root[0];
+      }
+    }
     const row = { owner_id: uid, created_by_id: uid };
     if (companyId) row.company_id = companyId;
     const { data: created, error: createError } = await supabase
@@ -1149,6 +1165,22 @@ export const FinAnalysis = {
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
+    // La empresa aún no lo tiene: lo crea la base (también para quien solo
+    // puede ver el módulo, que así lo encuentra vacío en vez de un error).
+    if (companyId) {
+      const { data: rootId, error: rootError } = await supabase.rpc("ensure_module_root", {
+        p_module: "fin-analysis",
+      });
+      if (!rootError && rootId) {
+        const { data: root, error: readError } = await supabase
+          .from("fin_analyses")
+          .select("*")
+          .eq("id", rootId)
+          .limit(1);
+        if (readError) handleQueryError(readError);
+        if (root && root.length > 0) return root[0];
+      }
+    }
     const row = { owner_id: uid, created_by_id: uid };
     if (companyId) row.company_id = companyId;
     const { data: created, error: createError } = await supabase

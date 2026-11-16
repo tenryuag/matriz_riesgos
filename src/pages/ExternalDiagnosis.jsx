@@ -45,7 +45,7 @@ function Choice({ value, options, onChange }) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => (
-        <button
+        <button data-edit-disable
           key={opt}
           type="button"
           onClick={() => onChange(value === opt ? "" : opt)}

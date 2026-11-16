@@ -386,7 +386,7 @@ export default function StrategicInitiatives() {
           placeholder="Nombre de la iniciativa (ej. Capacitar al equipo)…"
           className={`${FIELD_CLS} font-subtitle`}
         />
-        <Button
+        <Button data-edit
           variant="ghost"
           size="icon"
           onClick={() => removeInitiative(it)}
@@ -484,7 +484,7 @@ export default function StrategicInitiatives() {
     }
     const busy = busyKey === key;
     return (
-      <Button
+      <Button data-edit
         type="button"
         variant="outline"
         className="glass hover:border-accent font-subtitle w-full sm:w-auto"
@@ -558,7 +558,7 @@ export default function StrategicInitiatives() {
                 señal de alerta y un plan de reacción. Si ya los tienes, confírmalo; si no,
                 convierte las sugerencias de abajo en iniciativas.
               </p>
-              <Button
+              <Button data-edit
                 type="button"
                 variant="outline"
                 className="glass hover:border-accent font-subtitle w-full sm:w-auto"
@@ -574,7 +574,7 @@ export default function StrategicInitiatives() {
                 <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                 Confirmaste que lo tienes controlado. Este riesgo ya no aparece en las alertas.
               </span>
-              <button
+              <button data-edit
                 type="button"
                 onClick={() => unacknowledge(o)}
                 className="text-accent hover:underline"
@@ -633,7 +633,7 @@ export default function StrategicInitiatives() {
               existingTitles={list.map((it) => (it.title || "").trim()).filter(Boolean)}
               onAdd={(fields) => addInitiativeFrom(o.id, o.label, fields)}
             />
-            <button
+            <button data-edit
               type="button"
               onClick={() => addInitiative(o.id, o.label)}
               className="w-full flex items-center justify-center gap-2 p-3 glass rounded-xl text-accent hover:bg-accent/10 transition-colors"
@@ -830,7 +830,7 @@ export default function StrategicInitiatives() {
                     {/* Iniciativa sugerida por el diagnóstico externo (un clic la agrega) */}
                     {obj.suggestion &&
                       !list.some((it) => (it.title || "").trim() === obj.suggestion) && (
-                        <button
+                        <button data-edit
                           type="button"
                           onClick={() => addInitiativeFrom(obj.id, null, { title: obj.suggestion })}
                           className="w-full flex items-start gap-3 p-3 glass rounded-xl text-left hover:border-accent transition-colors"
@@ -853,7 +853,7 @@ export default function StrategicInitiatives() {
                       existingTitles={list.map((it) => (it.title || "").trim()).filter(Boolean)}
                       onAdd={(fields) => addInitiativeFrom(obj.id, null, fields)}
                     />
-                    <button
+                    <button data-edit
                       type="button"
                       onClick={() => addInitiative(obj.id)}
                       className="w-full flex items-center justify-center gap-2 p-3 glass rounded-xl text-accent hover:bg-accent/10 transition-colors"
