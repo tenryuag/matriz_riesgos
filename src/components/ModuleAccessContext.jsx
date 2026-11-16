@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { ModuleAccess } from "@/api/entities";
+import { ModuleAccess, Company } from "@/api/entities";
 
 // Contexto de acceso por módulo.
 //
@@ -19,21 +19,25 @@ import { ModuleAccess } from "@/api/entities";
 // El rol se lee de getSession() (JWT local, sin red) — la misma fuente que
 // usa el RLS.
 
-const ModuleAccessContext = createContext({
+const EMPTY = {
   user: null,
   isAdmin: false,
   grantedModules: [],
+  company: null, // { id, name } de la empresa del usuario
+  companyRole: null, // 'admin' | 'member' dentro de su empresa
+  moduleLevels: {}, // { risk: 'edit', strategic: 'view' }
+  hasCompanies: false, // la base ya trabaja por empresas
+};
+
+const ModuleAccessContext = createContext({
+  ...EMPTY,
   loading: true,
   refresh: () => {},
+  canEditModule: () => true,
 });
 
 export function ModuleAccessProvider({ children }) {
-  const [state, setState] = useState({
-    user: null,
-    isAdmin: false,
-    grantedModules: [],
-    loading: true,
-  });
+  const [state, setState] = useState({ ...EMPTY, loading: true });
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
@@ -45,19 +49,45 @@ export function ModuleAccessProvider({ children }) {
       // lo edita el propio usuario y no sirve para seguridad.
       const admin = user?.app_metadata?.role === "admin";
 
+      // Empresa, papel dentro de ella y módulos con su nivel (ver / editar).
+      // Si la base aún no tiene empresas, se usa el acceso por usuario.
       let modules = [];
-      if (session && !admin) {
+      let company = null;
+      let companyRole = null;
+      let moduleLevels = {};
+      let hasCompanies = false;
+      if (session) {
         try {
-          modules = await ModuleAccess.myModules();
-        } catch (err) {
-          console.error("Error al cargar módulos concedidos:", err);
-          modules = [];
+          const access = await Company.myAccess();
+          hasCompanies = true;
+          company = access?.company || null;
+          companyRole = access?.role || null;
+          moduleLevels = access?.modules || {};
+          modules = Object.keys(moduleLevels);
+        } catch {
+          if (!admin) {
+            try {
+              modules = await ModuleAccess.myModules();
+              moduleLevels = Object.fromEntries(modules.map((k) => [k, "edit"]));
+            } catch (err) {
+              console.error("Error al cargar módulos concedidos:", err);
+            }
+          }
         }
       }
-      setState({ user, isAdmin: admin, grantedModules: modules, loading: false });
+      setState({
+        user,
+        isAdmin: admin,
+        grantedModules: modules,
+        company,
+        companyRole,
+        moduleLevels,
+        hasCompanies,
+        loading: false,
+      });
     } catch (error) {
       console.error("Error al cargar acceso por módulo:", error);
-      setState({ user: null, isAdmin: false, grantedModules: [], loading: false });
+      setState({ ...EMPTY, loading: false });
     }
   }, []);
 
@@ -72,8 +102,15 @@ export function ModuleAccessProvider({ children }) {
     return () => sub?.subscription?.unsubscribe();
   }, [load]);
 
+  // ¿Puede editar en este módulo? Los administradores de la plataforma, sí;
+  // los demás, según el nivel que les dio su empresa.
+  const canEditModule = useCallback(
+    (moduleKey) => state.isAdmin || state.moduleLevels[moduleKey] !== "view",
+    [state.isAdmin, state.moduleLevels],
+  );
+
   return (
-    <ModuleAccessContext.Provider value={{ ...state, refresh: load }}>
+    <ModuleAccessContext.Provider value={{ ...state, refresh: load, canEditModule }}>
       {children}
     </ModuleAccessContext.Provider>
   );

@@ -71,3 +71,18 @@ Carga la copia de producción, toma una huella de lo que ve cada usuario,
 aplica `supabase-empresas.sql`, comprueba que todos ven exactamente lo mismo y
 prueba el aislamiento entre empresas. Para deshacer las reglas:
 `supabase-empresas-rollback.sql`.
+
+## Empresas (multiempresa) en local
+
+Las migraciones de empresas todavía no están en producción, así que una copia
+recién cargada no las trae. Después de `npm run db:local:cargar`:
+
+```bash
+npm run db:local:empresas   # aplica supabase-empresas.sql y supabase-empresas-usuarios.sql
+```
+
+Pruebas de la segunda fase (invitaciones y permisos por módulo):
+
+```bash
+docker exec -i supabase_db_hcmeoducjqudokfhhvyc psql -U postgres -d postgres -q < scripts/check-empresas-usuarios.sql
+```

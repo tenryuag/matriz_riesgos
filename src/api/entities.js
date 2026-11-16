@@ -414,6 +414,18 @@ export const User = {
       throw err;
     }
   },
+  // 🔹 Registrar a alguien invitado por su empresa (enlace con token). No usa
+  // código de invitación de la plataforma: la invitación ya lo autoriza y la
+  // base lo mete a la empresa que lo invitó.
+  async registerInvited(email, password, fullName, inviteToken) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, invite_token: inviteToken } },
+    });
+    if (error) throw error;
+    return data.user;
+  },
   // 🔹 Recuperar contraseña (enviar correo)
   async recoverPassword(email) {
     try {
@@ -658,7 +670,89 @@ async function currentUserId() {
   return data?.session?.user?.id || null;
 }
 
-// 🔹 Plan Estratégico (Fase 0.3 en adelante). Cada usuario tiene el suyo.
+// Empresa del usuario actual. Se consulta una vez por usuario y se recuerda.
+// Devuelve null si la base aún no tiene empresas o el usuario no tiene una.
+let companyCache = { uid: null, id: null };
+async function currentCompanyId() {
+  const uid = await currentUserId();
+  if (!uid) return null;
+  if (companyCache.uid === uid && companyCache.id) return companyCache.id;
+  const { data, error } = await supabase.rpc("my_company_id");
+  if (error) return null;
+  companyCache = { uid, id: data || null };
+  return companyCache.id;
+}
+
+// Lanza el mensaje que devuelve un RPC cuando responde { success: false }.
+function unwrapRpc(data, error, fallback) {
+  if (error) handleQueryError(error);
+  if (data && data.success === false) throw new Error(data.message || fallback);
+  return data;
+}
+
+// 🔹 Empresa: los datos pertenecen a la empresa y su administrador decide
+// quién de su gente entra a cada módulo y si solo ve o también edita.
+export const Company = {
+  // { company: {id, name} | null, role, modules: { risk: "edit", … } }
+  async myAccess() {
+    const { data, error } = await supabase.rpc("my_access");
+    if (error) throw error;
+    return data;
+  },
+
+  // Equipo de mi empresa: miembros, módulos contratados e invitaciones.
+  async team() {
+    const { data, error } = await supabase.rpc("company_team");
+    if (error) handleQueryError(error);
+    return data;
+  },
+
+  async rename(companyId, name) {
+    const { error } = await supabase
+      .from("companies")
+      .update({ name })
+      .eq("id", companyId);
+    if (error) handleQueryError(error);
+  },
+
+  // Devuelve { token, has_account }.
+  async invite(email, role, modules) {
+    const { data, error } = await supabase.rpc("company_invite", {
+      p_email: email,
+      p_role: role,
+      p_modules: modules,
+    });
+    return unwrapRpc(data, error, "No se pudo crear la invitación");
+  },
+
+  async cancelInvitation(id) {
+    const { data, error } = await supabase.rpc("company_cancel_invitation", { p_id: id });
+    return unwrapRpc(data, error, "No se pudo cancelar la invitación");
+  },
+
+  async updateMember(userId, role, modules) {
+    const { data, error } = await supabase.rpc("company_update_member", {
+      p_user: userId,
+      p_role: role,
+      p_modules: modules,
+    });
+    return unwrapRpc(data, error, "No se pudieron guardar los permisos");
+  },
+
+  async removeMember(userId) {
+    const { data, error } = await supabase.rpc("company_remove_member", { p_user: userId });
+    return unwrapRpc(data, error, "No se pudo dar de baja");
+  },
+
+  // Lo que ve quien abre un enlace de invitación, aún sin cuenta.
+  async invitationPreview(token) {
+    const { data, error } = await supabase.rpc("invitation_preview", { p_token: token });
+    if (error) return { valid: false };
+    return data || { valid: false };
+  },
+};
+
+// 🔹 Plan Estratégico (Fase 0.3 en adelante). Uno por empresa.
 export const StrategicPlan = {
   // Devuelve el plan del usuario actual; si no existe, lo crea.
   // (RLS ya limita la consulta al dueño; el filtro explícito lo documenta.)
@@ -668,18 +762,22 @@ export const StrategicPlan = {
       forceLogout();
       throw new Error("Sesión expirada");
     }
-    const { data, error } = await supabase
-      .from("strategic_plans")
-      .select("*")
-      .eq("owner_id", uid)
+    // El plan es de la EMPRESA: todos sus miembros trabajan sobre el mismo.
+    // (Sin empresas en la base —antes de la migración— se busca por dueño.)
+    const companyId = await currentCompanyId();
+    let query = supabase.from("strategic_plans").select("*");
+    query = companyId ? query.eq("company_id", companyId) : query.eq("owner_id", uid);
+    const { data, error } = await query
       .order("created_at", { ascending: true })
       .limit(1);
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
+    const row = { owner_id: uid, created_by_id: uid };
+    if (companyId) row.company_id = companyId;
     const { data: created, error: createError } = await supabase
       .from("strategic_plans")
-      .insert([{ owner_id: uid, created_by_id: uid }])
+      .insert([row])
       .select();
     if (createError) handleQueryError(createError);
     return created?.[0] || null;
@@ -983,18 +1081,22 @@ export const FinAnalysis = {
       forceLogout();
       throw new Error("Sesión expirada");
     }
-    const { data, error } = await supabase
-      .from("fin_analyses")
-      .select("*")
-      .eq("owner_id", uid)
+    // El análisis es de la EMPRESA: todos sus miembros trabajan sobre el mismo.
+    // (Sin empresas en la base —antes de la migración— se busca por dueño.)
+    const companyId = await currentCompanyId();
+    let query = supabase.from("fin_analyses").select("*");
+    query = companyId ? query.eq("company_id", companyId) : query.eq("owner_id", uid);
+    const { data, error } = await query
       .order("created_at", { ascending: true })
       .limit(1);
     if (error) handleQueryError(error);
     if (data && data.length > 0) return data[0];
 
+    const row = { owner_id: uid, created_by_id: uid };
+    if (companyId) row.company_id = companyId;
     const { data: created, error: createError } = await supabase
       .from("fin_analyses")
-      .insert([{ owner_id: uid, created_by_id: uid }])
+      .insert([row])
       .select();
     if (createError) handleQueryError(createError);
     return created?.[0] || null;

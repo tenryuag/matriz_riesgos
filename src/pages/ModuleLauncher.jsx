@@ -22,7 +22,9 @@ export default function ModuleLauncher() {
   const { t } = useLanguage();
   // El usuario y el acceso vienen del mismo contexto (leído de la sesión
   // local), sin llamadas de red extra.
-  const { user, isAdmin, grantedModules, loading } = useModuleAccess();
+  const { user, isAdmin, grantedModules, loading, company, hasCompanies } = useModuleAccess();
+  // Con cuenta pero sin empresa (lo dieron de baja): no hay nada que mostrar.
+  const noCompany = hasCompanies && !company && !isAdmin;
 
   const modules = getVisibleModules({ isAdmin, grantedModules });
 
@@ -90,8 +92,16 @@ export default function ModuleLauncher() {
       {modules.length === 0 && (
         <Card className="glass">
           <CardContent className="p-10 text-center text-muted">
-            <p className="text-lg font-subtitle mb-2">{t("moduleNoneTitle")}</p>
-            <p className="text-sm">{t("moduleNoneDesc")}</p>
+            <p className="text-lg font-subtitle mb-2">
+              {noCompany ? "Tu cuenta no pertenece a ninguna empresa" : t("moduleNoneTitle")}
+            </p>
+            <p className="text-sm">
+              {noCompany
+                ? "Pide al administrador de tu empresa que te invite de nuevo con este mismo correo."
+                : company
+                  ? "El administrador de tu empresa todavía no te asigna módulos. Pídele que te dé acceso desde «Mi empresa»."
+                  : t("moduleNoneDesc")}
+            </p>
           </CardContent>
         </Card>
       )}

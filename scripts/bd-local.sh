@@ -57,8 +57,19 @@ cargar() {
     "select 'Listo: ' || (select count(*) from auth.users) || ' usuarios, ' || (select count(*) from public.risks) || ' riesgos, ' || (select count(*) from public.fin_analyses) || ' análisis financieros'"
 }
 
+# Aplica en la base LOCAL las migraciones de empresas (aún no en producción).
+empresas() {
+  DB=supabase_db_hcmeoducjqudokfhhvyc
+  for f in supabase-empresas.sql supabase-empresas-usuarios.sql; do
+    echo "Aplicando $f…"
+    docker exec -i "$DB" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 < "$f" 2>&1 | grep -v "NOTICE" || true
+  done
+  docker exec -i "$DB" psql -U postgres -d postgres -At -q -c "notify pgrst, 'reload schema'; select 'Listo: ' || count(*) || ' empresas' from public.companies"
+}
+
 case "$1" in
   copiar) copiar ;;
   cargar) cargar ;;
-  *) echo "Uso: $0 copiar | cargar"; exit 1 ;;
+  empresas) empresas ;;
+  *) echo "Uso: $0 copiar | cargar | empresas"; exit 1 ;;
 esac

@@ -33,7 +33,8 @@ import {
   Target,
   LayoutGrid,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Eye as EyeIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
@@ -313,7 +314,13 @@ const AppLayout = ({ children, currentPageName }) => {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { language, changeLanguage, t } = useLanguage();
   // Acceso por módulo del usuario (Fase 2): para proteger las páginas.
-  const { isAdmin: hasAdminAccess, grantedModules, loading: accessLoading } = useModuleAccess();
+  const {
+    isAdmin: hasAdminAccess,
+    grantedModules,
+    loading: accessLoading,
+    company,
+    canEditModule,
+  } = useModuleAccess();
 
   // Grupo del menú lateral abierto (acordeón: uno a la vez). Al navegar a
   // una página con grupo, ese grupo se abre y el anterior se cierra; el
@@ -716,6 +723,10 @@ const AppLayout = ({ children, currentPageName }) => {
     accessChecked &&
     !canAccessModule(activeModule, { isAdmin: effectiveAdmin, grantedModules });
 
+  // Módulo en «solo ver» para este usuario: se avisa arriba de la página.
+  const readOnlyModule =
+    !!activeModule && accessChecked && !effectiveAdmin && !canEditModule(activeModule.key);
+
   if (deniedModuleAccess) {
     return (
       <div className={`min-h-screen font-body ${theme}`}>
@@ -766,6 +777,14 @@ const AppLayout = ({ children, currentPageName }) => {
                 <Button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} variant="ghost" size="icon" className="nav-glass">
                   <Globe className="w-4 h-4" />
                 </Button>
+                {company && (
+                  <Link to={createPageUrl('Company')}>
+                    <Button variant="ghost" className="nav-glass text-foreground max-w-[16rem]" title="Mi empresa">
+                      <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="font-subtitle text-sm truncate">{company.name}</span>
+                    </Button>
+                  </Link>
+                )}
                 <Button onClick={handleLogout} variant="ghost" size="icon" className="nav-glass text-foreground" title={t('logout')}>
                   <LogOut className="w-4 h-4" />
                 </Button>
@@ -932,6 +951,16 @@ const AppLayout = ({ children, currentPageName }) => {
               <div className="glass rounded-2xl p-4">
                 <h3 className="font-subtitle text-sm text-foreground mb-1">{user.user_metadata?.full_name || user.full_name || user.email}</h3>
                 <p className="text-xs text-accent truncate mb-3">{user.email}</p>
+                {company && (
+                  <Link
+                    to={createPageUrl('Company')}
+                    className="flex items-center gap-1.5 text-xs text-muted hover:text-accent mb-3 min-w-0"
+                    title="Mi empresa"
+                  >
+                    <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{company.name}</span>
+                  </Link>
+                )}
                 <span className="inline-block px-3 py-1 text-xs rounded-full glass border border-accent/30 text-accent">
                   {user.app_metadata?.role || 'user'}
                 </span>
@@ -962,6 +991,15 @@ const AppLayout = ({ children, currentPageName }) => {
         <div className={isLauncherMode ? '' : 'lg:pl-80'}>
           <main className="p-6 lg:p-12">
             <div className="max-w-7xl mx-auto">
+              {readOnlyModule && (
+                <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm print:hidden">
+                  <EyeIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>
+                    <strong className="font-subtitle">Solo lectura.</strong>{' '}
+                    Tu empresa te dio permiso para ver este módulo, no para editarlo. Los cambios que hagas no se guardan.
+                  </span>
+                </div>
+              )}
               {children}
             </div>
           </main>

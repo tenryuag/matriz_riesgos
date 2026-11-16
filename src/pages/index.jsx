@@ -96,6 +96,7 @@ import FinAnalysisSeasonality from "./FinAnalysisSeasonality";
 import OAuthConsent from "./OAuthConsent";
 
 import ModuleLauncher from "./ModuleLauncher";
+import CompanyTeam from "./CompanyTeam";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
 
@@ -112,6 +113,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'r
 const PAGES = {
 
     ModuleLauncher: ModuleLauncher,
+    Company: CompanyTeam,
 
     ModuleInDevelopment: ModuleInDevelopment,
 
@@ -258,6 +260,11 @@ function PagesContent() {
             <Route path="/ModuleLauncher" element={
                 <Layout currentPageName={currentPage}>
                     <ModuleLauncher />
+                </Layout>
+            } />
+            <Route path="/Company" element={
+                <Layout currentPageName={currentPage}>
+                    <CompanyTeam />
                 </Layout>
             } />
             <Route path="/ModuleInDevelopment" element={

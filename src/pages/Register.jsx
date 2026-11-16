@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff } from 'react-feather';
-import { Link, useNavigate } from "react-router-dom";
-import { User } from "@/api/entities";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { User, Company } from "@/api/entities";
 import {
   AlertTriangle,
   ArrowRight,
@@ -33,13 +33,30 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Enlace de invitación de una empresa (?invite=token): no pide código, el
+  // correo viene fijo y la cuenta entra directo a esa empresa.
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  const [invitation, setInvitation] = useState(null); // { valid, email, company_name }
+  useEffect(() => {
+    if (!inviteToken) return;
+    let alive = true;
+    Company.invitationPreview(inviteToken).then((info) => {
+      if (!alive) return;
+      setInvitation(info);
+      if (info?.valid) setFormData((f) => ({ ...f, email: info.email }));
+    });
+    return () => { alive = false; };
+  }, [inviteToken]);
+  const invited = !!(inviteToken && invitation?.valid);
+
   const handleChange = (field) => (e) => {
     setFormData({ ...formData, [field]: e.target.value });
     setError(''); // Clear error when user types
   };
 
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.fullName || !formData.invitationCode) {
+    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.fullName || (!invited && !formData.invitationCode)) {
       setError(t('registerAllFieldsRequired'));
       return false;
     }
@@ -72,12 +89,21 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
 
     setIsLoading(true);
     try {
-      await User.register(
-        formData.email,
-        formData.password,
-        formData.fullName,
-        formData.invitationCode
-      );
+      if (invited) {
+        await User.registerInvited(
+          formData.email,
+          formData.password,
+          formData.fullName,
+          inviteToken
+        );
+      } else {
+        await User.register(
+          formData.email,
+          formData.password,
+          formData.fullName,
+          formData.invitationCode
+        );
+      }
 
       setSuccess(t('registerSuccess'));
 
@@ -303,8 +329,21 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
           <div className="space-y-6">
             <div className="text-center lg:text-left">
               <h2 className="text-3xl font-title text-foreground mb-3">{t('registerTitle')}</h2>
-              <p className="text-muted text-lg">{t('registerSubtitle')}</p>
+              <p className="text-muted text-lg">{invited ? 'Crea tu cuenta para entrar al espacio de tu empresa' : t('registerSubtitle')}</p>
             </div>
+
+            {invited && (
+              <div className="rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm text-foreground">
+                <strong className="font-subtitle">{invitation.company_name}</strong> te invitó a su espacio de trabajo.
+                Crea tu contraseña para entrar.
+              </div>
+            )}
+            {inviteToken && invitation && !invitation.valid && (
+              <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-foreground">
+                Este enlace de invitación ya no es válido: venció, se canceló o ya se usó.
+                Pide a tu empresa que te envíe uno nuevo.
+              </div>
+            )}
 
             {/* Features for Mobile */}
             <div className="lg:hidden space-y-4">
@@ -347,7 +386,8 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 placeholder={t('Email')}
                 value={formData.email}
                 onChange={handleChange('email')}
-                className="input-glass w-full p-3 rounded-xl"
+                readOnly={invited}
+                className={`input-glass w-full p-3 rounded-xl ${invited ? 'opacity-70' : ''}`}
               />
               <div className="relative">
                 <input
@@ -381,6 +421,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {!invited && (
               <div className="relative">
                 <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
@@ -392,6 +433,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                   style={{ textTransform: 'uppercase' }}
                 />
               </div>
+              )}
               <Button
                 onClick={handleRegister}
                 disabled={isLoading || success}
@@ -423,9 +465,11 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                     {t('registerLoginLink')}
                   </Link>
                 </p>
-                <p className="text-xs text-muted">
-                  {t('registerCodeInfo')}
-                </p>
+                {!invited && (
+                  <p className="text-xs text-muted">
+                    {t('registerCodeInfo')}
+                  </p>
+                )}
               </div>
             </div>
           </div>
