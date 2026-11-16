@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { supabase } from "@/api/supabaseClient";
+import { supabase, getActingCompany, setActingCompany } from "@/api/supabaseClient";
 import { ModuleAccess, Company } from "@/api/entities";
 
 // Contexto de acceso por módulo.
@@ -27,6 +27,9 @@ const EMPTY = {
   companyRole: null, // 'admin' | 'member' dentro de su empresa
   moduleLevels: {}, // { risk: 'edit', strategic: 'view' }
   hasCompanies: false, // la base ya trabaja por empresas
+  isPlatformAdmin: false, // rol admin real (isAdmin se apaga en modo mentor)
+  mentorCompanies: [], // empresas que acompaña como mentor
+  actingCompany: null, // { id, name }: empresa del cliente que está viendo
 };
 
 const ModuleAccessContext = createContext({
@@ -34,6 +37,8 @@ const ModuleAccessContext = createContext({
   loading: true,
   refresh: () => {},
   canEditModule: () => true,
+  enterCompany: () => {},
+  exitCompany: () => {},
 });
 
 export function ModuleAccessProvider({ children }) {
@@ -75,14 +80,38 @@ export function ModuleAccessProvider({ children }) {
           }
         }
       }
+      // Modo mentor: empresas asignadas y, si eligió una, sus módulos. Dentro
+      // de la empresa de un cliente nadie es administrador de la plataforma:
+      // solo se ven los módulos que le asignaron para esa empresa.
+      let mentorCompanies = [];
+      let actingCompany = null;
+      if (session && hasCompanies) {
+        try {
+          mentorCompanies = await Company.mentorCompanies();
+        } catch {
+          mentorCompanies = [];
+        }
+        const wanted = getActingCompany();
+        const match = wanted && mentorCompanies.find((c) => c.id === wanted.id && c.active);
+        if (match) {
+          actingCompany = { id: match.id, name: match.name };
+          modules = match.modules || [];
+          moduleLevels = Object.fromEntries(modules.map((k) => [k, "edit"]));
+        } else if (wanted) {
+          setActingCompany(null); // ya no la acompaña o le retiraron el acceso
+        }
+      }
       setState({
         user,
-        isAdmin: admin,
+        isAdmin: admin && !actingCompany,
+        isPlatformAdmin: admin,
         grantedModules: modules,
         company,
         companyRole,
         moduleLevels,
         hasCompanies,
+        mentorCompanies,
+        actingCompany,
         loading: false,
       });
     } catch (error) {
@@ -109,8 +138,21 @@ export function ModuleAccessProvider({ children }) {
     [state.isAdmin, state.moduleLevels],
   );
 
+  // Entrar a la empresa de un cliente / volver a la propia. Se recarga la
+  // app completa para que ninguna pantalla conserve datos de la otra empresa.
+  const enterCompany = useCallback((company) => {
+    setActingCompany({ id: company.id, name: company.name });
+    window.location.assign("/");
+  }, []);
+  const exitCompany = useCallback(() => {
+    setActingCompany(null);
+    window.location.assign("/");
+  }, []);
+
   return (
-    <ModuleAccessContext.Provider value={{ ...state, refresh: load, canEditModule }}>
+    <ModuleAccessContext.Provider
+      value={{ ...state, refresh: load, canEditModule, enterCompany, exitCompany }}
+    >
       {children}
     </ModuleAccessContext.Provider>
   );

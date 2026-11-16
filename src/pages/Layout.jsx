@@ -320,6 +320,8 @@ const AppLayout = ({ children, currentPageName }) => {
     loading: accessLoading,
     company,
     canEditModule,
+    actingCompany,
+    exitCompany,
   } = useModuleAccess();
 
   // Grupo del menú lateral abierto (acordeón: uno a la vez). Al navegar a
@@ -716,7 +718,8 @@ const AppLayout = ({ children, currentPageName }) => {
   // Se considera admin si CUALQUIERA de las dos fuentes de rol lo confirma
   // (el loadUser del Layout o el hook de acceso), para que un admin nunca
   // quede bloqueado por un fallo puntual de carga.
-  const effectiveAdmin = isAdmin || hasAdminAccess;
+  // En modo mentor (dentro de la empresa de un cliente) nadie es admin.
+  const effectiveAdmin = !actingCompany && (isAdmin || hasAdminAccess);
   const accessChecked = !accessLoading;
   const deniedModuleAccess =
     activeModule &&
@@ -762,9 +765,32 @@ const AppLayout = ({ children, currentPageName }) => {
       >
         <style>{themeStyles}</style>
 
+        {/* Modo mentor: aviso fijo de que se trabaja con los datos de un cliente */}
+        {actingCompany && (
+          <div className={`sticky top-0 z-50 print:hidden bg-indigo-600 text-white ${isLauncherMode ? '' : 'lg:ml-80'}`}>
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <EyeIcon className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-grow min-w-0">
+                Modo mentor: estás viendo y editando los datos de{' '}
+                <strong className="font-subtitle">{actingCompany.name}</strong>
+              </span>
+              <Link to={createPageUrl('ChangeLog')} className="underline underline-offset-4 hover:no-underline">
+                Historial de cambios
+              </Link>
+              <button
+                type="button"
+                onClick={exitCompany}
+                className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1 font-subtitle"
+              >
+                Salir de esta empresa
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Barra superior: selector de módulos y placeholder "en desarrollo" */}
         {isLauncherMode && (
-          <header className="sticky top-0 z-30 glass-darker print:hidden">
+          <header className={`${actingCompany ? '' : 'sticky top-0'} z-30 glass-darker print:hidden`}>
             <div className="max-w-7xl mx-auto px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
               <div>
                 <h1 className="font-title text-lg text-foreground">{t('riskManagement')}</h1>
@@ -777,7 +803,7 @@ const AppLayout = ({ children, currentPageName }) => {
                 <Button onClick={() => changeLanguage(language === 'es' ? 'en' : 'es')} variant="ghost" size="icon" className="nav-glass">
                   <Globe className="w-4 h-4" />
                 </Button>
-                {company && (
+                {company && !actingCompany && (
                   <Link to={createPageUrl('Company')}>
                     <Button variant="ghost" className="nav-glass text-foreground max-w-[16rem]" title="Mi empresa">
                       <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -951,7 +977,7 @@ const AppLayout = ({ children, currentPageName }) => {
               <div className="glass rounded-2xl p-4">
                 <h3 className="font-subtitle text-sm text-foreground mb-1">{user.user_metadata?.full_name || user.full_name || user.email}</h3>
                 <p className="text-xs text-accent truncate mb-3">{user.email}</p>
-                {company && (
+                {company && !actingCompany && (
                   <Link
                     to={createPageUrl('Company')}
                     className="flex items-center gap-1.5 text-xs text-muted hover:text-accent mb-3 min-w-0"

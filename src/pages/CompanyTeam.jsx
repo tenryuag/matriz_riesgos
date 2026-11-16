@@ -7,6 +7,8 @@ import {
   Building2,
   Check,
   Copy,
+  GraduationCap,
+  History,
   Mail,
   Pencil,
   Save,
@@ -175,6 +177,28 @@ export default function CompanyTeam() {
   const modules = MODULES.filter((m) => team.modules.includes(m.key));
   const members = team.members || [];
   const invitations = team.invitations || [];
+  const mentors = team.mentors || [];
+
+  const setMentorAccess = async (mentor, active) => {
+    const who = mentor.full_name || mentor.email;
+    if (
+      !active &&
+      !window.confirm(
+        `¿Retirar el acceso de ${who}?\n\nDejará de ver y editar los datos de tu empresa. Puedes devolvérselo cuando quieras.`,
+      )
+    )
+      return;
+    setBusy(mentor.mentor_id);
+    try {
+      await Company.setMentorAccess(mentor.mentor_id, active);
+      await load();
+      toast.success(active ? `${who} vuelve a tener acceso` : `${who} ya no tiene acceso`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const setDraft = (userId, patch) =>
     setDrafts((d) => ({ ...d, [userId]: { ...d[userId], ...patch } }));
@@ -307,6 +331,12 @@ export default function CompanyTeam() {
             </div>
           )}
         </div>
+        <Link
+          to={createPageUrl("ChangeLog")}
+          className="glass glass-hover rounded-2xl px-4 py-3 inline-flex items-center gap-2 text-sm font-subtitle"
+        >
+          <History className="w-4 h-4 text-accent" /> Historial de cambios
+        </Link>
         <div className="glass rounded-2xl px-5 py-3 text-center">
           <div className="font-title text-2xl">{members.length}</div>
           <div className="text-xs text-muted">{members.length === 1 ? "usuario" : "usuarios"}</div>
@@ -433,6 +463,66 @@ export default function CompanyTeam() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mentores: personas de fuera de la empresa que la acompañan */}
+      {mentors.length > 0 && (
+        <Card className="glass">
+          <CardHeader>
+            <CardTitle className="font-subtitle flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-indigo-500" /> {mentors.length === 1 ? "Tu mentor" : "Tus mentores"}
+            </CardTitle>
+            <p className="text-sm text-muted">
+              Tu mentor puede ver y corregir los datos de estos módulos. Todo lo que cambie queda en el{" "}
+              <Link to={createPageUrl("ChangeLog")} className="text-accent hover:underline">
+                historial de cambios
+              </Link>
+              .{isAdmin ? " Tú decides si conserva el acceso." : ""}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-[var(--card-border)]">
+              {mentors.map((mentor) => (
+                <li key={mentor.mentor_id} className="py-3 flex flex-wrap items-center gap-4">
+                  <div className="flex-grow min-w-0">
+                    <div className="font-subtitle">{mentor.full_name || mentor.email}</div>
+                    <div className="text-xs text-muted">
+                      {mentor.email} ·{" "}
+                      {modules
+                        .filter((mod) => mentor.modules.includes(mod.key))
+                        .map((mod) => t(mod.nameKey))
+                        .join(" · ") || "sin módulos"}
+                    </div>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-subtitle border ${
+                      mentor.active
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                        : "border-[var(--card-border)] text-muted"
+                    }`}
+                  >
+                    {mentor.active ? "Con acceso" : "Acceso retirado"}
+                  </span>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant={mentor.active ? "ghost" : "default"}
+                      disabled={busy === mentor.mentor_id}
+                      onClick={() => setMentorAccess(mentor, !mentor.active)}
+                      className={
+                        mentor.active
+                          ? "text-red-500 hover:text-red-500"
+                          : "bg-accent text-accent-foreground hover:bg-accent/90"
+                      }
+                    >
+                      {mentor.active ? "Retirar acceso" : "Devolver acceso"}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invitar */}
       {isAdmin && (

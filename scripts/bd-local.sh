@@ -60,7 +60,7 @@ cargar() {
 # Aplica en la base LOCAL las migraciones de empresas (aún no en producción).
 empresas() {
   DB=supabase_db_hcmeoducjqudokfhhvyc
-  for f in supabase-empresas.sql supabase-empresas-usuarios.sql; do
+  for f in supabase-empresas.sql supabase-empresas-usuarios.sql supabase-empresas-mentores.sql; do
     echo "Aplicando $f…"
     docker exec -i "$DB" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 < "$f" 2>&1 | grep -v "NOTICE" || true
   done

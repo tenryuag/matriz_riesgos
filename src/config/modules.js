@@ -179,7 +179,10 @@ export const MODULES = [
     pages: [
       { pageKey: "InvitationCodes", nameKey: "invitationCodes", icon: Ticket },
       { pageKey: "UserManagement", nameKey: "userManagement", icon: Users },
-      { pageKey: "ModuleAccess", nameKey: "moduleAccessNav", icon: LayoutGrid },
+      { pageKey: "Companies", nameKey: "navCompanies", icon: Building2 },
+      // Asignación por usuario: la sustituye «Empresas» (los módulos son de la
+      // empresa). La ruta sigue viva mientras la base no tenga empresas.
+      { pageKey: "ModuleAccess", hidden: true },
       { pageKey: "IaUsage", nameKey: "navIaUsage", icon: Sparkles },
       { pageKey: "Documentation", nameKey: "documentation", icon: BookOpen, external: "/documentacion.html" },
       { pageKey: "AddInvitationCode", hidden: true },

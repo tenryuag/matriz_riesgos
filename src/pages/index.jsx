@@ -97,6 +97,8 @@ import OAuthConsent from "./OAuthConsent";
 
 import ModuleLauncher from "./ModuleLauncher";
 import CompanyTeam from "./CompanyTeam";
+import ChangeLog from "./ChangeLog";
+import AdminCompanies from "./AdminCompanies";
 
 import ModuleInDevelopment from "./ModuleInDevelopment";
 
@@ -114,6 +116,8 @@ const PAGES = {
 
     ModuleLauncher: ModuleLauncher,
     Company: CompanyTeam,
+    ChangeLog: ChangeLog,
+    Companies: AdminCompanies,
 
     ModuleInDevelopment: ModuleInDevelopment,
 
@@ -265,6 +269,16 @@ function PagesContent() {
             <Route path="/Company" element={
                 <Layout currentPageName={currentPage}>
                     <CompanyTeam />
+                </Layout>
+            } />
+            <Route path="/ChangeLog" element={
+                <Layout currentPageName={currentPage}>
+                    <ChangeLog />
+                </Layout>
+            } />
+            <Route path="/Companies" element={
+                <Layout currentPageName={currentPage}>
+                    <AdminCompanies />
                 </Layout>
             } />
             <Route path="/ModuleInDevelopment" element={

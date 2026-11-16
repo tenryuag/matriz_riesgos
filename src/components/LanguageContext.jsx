@@ -90,6 +90,7 @@ const translations = {
     // Register Page
     registerTitle: "Crear Nueva Cuenta",
     registerSubtitle: "Regístrate con tu código de invitación",
+    navCompanies: "Empresas",
     registerHeroSubtitle: "Únete a nuestra plataforma profesional de gestión de riesgos",
     registerFullName: "Nombre Completo",
     registerConfirmPassword: "Confirmar Contraseña",
@@ -810,6 +811,7 @@ const translations = {
     // Register Page
     registerTitle: "Create New Account",
     registerSubtitle: "Register with your invitation code",
+    navCompanies: "Companies",
     registerHeroSubtitle: "Join our professional risk management platform",
     registerFullName: "Full Name",
     registerConfirmPassword: "Confirm Password",

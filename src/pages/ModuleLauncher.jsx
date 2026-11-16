@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, Sparkles, GraduationCap, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/components/LanguageContext";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
-import { getVisibleModules } from "@/config/modules";
+import { getVisibleModules, MODULES } from "@/config/modules";
 
 // Frases que se van rotando mientras cargan los módulos, para que la espera
 // se sienta más amena.
@@ -22,7 +22,17 @@ export default function ModuleLauncher() {
   const { t } = useLanguage();
   // El usuario y el acceso vienen del mismo contexto (leído de la sesión
   // local), sin llamadas de red extra.
-  const { user, isAdmin, grantedModules, loading, company, hasCompanies } = useModuleAccess();
+  const {
+    user,
+    isAdmin,
+    grantedModules,
+    loading,
+    company,
+    hasCompanies,
+    mentorCompanies,
+    actingCompany,
+    enterCompany,
+  } = useModuleAccess();
   // Con cuenta pero sin empresa (lo dieron de baja): no hay nada que mostrar.
   const noCompany = hasCompanies && !company && !isAdmin;
 
@@ -84,7 +94,9 @@ export default function ModuleLauncher() {
           {firstName ? `Hola, ${firstName}` : t("welcome")}
         </h1>
         <p className="text-lg text-muted">
-          ¿Con qué módulo quieres trabajar hoy?
+          {actingCompany
+            ? `Estás en ${actingCompany.name}. ¿Qué módulo quieres revisar?`
+            : "¿Con qué módulo quieres trabajar hoy?"}
         </p>
       </div>
 
@@ -141,6 +153,50 @@ export default function ModuleLauncher() {
           );
         })}
       </div>
+
+      {/* Mentor: empresas que acompaña. Al entrar, toda la app pasa a mostrar
+          los datos de esa empresa hasta que salga. */}
+      {!actingCompany && mentorCompanies.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-indigo-500" />
+            <h2 className="font-title text-xl">Empresas que acompañas</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {mentorCompanies.map((c) => {
+              const names = MODULES.filter((m) => c.modules.includes(m.key)).map((m) => t(m.nameKey));
+              const canEnter = c.active && names.length > 0;
+              return (
+                <Card key={c.id} className="glass">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="w-11 h-11 bg-indigo-500/15 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-subtitle truncate">{c.name}</h3>
+                      <p className="text-xs text-muted">
+                        {!c.active
+                          ? "La empresa retiró tu acceso"
+                          : names.length > 0
+                            ? names.join(" · ")
+                            : "Sin módulos asignados"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!canEnter}
+                      onClick={() => enterCompany(c)}
+                      className="inline-flex items-center text-sm font-subtitle text-indigo-500 hover:underline underline-offset-4 disabled:opacity-40 disabled:no-underline"
+                    >
+                      Entrar <ArrowRight className="w-4 h-4 ml-1" />
+                    </button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Resumen ejecutivo con IA: junta los módulos del usuario en un
           documento. Vive fuera de los módulos (el Layout lo muestra en modo

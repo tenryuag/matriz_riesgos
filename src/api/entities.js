@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase, getActingCompany } from "./supabaseClient";
 import { handleQueryError, forceLogout } from "./authHelpers";
 
 export const Department = {
@@ -674,6 +674,9 @@ async function currentUserId() {
 // Devuelve null si la base aún no tiene empresas o el usuario no tiene una.
 let companyCache = { uid: null, id: null };
 async function currentCompanyId() {
+  // En modo mentor se trabaja sobre la empresa del cliente.
+  const acting = getActingCompany();
+  if (acting) return acting.id;
   const uid = await currentUserId();
   if (!uid) return null;
   if (companyCache.uid === uid && companyCache.id) return companyCache.id;
@@ -744,11 +747,65 @@ export const Company = {
     return unwrapRpc(data, error, "No se pudo dar de baja");
   },
 
+  // El administrador de la empresa retira o devuelve el acceso a su mentor.
+  async setMentorAccess(mentorId, active) {
+    const { data, error } = await supabase.rpc("company_set_mentor_access", {
+      p_mentor: mentorId,
+      p_active: active,
+    });
+    return unwrapRpc(data, error, "No se pudo cambiar el acceso del mentor");
+  },
+
+  // Empresas que el usuario acompaña como mentor: [{ id, name, active, modules }].
+  async mentorCompanies() {
+    const { data, error } = await supabase.rpc("mentor_companies");
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Historial de cambios de la empresa activa (la propia, o la del cliente
+  // en modo mentor), del más reciente al más antiguo.
+  async changes({ limit = 200, onlyMentor = false } = {}) {
+    const { data, error } = await supabase.rpc("company_changes", {
+      p_limit: limit,
+      p_only_mentor: onlyMentor,
+    });
+    if (error) handleQueryError(error);
+    return data || [];
+  },
+
   // Lo que ve quien abre un enlace de invitación, aún sin cuenta.
   async invitationPreview(token) {
     const { data, error } = await supabase.rpc("invitation_preview", { p_token: token });
     if (error) return { valid: false };
     return data || { valid: false };
+  },
+};
+
+// 🔹 Administración de la plataforma: empresas, sus módulos y sus mentores.
+export const PlatformAdmin = {
+  // { companies: [{ id, name, modules, members, mentors }], mentors: [elegibles] }
+  async companies() {
+    const { data, error } = await supabase.rpc("admin_companies");
+    return unwrapRpc(data, error, "No se pudieron cargar las empresas");
+  },
+
+  async setCompanyModules(companyId, moduleKeys) {
+    const { data, error } = await supabase.rpc("admin_set_company_modules", {
+      p_company: companyId,
+      p_modules: moduleKeys,
+    });
+    return unwrapRpc(data, error, "No se pudieron guardar los módulos");
+  },
+
+  // Sin módulos, quita al mentor de la empresa.
+  async setCompanyMentor(companyId, mentorId, moduleKeys) {
+    const { data, error } = await supabase.rpc("admin_set_company_mentor", {
+      p_company: companyId,
+      p_mentor: mentorId,
+      p_modules: moduleKeys,
+    });
+    return unwrapRpc(data, error, "No se pudo asignar el mentor");
   },
 };
 

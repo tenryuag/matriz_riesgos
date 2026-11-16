@@ -78,11 +78,12 @@ Las migraciones de empresas todavía no están en producción, así que una copi
 recién cargada no las trae. Después de `npm run db:local:cargar`:
 
 ```bash
-npm run db:local:empresas   # aplica supabase-empresas.sql y supabase-empresas-usuarios.sql
+npm run db:local:empresas   # aplica las tres migraciones de empresas (estructura, usuarios, mentores)
 ```
 
 Pruebas de la segunda fase (invitaciones y permisos por módulo):
 
 ```bash
 docker exec -i supabase_db_hcmeoducjqudokfhhvyc psql -U postgres -d postgres -q < scripts/check-empresas-usuarios.sql
+docker exec -i supabase_db_hcmeoducjqudokfhhvyc psql -U postgres -d postgres -q < scripts/check-empresas-mentores.sql
 ```

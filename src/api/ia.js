@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase, getActingCompany } from "./supabaseClient";
 import { handleQueryError } from "./authHelpers";
 
 // ============================================================
@@ -85,6 +85,12 @@ async function toIaError(error, data) {
 // Llama una acción del asistente. `params` es el cuerpo específico de la
 // acción. Devuelve { result, usage, cached, generated_at }.
 export async function callIa(action, params = {}, { signal } = {}) {
+  // El asistente trabaja con los datos de quien lo llama; en modo mentor
+  // analizaría la empresa del mentor, no la del cliente. Se bloquea hasta
+  // que la función `ia` sepa trabajar sobre la empresa del cliente.
+  if (getActingCompany() && action !== "estado") {
+    throw new IaError("sin_acceso", "El asistente de IA todavía no está disponible en modo mentor.");
+  }
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData?.session) throw new IaError("sin_sesion");
   const { data, error } = await supabase.functions.invoke(IA_FUNCTION, {
@@ -109,6 +115,7 @@ export async function iaStatus() {
 // Último resultado guardado de un tipo ('informe' | 'resumen_ejecutivo') del
 // usuario, o null. Lo leen las pantallas al abrir, sin llamar a la IA.
 export async function iaSavedResult(kind) {
+  if (getActingCompany()) return null; // los resultados guardados son del mentor, no del cliente
   const { data, error } = await supabase
     .from("ia_resultados")
     .select("result, input_hash, model, cost_usd, created_at")

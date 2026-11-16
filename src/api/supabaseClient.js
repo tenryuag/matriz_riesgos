@@ -4,8 +4,46 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// 🔹 Modo mentor: empresa del cliente sobre la que se está trabajando.
+// Mientras hay una, cada petición de datos lleva el encabezado `x-company-id`
+// y la base solo muestra (y guarda en) esa empresa. Sin él, cada quien ve
+// únicamente su propia empresa. La base comprueba que el usuario sea mentor
+// activo de esa empresa: el encabezado por sí solo no da acceso a nada.
+// Vive en sessionStorage: se pierde al cerrar la pestaña, no se comparte.
+const ACTING_KEY = 'acting-company'
+
+export function getActingCompany() {
+  try {
+    const raw = sessionStorage.getItem(ACTING_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return parsed?.id ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export function setActingCompany(company) {
+  try {
+    if (company?.id) sessionStorage.setItem(ACTING_KEY, JSON.stringify(company))
+    else sessionStorage.removeItem(ACTING_KEY)
+  } catch {
+    /* sin sessionStorage no hay modo mentor */
+  }
+}
+
+// Agrega el encabezado solo a las peticiones de datos (REST), no a Auth.
+const fetchWithCompany = (input, init = {}) => {
+  const acting = getActingCompany()
+  const url = typeof input === 'string' ? input : input?.url || ''
+  if (!acting || !url.includes('/rest/v1/')) return fetch(input, init)
+  const headers = new Headers(init.headers || {})
+  headers.set('x-company-id', acting.id)
+  return fetch(input, { ...init, headers })
+}
+
 // 🔹 Cliente principal de Supabase
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: fetchWithCompany },
   auth: {
     // Mantiene la sesión guardada entre recargas.
     persistSession: true,
