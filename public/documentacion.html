@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Documentación · Matriz de Riesgos</title>
+<title>Documentación de la plataforma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -382,6 +382,46 @@
     .app { display: block; }
     main { padding: 1.5rem; max-width: 100%; }
   }
+
+  /* Índice por grupos */
+  .toc-group {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600;
+    color: var(--fg-muted); padding: 1rem .75rem .35rem;
+  }
+  nav.toc-nav .toc-group:first-child { padding-top: 0; }
+
+  /* Etiqueta del módulo junto al título */
+  .module-tag {
+    display: inline-block; vertical-align: middle; margin-left: .5rem;
+    padding: .2rem .65rem; border-radius: 999px; border: 1px solid;
+    font-family: var(--font-body); font-size: .7rem; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  }
+  .card > .module-tag { margin-left: 0; }
+  .t-risk  { color: #10b981; border-color: rgba(16,185,129,.4);  background: rgba(16,185,129,.1); }
+  .t-fin   { color: #06b6d4; border-color: rgba(6,182,212,.4);   background: rgba(6,182,212,.1); }
+  .t-plan  { color: #3b82f6; border-color: rgba(59,130,246,.4);  background: rgba(59,130,246,.1); }
+  .t-admin { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft); }
+  .t-dev   { color: var(--fg-muted); border-color: var(--card-border); background: var(--card-bg); }
+  html[data-theme="light"] .t-risk { color: #047857; }
+  html[data-theme="light"] .t-fin  { color: #0e7490; }
+  html[data-theme="light"] .t-plan { color: #1d4ed8; }
+  html[data-theme="light"] .t-admin { color: #8a6d1a; }
+
+  /* Tablas anchas: se desplazan dentro de su contenedor */
+  main { min-width: 0; }
+  .matrix { grid-template-columns: auto repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 900px) {
+    .matrix-wrap { display: block; overflow-x: auto; }
+    .matrix { min-width: 460px; margin-bottom: 1rem; }
+  }
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  .table-scroll table.docs { margin: 0; min-width: 520px; }
+  table.docs tr.group-row td {
+    background: var(--code-bg); font-size: .75rem; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--fg-muted);
+  }
+  table.docs td { vertical-align: top; }
 </style>
 </head>
 <body>
@@ -396,7 +436,7 @@
   <aside class="toc" id="toc">
     <div class="brand">
       <span class="sub">Documentación</span>
-      <span class="title">Matriz de Riesgos</span>
+      <span class="title">Guía de la plataforma</span>
     </div>
 
     <div class="search-wrap">
@@ -405,20 +445,46 @@
     <div class="search-empty" id="searchEmpty">Sin resultados</div>
 
     <nav class="toc-nav" id="tocNav">
+      <div class="toc-group">Para empezar</div>
       <ul>
-        <li><a href="#intro" data-keywords="introduccion bienvenida que es"><span class="num">1</span> Introducción</a></li>
-        <li><a href="#conceptos" data-keywords="conceptos glosario riesgo inherente residual probabilidad impacto"><span class="num">2</span> Conceptos clave</a></li>
-        <li><a href="#roles" data-keywords="roles admin usuario permisos acceso"><span class="num">3</span> Roles y accesos</a></li>
-        <li><a href="#dashboard" data-keywords="dashboard tablero estadisticas graficas"><span class="num">4</span> Dashboard</a></li>
-        <li><a href="#departamentos" data-keywords="departamentos areas crear editar"><span class="num">5</span> Departamentos</a></li>
-        <li><a href="#riesgos" data-keywords="riesgos crear evaluar amenaza"><span class="num">6</span> Crear riesgos</a></li>
-        <li><a href="#matriz" data-keywords="matriz probabilidad impacto niveles colores"><span class="num">7</span> La matriz 5×5</a></li>
-        <li><a href="#mitigacion" data-keywords="mitigacion controles estrategia reducir transferir aceptar"><span class="num">8</span> Mitigación y controles</a></li>
-        <li><a href="#residual" data-keywords="residual inherente comparacion"><span class="num">9</span> Inherente vs residual</a></li>
-        <li><a href="#exportar" data-keywords="exportar excel descargar reporte xlsx"><span class="num">10</span> Exportar a Excel</a></li>
-        <li><a href="#invitaciones" data-keywords="invitaciones codigos registrar usuarios"><span class="num">11</span> Códigos de invitación</a></li>
-        <li><a href="#usuarios" data-keywords="usuarios gestion suspender activar admin"><span class="num">12</span> Gestión de usuarios</a></li>
-        <li><a href="#faq" data-keywords="preguntas frecuentes ayuda dudas faq"><span class="num">13</span> Preguntas frecuentes</a></li>
+        <li><a href="#intro" data-keywords="introduccion bienvenida modulos que es"><span class="num">1</span> Introducción</a></li>
+        <li><a href="#roles" data-keywords="roles admin administrador mentor miembro permisos acceso solo ver editar"><span class="num">2</span> Empresas, roles y permisos</a></li>
+        <li><a href="#mi-empresa" data-keywords="mi empresa equipo invitar invitacion enlace mentor historial cambios"><span class="num">3</span> Mi empresa</a></li>
+      </ul>
+      <div class="toc-group">Gestión del Riesgo</div>
+      <ul>
+        <li><a href="#conceptos" data-keywords="conceptos glosario riesgo inherente residual probabilidad impacto matriz niveles colores"><span class="num">4</span> Conceptos y niveles</a></li>
+        <li><a href="#dashboard" data-keywords="dashboard tablero estadisticas graficas criticos mitigacion"><span class="num">5</span> Dashboard</a></li>
+        <li><a href="#perspectivas" data-keywords="perspectivas finanzas clientes competitividad procesos equipo talento departamentos asignar"><span class="num">6</span> Perspectivas</a></li>
+        <li><a href="#riesgos" data-keywords="riesgos registrar agregar evaluar amenaza mitigacion controles grado de control estrategia"><span class="num">7</span> Registrar un riesgo</a></li>
+        <li><a href="#matriz" data-keywords="matriz de riesgos filtros exportar excel descargar xlsx eliminar"><span class="num">8</span> Matriz de Riesgos y Excel</a></li>
+      </ul>
+      <div class="toc-group">Análisis Financiero</div>
+      <ul>
+        <li><a href="#fin-captura" data-keywords="analisis financiero captura datos generales estado de resultados balance general estado de cambios importar pdf miles cortes años"><span class="num">9</span> Recorrido y captura</a></li>
+        <li><a href="#fin-razones" data-keywords="razones financieras semaforo liquidez solvencia rentabilidad eficiencia cobertura ebitda roe roa"><span class="num">10</span> Razones financieras</a></li>
+        <li><a href="#fin-informe" data-keywords="informe imprimir pdf comparativo de cortes explicar con ia"><span class="num">11</span> Informe y comparativo</a></li>
+        <li><a href="#fin-opcionales" data-keywords="segmentos desglose del gasto estacionalidad opcionales"><span class="num">12</span> Análisis opcionales</a></li>
+      </ul>
+      <div class="toc-group">Planeación Estratégica</div>
+      <ul>
+        <li><a href="#plan-recorrido" data-keywords="planeacion estrategica recorrido flujo inicio foco"><span class="num">13</span> El recorrido</a></li>
+        <li><a href="#plan-analisis" data-keywords="analisis del cliente mercado competidores blue ocean oportunidades conclusiones estrategias financieras diagnostico externo"><span class="num">14</span> Análisis</a></li>
+        <li><a href="#plan-estrategia" data-keywords="foda fortalezas debilidades oportunidades amenazas resumen priorizacion prioridad riesgos de la matriz mapa estrategico calibrado"><span class="num">15</span> Estrategia</a></li>
+        <li><a href="#plan-accion" data-keywords="iniciativas estrategicas score card mision vision valores kpi presupuesto plan de accion"><span class="num">16</span> Plan de acción</a></li>
+      </ul>
+      <div class="toc-group">Herramientas</div>
+      <ul>
+        <li><a href="#ia" data-keywords="ia inteligencia artificial asistente sugerir explicar importar pdf resumen ejecutivo limite"><span class="num">17</span> Asistente de IA</a></li>
+        <li><a href="#claude" data-keywords="conectar claude conector mcp conversar datos"><span class="num">18</span> Conectar Claude</a></li>
+      </ul>
+      <div class="toc-group">Administración</div>
+      <ul>
+        <li><a href="#admin-empresas" data-keywords="empresas modulos contratados mentor asignar administracion"><span class="num">19</span> Empresas y mentores</a></li>
+        <li><a href="#usuarios" data-keywords="usuarios gestion suspender reactivar admin rol"><span class="num">20</span> Gestión de usuarios</a></li>
+        <li><a href="#invitaciones" data-keywords="invitaciones codigos registrar usuarios"><span class="num">21</span> Códigos de invitación</a></li>
+        <li><a href="#uso-ia" data-keywords="uso de ia gasto costo llamadas tope"><span class="num">22</span> Uso de IA</a></li>
+        <li><a href="#faq" data-keywords="preguntas frecuentes ayuda dudas faq"><span class="num">23</span> Preguntas frecuentes</a></li>
       </ul>
     </nav>
 
@@ -436,283 +502,152 @@
 
   <main>
     <div class="lead">
-      <div class="badge">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        Guía de uso
-      </div>
+      <div class="badge">Guía de uso</div>
       <h1>Documentación de la plataforma</h1>
-      <p>Aprende a identificar, evaluar y mitigar riesgos organizacionales con la Matriz de Riesgos. Esta guía está pensada para cualquier persona que use el sistema, no requiere conocimientos técnicos.</p>
+      <p>Cómo funcionan los tres módulos de trabajo (Gestión del Riesgo, Análisis Financiero y Planeación Estratégica), cómo se organizan las empresas y sus usuarios, y qué puede hacer un administrador. No requiere conocimientos técnicos.</p>
     </div>
 
-    <!-- 1. Introducción -->
+    <!-- ============ PARA EMPEZAR ============ -->
     <section class="doc" id="intro">
       <h2><span class="anchor">#</span>Introducción</h2>
-      <p>La <strong>Matriz de Riesgos</strong> es una aplicación web que ayuda a las organizaciones a tener una vista clara y centralizada de los riesgos a los que están expuestas, departamento por departamento. Permite registrar cada riesgo, calificarlo según su probabilidad e impacto, definir cómo se va a manejar y dar seguimiento al resultado después de aplicar controles.</p>
+      <p>Al iniciar sesión aparece la pantalla <strong>«¿Con qué módulo quieres trabajar hoy?»</strong>. Cada persona ve solo los módulos que su empresa tiene contratados y a los que le dieron acceso. Dentro de un módulo, el botón <strong>«Módulos»</strong> del menú lateral regresa a esta pantalla.</p>
 
-      <div class="grid grid-3" style="margin: 1.5rem 0;">
+      <div class="grid grid-2" style="margin: 1.5rem 0;">
         <div class="card">
-          <div class="icon-row" style="color: var(--accent);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Identifica
-          </div>
-          <p class="muted" style="margin:0; font-size:.9rem;">Registra riesgos internos y externos por área de la organización.</p>
+          <span class="module-tag t-risk">Gestión del Riesgo</span>
+          <p class="muted" style="margin:.6rem 0 0; font-size:.92rem;">Registra los riesgos de la empresa, califícalos por probabilidad e impacto y da seguimiento a sus controles.</p>
         </div>
         <div class="card">
-          <div class="icon-row" style="color: var(--accent);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-            Evalúa
-          </div>
-          <p class="muted" style="margin:0; font-size:.9rem;">Califica cada riesgo por probabilidad e impacto en una escala visual.</p>
+          <span class="module-tag t-fin">Análisis Financiero</span>
+          <p class="muted" style="margin:.6rem 0 0; font-size:.92rem;">Captura los estados financieros de varios años y obtén razones financieras con semáforo y un informe listo para imprimir.</p>
         </div>
         <div class="card">
-          <div class="icon-row" style="color: var(--accent);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Mitiga
-          </div>
-          <p class="muted" style="margin:0; font-size:.9rem;">Define hasta 3 medidas por riesgo y mide el impacto real.</p>
+          <span class="module-tag t-plan">Planeación Estratégica</span>
+          <p class="muted" style="margin:.6rem 0 0; font-size:.92rem;">Analiza clientes, mercado y entorno; la app arma el FODA, prioriza las estrategias y las convierte en iniciativas.</p>
+        </div>
+        <div class="card">
+          <span class="module-tag t-dev">Planeación Financiera</span>
+          <p class="muted" style="margin:.6rem 0 0; font-size:.92rem;">En desarrollo. Aparece con la etiqueta «En desarrollo» y todavía no se puede usar.</p>
         </div>
       </div>
 
-      <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-          ¿Por dónde empezar?
-        </div>
-        <p style="margin:0;">Si es la primera vez que usas la plataforma, ve directamente a <a href="#departamentos">Departamentos</a> para crear las áreas de tu organización. Después puedes comenzar a registrar riesgos.</p>
-      </div>
+      <p>Los módulos se alimentan entre sí: los riesgos más graves de la matriz pasan solos a la Planeación Estratégica, y ahí se convierten en objetivos de prioridad alta.</p>
+
+      <h3>Lo que es igual en toda la plataforma</h3>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Tema</th><th>Cómo funciona</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Guardado automático</strong></td><td>En Análisis Financiero y Planeación Estratégica una barra al pie guarda sola, a los pocos segundos del último cambio. Muestra «Guardado automáticamente» y tiene el botón «Guardar ahora». En Gestión del Riesgo cada riesgo se guarda con su botón.</td></tr>
+          <tr><td><strong>Botón «Siguiente»</strong></td><td>Las pantallas de Análisis Financiero y Planeación llevan al paso que sigue, en el orden recomendado.</td></tr>
+          <tr><td><strong>Idioma y tema</strong></td><td>El menú lateral permite cambiar entre español e inglés y entre tema claro y oscuro. Las pantallas de empresa, mentores e historial solo están en español.</td></tr>
+          <tr><td><strong>Datos por empresa</strong></td><td>Todo lo que se captura pertenece a la empresa, no a la persona. Los compañeros de una misma empresa trabajan sobre los mismos datos.</td></tr>
+        </tbody>
+      </table></div>
     </section>
 
-    <!-- 2. Conceptos -->
-    <section class="doc" id="conceptos">
-      <h2><span class="anchor">#</span>Conceptos clave</h2>
-      <p>Estos son los términos que vas a ver en toda la plataforma. Tenerlos claros hace mucho más fácil el día a día.</p>
-
-      <div class="grid grid-2">
-        <div class="card">
-          <h4 style="margin-top:0;">Riesgo</h4>
-          <p class="muted" style="margin:0;">Cualquier evento que pueda afectar negativamente los objetivos de un departamento o de la organización.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Amenaza</h4>
-          <p class="muted" style="margin:0;">El origen del riesgo. Puede ser <strong>interna</strong> (proceso, persona, sistema propio) o <strong>externa</strong> (mercado, proveedores, clima).</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Probabilidad</h4>
-          <p class="muted" style="margin:0;">Qué tan posible es que el riesgo ocurra, en una escala de 1 (remoto) a 5 (frecuente).</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Impacto</h4>
-          <p class="muted" style="margin:0;">Qué tan graves serían las consecuencias si el riesgo se materializa, de 1 (insignificante) a 5 (catastrófico).</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Riesgo inherente</h4>
-          <p class="muted" style="margin:0;">El nivel del riesgo <strong>antes</strong> de aplicar cualquier control o mitigación. Es la "fotografía" del riesgo en bruto.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Riesgo residual</h4>
-          <p class="muted" style="margin:0;">El nivel del riesgo <strong>después</strong> de aplicar las medidas de mitigación. Es el riesgo real que queda.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Mitigante</h4>
-          <p class="muted" style="margin:0;">Acción o control que se implementa para reducir la probabilidad, el impacto o ambos.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Estrategia</h4>
-          <p class="muted" style="margin:0;">Cómo se decide manejar el riesgo: <strong>Aceptar</strong>, <strong>Reducir</strong> o <strong>Transferir</strong>.</p>
-        </div>
-      </div>
-
-      <h3>Niveles de riesgo</h3>
-      <p>Cada riesgo se clasifica automáticamente en uno de estos cinco niveles según el resultado de <code>probabilidad × impacto</code>:</p>
-      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
-        <span class="badge-level lvl-tolerable">Tolerable (1–4)</span>
-        <span class="badge-level lvl-low">Bajo (5–8)</span>
-        <span class="badge-level lvl-medium">Medio (9–12)</span>
-        <span class="badge-level lvl-high">Alto (13–16)</span>
-        <span class="badge-level lvl-intolerable">Intolerable (17–25)</span>
-      </div>
-    </section>
-
-    <!-- 3. Roles -->
     <section class="doc" id="roles">
-      <h2><span class="anchor">#</span>Roles y accesos</h2>
-      <p>La plataforma maneja dos tipos de usuario. El rol determina qué puede ver y qué puede hacer cada persona.</p>
+      <h2><span class="anchor">#</span>Empresas, roles y permisos</h2>
+      <p>Cada cuenta pertenece a <strong>una sola empresa</strong>. La empresa tiene módulos contratados y decide qué ve cada uno de sus usuarios. Hay cuatro papeles:</p>
 
       <div class="roles-diag">
         <div class="role-box admin">
-          <h4>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Administrador
-          </h4>
+          <h4>Administrador de la plataforma</h4>
           <ul>
-            <li><span class="yes">✓</span> Ver el dashboard completo</li>
-            <li><span class="yes">✓</span> Crear y editar departamentos</li>
-            <li><span class="yes">✓</span> Crear, editar y eliminar riesgos</li>
-            <li><span class="yes">✓</span> Exportar a Excel</li>
-            <li><span class="yes">✓</span> Generar y eliminar códigos de invitación</li>
-            <li><span class="yes">✓</span> Gestionar usuarios (suspender, cambiar rol)</li>
-            <li><span class="yes">✓</span> Acceso a esta documentación</li>
+            <li><span class="yes">✓</span> Entra al módulo «Administración»</li>
+            <li><span class="yes">✓</span> Decide qué módulos tiene contratados cada empresa</li>
+            <li><span class="yes">✓</span> Nombra mentores y los asigna a empresas</li>
+            <li><span class="yes">✓</span> Genera códigos de invitación y suspende cuentas</li>
+            <li><span class="yes">✓</span> Puede ser mentor al mismo tiempo</li>
+          </ul>
+        </div>
+        <div class="role-box admin">
+          <h4>Mentor</h4>
+          <ul>
+            <li><span class="yes">✓</span> Ve y corrige los datos de las empresas que acompaña</li>
+            <li><span class="yes">✓</span> Solo en los módulos que le asignaron</li>
+            <li><span class="yes">✓</span> Sus cambios quedan en el historial de la empresa</li>
+            <li><span class="no">✕</span> No administra el equipo de la empresa</li>
+            <li><span class="no">✕</span> La empresa puede retirarle el acceso</li>
           </ul>
         </div>
         <div class="role-box">
-          <h4>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Usuario
-          </h4>
+          <h4>Administrador de la empresa</h4>
           <ul>
-            <li><span class="yes">✓</span> Ver el dashboard</li>
-            <li><span class="yes">✓</span> Ver y editar departamentos</li>
-            <li><span class="yes">✓</span> Ver, crear y editar riesgos</li>
-            <li><span class="yes">✓</span> Exportar a Excel</li>
-            <li><span class="no">✕</span> Sin acceso a códigos de invitación</li>
-            <li><span class="no">✕</span> Sin acceso a gestión de usuarios</li>
-            <li><span class="no">✕</span> Sin acceso a esta documentación</li>
+            <li><span class="yes">✓</span> Entra a todos los módulos de su empresa, con edición</li>
+            <li><span class="yes">✓</span> Invita personas y define sus permisos</li>
+            <li><span class="yes">✓</span> Retira o devuelve el acceso a su mentor</li>
+            <li><span class="yes">✓</span> Consulta el historial de cambios</li>
+          </ul>
+        </div>
+        <div class="role-box">
+          <h4>Miembro</h4>
+          <ul>
+            <li><span class="yes">✓</span> Entra a los módulos que le asignó su administrador</li>
+            <li><span class="yes">✓</span> En cada módulo: «Solo ver» o «Ver y editar»</li>
+            <li><span class="no">✕</span> No invita ni cambia permisos</li>
           </ul>
         </div>
       </div>
 
+      <h3>Niveles de permiso por módulo</h3>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Nivel</th><th>Qué puede hacer</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sin acceso</strong></td><td>El módulo no aparece en su pantalla de inicio.</td></tr>
+          <tr><td><strong>Solo ver</strong></td><td>Consulta toda la información. No ve botones de agregar, editar, borrar ni guardar, y los campos están bloqueados. Conserva buscar, filtrar, exportar a Excel e imprimir. Un aviso en la parte superior le recuerda que está en modo de consulta.</td></tr>
+          <tr><td><strong>Ver y editar</strong></td><td>Captura y modifica todo lo del módulo.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Cómo trabaja un mentor</h3>
+      <div class="steps">
+        <div class="step"><strong>Elige la empresa</strong><p>En su pantalla de inicio aparece «Empresas que acompañas», con una tarjeta por empresa y los módulos que puede abrir.</p></div>
+        <div class="step"><strong>Trabaja dentro de la empresa</strong><p>Una franja en la parte superior indica en qué empresa está. Lo que capture o corrija se guarda en los datos de esa empresa.</p></div>
+        <div class="step"><strong>Sale cuando termina</strong><p>Desde la misma franja regresa a su propio espacio.</p></div>
+      </div>
       <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          Cómo verifico mi rol
-        </div>
-        <p style="margin:0;">Tu rol aparece en el menú lateral, debajo de tu nombre. Si necesitas cambiar el rol de alguien, debes ser administrador y entrar a <em>Gestión de usuarios</em>.</p>
+        <div class="icon-row">Si la empresa retira el acceso</div>
+        <p style="margin:0;">El mentor regresa a su inicio y ve el aviso «Ya no tienes acceso a…». Solo el administrador de esa empresa puede devolvérselo. Mientras actúa como mentor, el asistente de IA no está disponible.</p>
       </div>
     </section>
 
-    <!-- 4. Dashboard -->
-    <section class="doc" id="dashboard">
-      <h2><span class="anchor">#</span>Dashboard</h2>
-      <p>El dashboard es la primera pantalla que ves al entrar. Muestra de un vistazo el estado de toda la organización: cuántos riesgos hay, cuántos son críticos y cómo están distribuidos.</p>
+    <section class="doc" id="mi-empresa">
+      <h2><span class="anchor">#</span>Mi empresa</h2>
+      <p>El botón con el nombre de la empresa, en el menú lateral, abre <strong>«Mi empresa»</strong>. El administrador de la empresa gestiona ahí a su equipo; los miembros solo ven la información.</p>
 
-      <h3>Tarjetas de estadísticas</h3>
-      <div class="mockup">
-        <div class="mockup-label">Vista previa del componente</div>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:.75rem;">
-          <div class="stat-card-mock"><div class="label">Departamentos</div><div class="value">4</div></div>
-          <div class="stat-card-mock"><div class="label">Riesgos totales</div><div class="value">27</div></div>
-          <div class="stat-card-mock danger"><div class="label">Intolerable</div><div class="value">3</div></div>
-          <div class="stat-card-mock warn"><div class="label">Alto</div><div class="value">5</div></div>
-          <div class="stat-card-mock"><div class="label">Controlados</div><div class="value">12</div></div>
-        </div>
+      <h3>Invitar a una persona</h3>
+      <div class="steps">
+        <div class="step"><strong>Escribe su correo y elige su papel</strong><p>«Administrador» entra a todo. A un «Miembro» se le asignan los módulos uno por uno, con «Solo ver» o «Ver y editar».</p></div>
+        <div class="step"><strong>Copia el enlace</strong><p>La app crea un enlace personal para ese correo. No lo envía por ti: compártelo por el medio que prefieras con «Copiar enlace».</p></div>
+        <div class="step"><strong>La persona crea su contraseña</strong><p>Al abrir el enlace se registra sin código de invitación y entra directo a la empresa. El enlace dura 14 días y solo sirve para ese correo.</p></div>
       </div>
+      <p>Las invitaciones sin usar aparecen en «Invitaciones pendientes» y se pueden cancelar.</p>
 
-      <h3>Indicadores principales</h3>
-      <table class="docs">
-        <thead><tr><th>Indicador</th><th>Qué significa</th></tr></thead>
-        <tbody>
-          <tr><td><strong>% de riesgos críticos</strong></td><td>Porcentaje de riesgos cuyo nivel residual es Alto o Intolerable. Si supera 30% el indicador se pone rojo.</td></tr>
-          <tr><td><strong>Tasa de mitigación</strong></td><td>Porcentaje de riesgos en los que el nivel residual es menor al inherente. Mide qué tanto están funcionando los controles.</td></tr>
-          <tr><td><strong>Distribución por nivel</strong></td><td>Cuántos riesgos hay en cada nivel (Intolerable, Alto, Medio, Bajo, Tolerable).</td></tr>
-        </tbody>
-      </table>
+      <h3>Cambiar permisos o dar de baja</h3>
+      <p>En la lista del equipo se cambia el papel de cada persona y su nivel en cada módulo. Al quitar a alguien de la empresa pierde el acceso a sus datos; lo que capturó se queda en la empresa. Un administrador no puede darse de baja a sí mismo.</p>
 
-      <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-          Banner de alerta
-        </div>
-        <p style="margin:0;">Cuando hay riesgos críticos sin mitigar aparece un banner rojo en la parte superior del dashboard, con los 3 más urgentes listados. Sirve como recordatorio diario.</p>
-      </div>
+      <h3>Tu mentor</h3>
+      <p>Si la empresa tiene mentor asignado, aparece una tarjeta con su nombre, los módulos que puede abrir y su estado: «Con acceso» o «Acceso retirado». Los botones «Retirar acceso» y «Devolver acceso» surten efecto de inmediato.</p>
 
-      <h3>Gráficas</h3>
+      <h3>Historial de cambios</h3>
+      <p>Registra cada cambio guardado en los datos de la empresa: quién lo hizo, cuándo, en qué módulo y el valor anterior y el nuevo. Cada renglón dice «Agregó», «Cambió» o «Borró». Se puede filtrar por módulo y marcar <strong>«Solo cambios de mentores»</strong> para revisar qué corrigió el mentor. El historial empieza el día en que se activó esta función; lo anterior no está registrado.</p>
+    </section>
+
+    <!-- ============ GESTIÓN DEL RIESGO ============ -->
+    <section class="doc" id="conceptos">
+      <h2><span class="anchor">#</span>Conceptos y niveles <span class="module-tag t-risk">Gestión del Riesgo</span></h2>
+
       <div class="grid grid-2">
-        <div class="card">
-          <h4 style="margin-top:0;">Distribución de riesgos</h4>
-          <p class="muted" style="margin:0; font-size:.9rem;">Gráfica de dona que muestra qué porcentaje de los riesgos cae en cada nivel. Usa el <strong>nivel residual</strong>.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0;">Riesgos por departamento</h4>
-          <p class="muted" style="margin:0; font-size:.9rem;">Gráfica de barras que compara cada departamento: cuántos riesgos críticos, medios y controlados tiene.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. Departamentos -->
-    <section class="doc" id="departamentos">
-      <h2><span class="anchor">#</span>Departamentos</h2>
-      <p>Los departamentos son las áreas de tu organización (por ejemplo: Finanzas, Operaciones, TI, Recursos Humanos). Cada riesgo siempre pertenece a un departamento.</p>
-
-      <h3>Crear un departamento</h3>
-      <div class="steps">
-        <div class="step"><strong>Abre Departamentos</strong><p>Desde el menú lateral selecciona "Departamentos".</p></div>
-        <div class="step"><strong>Pulsa "Nuevo departamento"</strong><p>Botón con el ícono de "+" en la esquina superior derecha.</p></div>
-        <div class="step"><strong>Llena el nombre</strong><p>El nombre es obligatorio. La descripción es opcional pero ayuda a otros usuarios a entender de qué se trata el área.</p></div>
-        <div class="step"><strong>Guarda</strong><p>El departamento aparecerá en la lista listo para recibir riesgos.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Amenaza</h4><p class="muted" style="margin:0;">El origen del riesgo: <strong>interna</strong> (proceso, persona, sistema propio) o <strong>externa</strong> (mercado, proveedores, clima).</p></div>
+        <div class="card"><h4 style="margin-top:0;">Perspectiva</h4><p class="muted" style="margin:0;">El área del negocio a la que afecta el riesgo. Hay cinco y son las mismas que usa la Planeación Estratégica.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Riesgo inherente</h4><p class="muted" style="margin:0;">El nivel del riesgo <strong>antes</strong> de aplicar cualquier control.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Riesgo residual</h4><p class="muted" style="margin:0;">El nivel que queda <strong>después</strong> de aplicar las medidas de mitigación. Lo elige quien captura; la app no lo calcula a partir de los controles.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Estrategia de manejo</h4><p class="muted" style="margin:0;"><strong>Aceptar</strong>, <strong>Reducir</strong> o <strong>Transferir</strong>.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Riesgo crítico</h4><p class="muted" style="margin:0;">El que tiene nivel <strong>Alto o Intolerable</strong> (puntaje de 13 o más).</p></div>
       </div>
 
-      <div class="mockup">
-        <div class="mockup-label">Formulario</div>
-        <div class="form-mock">
-          <div class="field">
-            <label>Nombre del departamento *</label>
-            <input value="Tecnología de la Información" readonly />
-          </div>
-          <div class="field">
-            <label>Descripción</label>
-            <textarea readonly>Responsable de la infraestructura tecnológica y los sistemas internos.</textarea>
-          </div>
-          <div style="display:flex; gap:.5rem; justify-content:flex-end;">
-            <button class="btn-mock ghost" type="button">Cancelar</button>
-            <button class="btn-mock" type="button">Guardar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="icon-row" style="color: var(--accent);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          ¿Qué pasa si elimino un departamento?
-        </div>
-        <p style="margin:0;">Al eliminar un departamento se eliminan todos los riesgos asociados a él. Asegúrate de revisar primero o exportar la información si la vas a necesitar.</p>
-      </div>
-    </section>
-
-    <!-- 6. Crear riesgos -->
-    <section class="doc" id="riesgos">
-      <h2><span class="anchor">#</span>Crear y evaluar riesgos</h2>
-      <p>Registrar un riesgo se hace en dos partes: primero lo describes, luego lo evalúas. La plataforma calcula el nivel automáticamente.</p>
-
-      <h3>Campos del riesgo</h3>
-      <table class="docs">
-        <thead><tr><th>Campo</th><th>Obligatorio</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr><td>Departamento</td><td>Sí</td><td>Área al que pertenece el riesgo.</td></tr>
-          <tr><td>Tipo de amenaza</td><td>Sí</td><td>Interna o Externa.</td></tr>
-          <tr><td>Descripción</td><td>Sí</td><td>Una explicación clara del riesgo (qué podría pasar y por qué).</td></tr>
-          <tr><td>Probabilidad inherente</td><td>Recomendado</td><td>Del 1 al 5 según la escala.</td></tr>
-          <tr><td>Impacto inherente</td><td>Recomendado</td><td>Del 1 al 5 según la escala.</td></tr>
-          <tr><td>Estrategia</td><td>Recomendado</td><td>Aceptar, Reducir o Transferir.</td></tr>
-          <tr><td>Mitigantes (hasta 3)</td><td>Opcional</td><td>Acciones concretas con su tipo de impacto.</td></tr>
-          <tr><td>Probabilidad e impacto residual</td><td>Opcional</td><td>Reevaluación después de aplicar mitigantes.</td></tr>
-        </tbody>
-      </table>
-
-      <h3>Pasos para registrar un riesgo</h3>
-      <div class="steps">
-        <div class="step"><strong>Botón "Nuevo riesgo"</strong><p>Desde el dashboard o desde el listado de riesgos del departamento.</p></div>
-        <div class="step"><strong>Selecciona el departamento y el tipo</strong><p>Tipo Interna si el origen está dentro de la organización; Externa si viene del entorno.</p></div>
-        <div class="step"><strong>Describe el riesgo</strong><p>Sé específico: "Caída del sistema de facturación por sobrecarga" es mejor que "Falla de TI".</p></div>
-        <div class="step"><strong>Evalúa probabilidad e impacto inherente</strong><p>Como si no existiera ningún control. Tira el número honesto.</p></div>
-        <div class="step"><strong>Define la estrategia y mitigantes</strong><p>¿Vas a aceptarlo tal cual, reducirlo con controles, o pasárselo a un tercero?</p></div>
-        <div class="step"><strong>Evalúa el residual</strong><p>Después de tus mitigantes, ¿cuál es la probabilidad e impacto real?</p></div>
-        <div class="step"><strong>Guarda</strong><p>El riesgo queda registrado y suma a las estadísticas del dashboard.</p></div>
-      </div>
-
-      <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-          Buenas prácticas al describir un riesgo
-        </div>
-        <p style="margin:0;">Usa la estructura <em>"Causa → Evento → Consecuencia"</em>. Por ejemplo: <em>"Por falta de respaldos automáticos (causa), si el servidor falla (evento), perderíamos hasta 7 días de información de clientes (consecuencia)"</em>.</p>
-      </div>
-    </section>
-
-    <!-- 7. Matriz -->
-    <section class="doc" id="matriz">
-      <h2><span class="anchor">#</span>La matriz 5×5</h2>
-      <p>El nivel de un riesgo sale de multiplicar probabilidad por impacto. La siguiente tabla es interactiva: <strong>pasa el cursor sobre cualquier celda</strong> para ver el resultado.</p>
-
+      <h3>La matriz 5×5</h3>
+      <p>El puntaje es <code>probabilidad × impacto</code>, cada uno del 1 al 5. Pasa el cursor sobre una celda para ver el resultado.</p>
       <div class="matrix-wrap">
         <div class="matrix" id="matrix">
           <div class="corner"></div>
@@ -721,7 +656,6 @@
           <div class="header axis-x">Crítico</div>
           <div class="header axis-x">Mayor</div>
           <div class="header axis-x">Catastrófico</div>
-          <!-- Generated by JS -->
         </div>
         <div class="matrix-legend">
           <div><span class="dot" style="background: var(--c-tolerable);"></span> Tolerable · 1–4</div>
@@ -732,231 +666,494 @@
         </div>
       </div>
 
-      <h3>Escala de probabilidad</h3>
-      <table class="docs">
-        <thead><tr><th style="width:80px;">Nivel</th><th>Etiqueta</th><th>Rango</th></tr></thead>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th style="width:70px;">Valor</th><th>Probabilidad</th><th>Impacto</th></tr></thead>
         <tbody>
-          <tr><td><strong>1</strong></td><td>Remoto</td><td>0–20%</td></tr>
-          <tr><td><strong>2</strong></td><td>Improbable</td><td>21–40%</td></tr>
-          <tr><td><strong>3</strong></td><td>Ocasional</td><td>41–60%</td></tr>
-          <tr><td><strong>4</strong></td><td>Probable</td><td>61–80%</td></tr>
-          <tr><td><strong>5</strong></td><td>Frecuente</td><td>81–100%</td></tr>
+          <tr><td><strong>1</strong></td><td>Remoto (0–20%)</td><td>Insignificante</td></tr>
+          <tr><td><strong>2</strong></td><td>Improbable (21–40%)</td><td>Menor</td></tr>
+          <tr><td><strong>3</strong></td><td>Ocasional (41–60%)</td><td>Crítico</td></tr>
+          <tr><td><strong>4</strong></td><td>Probable (61–80%)</td><td>Mayor</td></tr>
+          <tr><td><strong>5</strong></td><td>Frecuente (81–100%)</td><td>Catastrófico</td></tr>
         </tbody>
-      </table>
-
-      <h3>Escala de impacto</h3>
-      <table class="docs">
-        <thead><tr><th style="width:80px;">Nivel</th><th>Etiqueta</th><th>Descripción típica</th></tr></thead>
-        <tbody>
-          <tr><td><strong>1</strong></td><td>Insignificante</td><td>Sin consecuencias operativas.</td></tr>
-          <tr><td><strong>2</strong></td><td>Menor</td><td>Molestia que se resuelve con esfuerzo bajo.</td></tr>
-          <tr><td><strong>3</strong></td><td>Crítico</td><td>Afecta operación de un área por horas o un día.</td></tr>
-          <tr><td><strong>4</strong></td><td>Mayor</td><td>Afecta operación de varias áreas o tiene costo significativo.</td></tr>
-          <tr><td><strong>5</strong></td><td>Catastrófico</td><td>Compromete continuidad del negocio, reputación o cumplimiento legal.</td></tr>
-        </tbody>
-      </table>
+      </table></div>
     </section>
 
-    <!-- 8. Mitigación -->
-    <section class="doc" id="mitigacion">
-      <h2><span class="anchor">#</span>Mitigación y controles</h2>
-      <p>Una vez evaluado el riesgo inherente, decides cómo manejarlo. La plataforma soporta tres estrategias y hasta tres mitigantes por riesgo.</p>
+    <section class="doc" id="dashboard">
+      <h2><span class="anchor">#</span>Dashboard <span class="module-tag t-risk">Gestión del Riesgo</span></h2>
+      <p>Es la primera pantalla del módulo. Resume el estado de todos los riesgos de la empresa.</p>
 
-      <h3>Estrategias</h3>
-      <div class="grid grid-3">
-        <div class="card">
-          <h4 style="margin-top:0; color: var(--c-tolerable);">Aceptar</h4>
-          <p class="muted" style="margin:0; font-size:.9rem;">Reconoces el riesgo y decides convivir con él porque mitigar cuesta más que el daño potencial. No se aplican controles.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0; color: var(--c-medium);">Reducir</h4>
-          <p class="muted" style="margin:0; font-size:.9rem;">Implementas controles que bajan la probabilidad, el impacto o ambos. Es la estrategia más común.</p>
-        </div>
-        <div class="card">
-          <h4 style="margin-top:0; color: var(--c-low);">Transferir</h4>
-          <p class="muted" style="margin:0; font-size:.9rem;">Pasas el riesgo a un tercero: seguros, outsourcing, contratos con cláusulas específicas.</p>
+      <div class="mockup">
+        <div class="mockup-label">Tarjetas superiores</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:.75rem;">
+          <div class="stat-card-mock"><div class="label">Sin puntaje</div><div class="value">2</div></div>
+          <div class="stat-card-mock"><div class="label">Riesgos totales</div><div class="value">27</div></div>
+          <div class="stat-card-mock danger"><div class="label">Intolerable</div><div class="value">3</div></div>
+          <div class="stat-card-mock warn"><div class="label">Alto</div><div class="value">5</div></div>
+          <div class="stat-card-mock"><div class="label">Mitigados</div><div class="value">12</div></div>
         </div>
       </div>
 
-      <h3>Tipos de mitigante</h3>
-      <p>Cada mitigante debe declarar qué parte del riesgo ataca:</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Elemento</th><th>Qué significa</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sin puntaje</strong></td><td>Riesgos a los que les falta la probabilidad o el impacto inherente.</td></tr>
+          <tr><td><strong>Intolerable, Alto, Mitigados</strong></td><td>Conteo por nivel <strong>residual</strong>. «Mitigados» suma los de nivel Bajo y Tolerable.</td></tr>
+          <tr><td><strong>% Riesgos críticos</strong></td><td>Riesgos con residual Alto o Intolerable sobre el total. Rojo arriba de 30%, naranja arriba de 15%, verde en otro caso.</td></tr>
+          <tr><td><strong>Tasa de mitigación</strong></td><td>Porcentaje de riesgos cuyo nivel residual es mejor que el inherente. Verde desde 60%, amarillo desde 30%, rojo por debajo.</td></tr>
+          <tr><td><strong>Distribución de riesgos</strong></td><td>Dona por nivel residual. Un riesgo sin residual cuenta como «Sin clasificar».</td></tr>
+          <tr><td><strong>Riesgos por perspectiva</strong></td><td>Barras de «Críticos» contra «Otros» en cada perspectiva.</td></tr>
+          <tr><td><strong>Detalle de riesgos críticos</strong></td><td>Tabla con hasta 8 riesgos; el ícono del ojo abre el riesgo.</td></tr>
+          <tr><td><strong>Resumen por perspectiva</strong></td><td>Una fila por perspectiva. La fila «Sin asignar» tiene el botón «Asignar».</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="card tip">
+        <div class="icon-row">«Crítico» se mide de dos formas</div>
+        <p style="margin:0;">La alerta roja «Riesgos críticos sin mitigar» y las tarjetas usan el nivel <strong>residual</strong>: lo que sigue grave después de los controles. La gráfica por perspectiva y el paso a la Planeación Estratégica usan el nivel <strong>inherente</strong>: lo grave que es el riesgo sin contar los controles.</p>
+      </div>
+    </section>
+
+    <section class="doc" id="perspectivas">
+      <h2><span class="anchor">#</span>Perspectivas <span class="module-tag t-risk">Gestión del Riesgo</span></h2>
+      <p>Los riesgos se organizan en las cinco áreas que mueven el negocio. Antes se organizaban por departamento; ahora el departamento es un dato opcional.</p>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
+        <span class="badge-level lvl-low">Finanzas</span>
+        <span class="badge-level lvl-low">Clientes</span>
+        <span class="badge-level lvl-low">Competitividad</span>
+        <span class="badge-level lvl-low">Procesos</span>
+        <span class="badge-level lvl-low">Equipo y talento</span>
+      </div>
+      <p>Cada tarjeta de perspectiva muestra:</p>
       <ul style="padding-left: 1.25rem;">
-        <li><strong>Mitiga la probabilidad</strong> — reduce la posibilidad de que el evento ocurra.</li>
-        <li><strong>Mitiga el impacto</strong> — reduce el daño si el evento ocurre.</li>
-        <li><strong>Mitiga la probabilidad e impacto</strong> — actúa sobre ambos.</li>
+        <li>Cuántos riesgos tiene, cuántos son críticos y cuántos están sin puntaje.</li>
+        <li>La ayuda «¿Qué va aquí?» y tres ejemplos típicos. «Tomar este ejemplo» abre un riesgo nuevo con la descripción ya escrita.</li>
+        <li>«Ver riesgos», que abre la lista de esa perspectiva con buscador, filtros por nivel y tipo de amenaza, y orden por puntaje.</li>
       </ul>
 
-      <div class="card">
-        <div class="icon-row" style="color: var(--accent);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Evaluación del control
-        </div>
-        <p style="margin:0;">Además del tipo, cada mitigante puede evaluarse en su <strong>diseño</strong> (qué tan bien planteado está) y su <strong>operación</strong> (qué tan bien se ejecuta en la práctica). El resultado es un <em>grado de control</em> que ayuda a justificar el nivel residual.</p>
+      <h3>Riesgos sin perspectiva</h3>
+      <p>Si hay riesgos antiguos sin perspectiva, el Dashboard, Perspectivas y la Matriz muestran el aviso «Tienes N riesgos sin perspectiva» con el botón <strong>«Asignar perspectivas»</strong>. Esa pantalla sugiere una perspectiva para cada departamento según su nombre y la asigna a todos sus riesgos con un clic; se puede deshacer. Los riesgos sin departamento se asignan uno por uno.</p>
+
+      <h3>Departamentos</h3>
+      <p>Ya no están en el menú. Se llega desde el pie de Perspectivas, en «Departamentos (anterior)». Se pueden crear, editar y consultar sus riesgos. Un departamento que tiene riesgos no se puede eliminar.</p>
+    </section>
+
+    <section class="doc" id="riesgos">
+      <h2><span class="anchor">#</span>Registrar un riesgo <span class="module-tag t-risk">Gestión del Riesgo</span></h2>
+      <p>«Agregar Riesgo» abre un solo formulario con cuatro bloques. Solo son obligatorios la perspectiva, el tipo de amenaza y la descripción; lo demás se puede completar después.</p>
+
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Bloque</th><th>Qué se captura</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Información básica</strong></td><td>Perspectiva, tipo de amenaza (Interna o Externa), descripción y, si se quiere, departamento.</td></tr>
+          <tr><td><strong>Riesgo inherente</strong></td><td>Probabilidad e impacto. El nivel se calcula solo. Si el puntaje llega a 13 aparece el aviso «Este riesgo pasará a tu planeación estratégica».</td></tr>
+          <tr><td><strong>Estrategia y mitigación</strong></td><td>Estrategia de manejo y hasta tres medidas de mitigación. Cada medida indica si mitiga la probabilidad, el impacto o ambos, y lleva su evaluación del control.</td></tr>
+          <tr><td><strong>Riesgo residual</strong></td><td>Probabilidad e impacto después de las medidas.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Evaluación del control y grado de control</h3>
+      <p>Cada medida de mitigación se evalúa con seis respuestas. Cada respuesta suma puntos y el total da el <strong>grado de control</strong>. Se calcula cuando las seis están contestadas.</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Pregunta</th><th>Puntos</th></tr></thead>
+        <tbody>
+          <tr><td>Tipo de control</td><td>Preventivo 0.30 · Detectivo 0.15 · Correctivo 0.05</td></tr>
+          <tr><td>Tipo de proceso</td><td>Automatizado 0.40 · Combinado 0.25 · Manual 0.10</td></tr>
+          <tr><td>¿Control documentado?</td><td rowspan="4">Sí 0.10 · No 0.01, en cada pregunta</td></tr>
+          <tr><td>¿Genera evidencia auditable?</td></tr>
+          <tr><td>¿Tiene responsable?</td></tr>
+          <tr><td>¿Se ejecuta con frecuencia?</td></tr>
+        </tbody>
+      </table></div>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
+        <span class="badge-level lvl-tolerable">Fuerte · 1.10 o más</span>
+        <span class="badge-level lvl-medium">Medio · de 0.70 a 1.09</span>
+        <span class="badge-level lvl-intolerable">Débil · menos de 0.70</span>
+      </div>
+      <p>Ejemplo: un control preventivo (0.30), automatizado (0.40), con las cuatro respuestas en «Sí» (0.40) suma 1.10 y es Fuerte.</p>
+
+      <div class="card tip">
+        <div class="icon-row">Cómo describir un riesgo</div>
+        <p style="margin:0;">Usa la estructura <em>causa → evento → consecuencia</em>: «Por falta de respaldos automáticos, si el servidor falla, perderíamos hasta 7 días de información de clientes». Con 10 caracteres o más se activa «Sugerir con IA», que propone redacción, evaluación y controles. Ver <a href="#ia">Asistente de IA</a>.</p>
       </div>
     </section>
 
-    <!-- 9. Inherente vs residual -->
-    <section class="doc" id="residual">
-      <h2><span class="anchor">#</span>Inherente vs residual</h2>
-      <p>Esta es probablemente la distinción más importante de toda la metodología. La plataforma siempre registra ambos.</p>
+    <section class="doc" id="matriz">
+      <h2><span class="anchor">#</span>Matriz de Riesgos y Excel <span class="module-tag t-risk">Gestión del Riesgo</span></h2>
+      <p>«Matriz de Riesgos» es la tabla completa: perspectiva, departamento, evaluación inherente, manejo, las tres medidas con su grado de control y evaluación residual.</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Acción</th><th>Cómo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Filtrar</strong></td><td>Por perspectiva, departamento y nivel, más un buscador sobre la descripción. El filtro de nivel usa el residual si existe; si no, el inherente.</td></tr>
+          <tr><td><strong>Ordenar</strong></td><td>«Más recientes», «Mayor puntaje primero» o «Menor puntaje primero».</td></tr>
+          <tr><td><strong>Editar</strong></td><td>Marca la casilla de un riesgo y pulsa «Editar».</td></tr>
+          <tr><td><strong>Eliminar</strong></td><td>Marca uno o varios riesgos y pulsa «Eliminar». Pide confirmación y no se puede deshacer.</td></tr>
+          <tr><td><strong>Exportar Excel</strong></td><td>Descarga <code>matriz_riesgos_AAAA-MM-DD.xlsx</code> con los riesgos que estén filtrados en ese momento.</td></tr>
+        </tbody>
+      </table></div>
+      <p>El archivo trae una fila por riesgo con: perspectiva, departamento, tipo de amenaza, descripción, probabilidad, impacto, nivel y puntaje inherentes, estrategia, las tres medidas (texto, qué mitiga, tipo de control y grado de control), probabilidad, impacto y nivel residuales, y fecha de creación.</p>
+    </section>
+
+    <!-- ============ ANÁLISIS FINANCIERO ============ -->
+    <section class="doc" id="fin-captura">
+      <h2><span class="anchor">#</span>Recorrido y captura <span class="module-tag t-fin">Análisis Financiero</span></h2>
+      <p>El módulo convierte los estados financieros de varios años en razones financieras y un informe. El «Inicio» muestra el recorrido con los pasos terminados en verde y un botón que lleva al primer paso pendiente.</p>
+
+      <div class="steps">
+        <div class="step"><strong>Datos generales</strong><p>Nombre, país, actividad y moneda de la empresa, y los años a analizar.</p></div>
+        <div class="step"><strong>Estado de Resultados</strong><p>Ventas, costos, gastos, resultado financiero e impuestos de cada año.</p></div>
+        <div class="step"><strong>Balance General</strong><p>27 cuentas de activo, pasivo y capital.</p></div>
+        <div class="step"><strong>Estado de cambios</strong><p>Se calcula solo; pide cinco datos complementarios.</p></div>
+        <div class="step"><strong>Razones financieras</strong><p>41 indicadores, 27 de ellos con semáforo.</p></div>
+        <div class="step"><strong>Informe</strong><p>Diez cuadros con gráficas, listo para imprimir.</p></div>
+      </div>
+
+      <div class="card tip">
+        <div class="icon-row">Todas las cifras van en miles</div>
+        <p style="margin:0;">Captura 1,250 para un millón doscientos cincuenta mil. Los costos y gastos se escriben en positivo; la app ya sabe que restan. Solo llevan signo las partidas que pueden ser ganancia o pérdida, como la utilidad cambiaria.</p>
+      </div>
+
+      <h3>Años y cortes</h3>
+      <p>En «Datos generales» se agregan los años; la app recomienda de 3 a 5. Cada año puede ser «Año completo» o parcial («Parcial a junio», por ejemplo). El botón <strong>«+ Corte»</strong> agrega otro corte del mismo año sin borrar el anterior, hasta 12 por año. Eliminar un año borra también todas sus cifras.</p>
+
+      <h3>Qué se calcula solo</h3>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Pantalla</th><th>Calculado por la app</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Estado de Resultados</strong></td><td>Utilidad bruta, gasto operativo, resultado de operación, resultado integral de financiamiento, resultado antes de impuestos y utilidad neta. Bajo cada uno: % de ventas y cambio contra el año anterior.</td></tr>
+          <tr><td><strong>Balance General</strong></td><td>Todos los totales y su % sobre el activo total. El «Resultado neto del periodo» se toma del Estado de Resultados.</td></tr>
+          <tr><td><strong>Estado de cambios</strong></td><td>Todo el flujo, de resultado operativo a caja final. Necesita al menos dos periodos.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Importar desde PDF</h3>
+      <p>En Estado de Resultados y Balance General, «Importar desde PDF» lee los estados financieros con IA. Acepta hasta 4 archivos (PDF, JPG, PNG o WebP) y 8 MB en total. La app detecta la unidad del documento y convierte a miles. Antes de guardar se elige a qué año corresponde cada periodo y qué filas sobrescribir; nada se guarda hasta pulsar «Guardar cifras seleccionadas».</p>
+
+      <h3>Comprobaciones</h3>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>El balance debe cuadrar.</strong> La fila «Diferencia (Activo − Pasivo − Capital)» muestra «✓ 0» o la cifra en rojo, y un aviso indica en qué periodos no cuadra.</li>
+        <li><strong>Falta el Estado de Resultados.</strong> Sin él, el resultado neto vale 0 y el capital no cuadrará. El aviso lleva a capturarlo.</li>
+        <li><strong>Caja final.</strong> El Estado de cambios compara su caja final con la del Balance; la diferencia debe ser cero.</li>
+      </ul>
+    </section>
+
+    <section class="doc" id="fin-razones">
+      <h2><span class="anchor">#</span>Razones financieras <span class="module-tag t-fin">Análisis Financiero</span></h2>
+      <p>No se captura nada: todo sale de los estados financieros. Al tocar el nombre de un indicador se abre «¿Qué mide?», «¿Cómo leerlo?» y su fórmula. La columna «Tendencia» compara el último periodo con el anterior.</p>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
+        <span class="badge-level lvl-tolerable">Sano</span>
+        <span class="badge-level lvl-medium">Vigilar</span>
+        <span class="badge-level lvl-intolerable">Atender</span>
+      </div>
+
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Indicador</th><th>Cómo se calcula</th><th>Sano</th><th>Vigilar</th></tr></thead>
+        <tbody>
+          <tr class="group-row"><td colspan="4">Eficiencia</td></tr>
+          <tr><td>Crecimiento en ventas</td><td>Ventas ÷ ventas del año anterior − 1</td><td>10% o más</td><td>0% o más</td></tr>
+          <tr><td>Días clientes</td><td>Clientes ÷ ventas diarias</td><td>hasta 45</td><td>hasta 75</td></tr>
+          <tr><td>Días inventario</td><td>Inventarios ÷ costo diario</td><td>hasta 60</td><td>hasta 90</td></tr>
+          <tr><td>Días proveedores</td><td>Proveedores ÷ costo diario</td><td>30 a 90</td><td>15 a 120</td></tr>
+          <tr><td>Ciclo económico</td><td>Días clientes + inventario − anticipos − proveedores</td><td>hasta 45</td><td>hasta 90</td></tr>
+          <tr class="group-row"><td colspan="4">Liquidez</td></tr>
+          <tr><td>Índice de liquidez</td><td>Activo circulante ÷ pasivo circulante</td><td>1.5 o más</td><td>1.0 o más</td></tr>
+          <tr><td>Prueba del ácido</td><td>(Activo circulante − inventarios) ÷ pasivo circulante</td><td>1.0 o más</td><td>0.7 o más</td></tr>
+          <tr><td>Liquidez inmediata</td><td>Efectivo ÷ pasivo circulante</td><td>0.3 o más</td><td>0.1 o más</td></tr>
+          <tr class="group-row"><td colspan="4">Cobertura</td></tr>
+          <tr><td>Cobertura del costo financiero y de intereses (con EBIT y con EBITDA)</td><td>Resultado de operación o EBITDA ÷ costo financiero</td><td>3 o más</td><td>1.5 o más</td></tr>
+          <tr class="group-row"><td colspan="4">Solvencia</td></tr>
+          <tr><td>Índice de apalancamiento</td><td>Pasivo total ÷ capital</td><td>hasta 1</td><td>hasta 2</td></tr>
+          <tr><td>Apalancamiento financiero</td><td>Deuda bancaria ÷ capital</td><td>hasta 0.5</td><td>hasta 1</td></tr>
+          <tr><td>Capital / activo total</td><td>Capital ÷ activo total</td><td>50% o más</td><td>33% o más</td></tr>
+          <tr><td>Pasivo total / EBITDA</td><td>Pasivo total ÷ EBITDA</td><td>hasta 3</td><td>hasta 5</td></tr>
+          <tr><td>Pasivo financiero / EBITDA</td><td>Deuda con costo ÷ EBITDA</td><td>hasta 2</td><td>hasta 3.5</td></tr>
+          <tr class="group-row"><td colspan="4">Rentabilidad</td></tr>
+          <tr><td>Margen bruto</td><td>Utilidad bruta ÷ ventas</td><td>30% o más</td><td>15% o más</td></tr>
+          <tr><td>Margen operativo</td><td>Resultado de operación ÷ ventas</td><td>10% o más</td><td>5% o más</td></tr>
+          <tr><td>Margen neto</td><td>Utilidad neta ÷ ventas</td><td>5% o más</td><td>0% o más</td></tr>
+          <tr><td>ROA</td><td>Utilidad neta ÷ activo total</td><td>5% o más</td><td>0% o más</td></tr>
+          <tr><td>ROE</td><td>Utilidad neta ÷ capital</td><td>15% o más</td><td>0% o más</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted">Fuera de «Sano» y «Vigilar», el indicador queda en «Atender». El grupo «Flujo de efectivo» (EBIT, EBITDA, flujo de operación, inversión, financiamiento) se muestra en miles y sin semáforo. En periodos parciales, el crecimiento, el ROA y el ROE se anualizan. Cuando un indicador no se puede calcular aparece «No aplica» con el motivo, por ejemplo «Sin ventas».</p>
+    </section>
+
+    <section class="doc" id="fin-informe">
+      <h2><span class="anchor">#</span>Informe y comparativo <span class="module-tag t-fin">Análisis Financiero</span></h2>
+      <h3>Informe</h3>
+      <p>Reúne los resultados en diez cuadros, cada uno con una gráfica y una tabla por año con el semáforo: crecimiento y cobranza, márgenes, cobertura del costo financiero, deuda y apalancamiento, flujo de efectivo, ciclo financiero, liquidez, cobertura de intereses, solvencia y rentabilidad.</p>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>«Imprimir»</strong> usa la impresión del navegador; elige «Guardar como PDF» para obtener un archivo.</li>
+        <li><strong>«Explicar con IA»</strong> redacta un diagnóstico en lenguaje sencillo, que también sale en la impresión.</li>
+      </ul>
+      <p>Este módulo no exporta a Excel.</p>
+
+      <h3>Comparativo de cortes</h3>
+      <p>Un corte es la foto acumulada de un año a cierto mes, por ejemplo «jun 2026». Se crea en Datos generales con «+ Corte». En el comparativo se elige el corte a analizar y la app lo compara con hasta tres referencias:</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Referencia</th><th>Contra qué compara</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Corte anterior</strong></td><td>El corte previo del mismo año, a ritmo anualizado.</td></tr>
+          <tr><td><strong>Mismo corte</strong></td><td>Los mismos meses del año anterior.</td></tr>
+          <tr><td><strong>Cierre anterior</strong></td><td>El año anterior completo, con el corte llevado a 12 meses.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Muestra el Estado de Resultados, los cinco totales del Balance y las razones financieras con flechas de mejora o deterioro.</p>
+    </section>
+
+    <section class="doc" id="fin-opcionales">
+      <h2><span class="anchor">#</span>Análisis opcionales <span class="module-tag t-fin">Análisis Financiero</span></h2>
+      <p>No son necesarios para las razones ni para el informe. Cada uno compara su total con el Estado de Resultados y muestra la diferencia, que debe ser cero.</p>
+      <div class="grid grid-3">
+        <div class="card"><h4 style="margin-top:0;">Segmentos</h4><p class="muted" style="margin:0; font-size:.9rem;">Ventas y costos por línea de negocio. Calcula el resultado bruto y el margen de cada segmento.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Desglose del gasto</h4><p class="muted" style="margin:0; font-size:.9rem;">El gasto de operación en 20 conceptos, de sueldos a gastos generales.</p></div>
+        <div class="card"><h4 style="margin-top:0;">Estacionalidad</h4><p class="muted" style="margin:0; font-size:.9rem;">Ventas mes a mes de cada año, con su peso sobre el total y una gráfica.</p></div>
+      </div>
+    </section>
+
+    <!-- ============ PLANEACIÓN ESTRATÉGICA ============ -->
+    <section class="doc" id="plan-recorrido">
+      <h2><span class="anchor">#</span>El recorrido <span class="module-tag t-plan">Planeación Estratégica</span></h2>
+      <p>El módulo lleva de las preguntas sobre el negocio a un plan de acción. El orden del menú es el orden recomendado. Lo que se contesta en «Análisis» arma solo el FODA; lo que se decide cambiar se prioriza; y solo lo de prioridad alta se convierte en iniciativas.</p>
 
       <div class="inh-res">
         <div class="block">
-          <div class="label">Riesgo inherente</div>
-          <div style="display:flex; gap:.4rem; margin-top:.4rem;"><span class="badge-level lvl-intolerable">Intolerable</span></div>
-          <div class="desc">Cómo se ve el riesgo "en bruto", sin ningún control.</div>
-        </div>
-        <div class="arrow">→</div>
-        <div class="block" style="text-align:center;">
-          <div class="label">Mitigantes</div>
-          <div class="desc" style="margin-top:.4rem;">Controles, seguros, procesos…</div>
+          <div class="label">Análisis</div>
+          <div class="desc">Cliente, mercado, oportunidades, finanzas y entorno. Se contesta a mano.</div>
         </div>
         <div class="arrow">→</div>
         <div class="block">
-          <div class="label">Riesgo residual</div>
-          <div style="display:flex; gap:.4rem; margin-top:.4rem;"><span class="badge-level lvl-medium">Medio</span></div>
-          <div class="desc">Lo que queda en realidad después de aplicar todo.</div>
+          <div class="label">Estrategia</div>
+          <div class="desc">FODA automático, priorización y mapas. Entran solos los riesgos críticos.</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="block">
+          <div class="label">Plan de acción</div>
+          <div class="desc">Iniciativas con responsable, fechas, presupuesto y KPI, y el Score Card.</div>
         </div>
       </div>
 
-      <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          ¿Cuál se usa en el dashboard?
-        </div>
-        <p style="margin:0;">El dashboard utiliza el <strong>nivel residual</strong> para todos los conteos, gráficas y alertas. Eso refleja el riesgo real al que está expuesta la organización hoy. El nivel inherente se usa para comparar y medir qué tan efectivas son las mitigaciones.</p>
-      </div>
+      <p>El «Inicio» del módulo es un tablero: cuántas fortalezas y debilidades hay, «Tu foco ahora» (máximo cinco objetivos), el presupuesto del plan y la tarjeta «Requiere tu atención», con iniciativas vencidas, objetivos de prioridad alta sin plan y debilidades sin calificar.</p>
     </section>
 
-    <!-- 10. Exportar -->
-    <section class="doc" id="exportar">
-      <h2><span class="anchor">#</span>Exportar a Excel</h2>
-      <p>Desde la pantalla <em>Todos los riesgos</em> puedes descargar la matriz completa en formato Excel. Sirve para reportes, auditorías o trabajar fuera de la plataforma.</p>
-
-      <h3>Cómo hacerlo</h3>
-      <div class="steps">
-        <div class="step"><strong>Ve a "Todos los riesgos"</strong><p>Desde el menú lateral.</p></div>
-        <div class="step"><strong>Aplica filtros si quieres</strong><p>Por departamento, nivel, tipo de amenaza, etc. Solo se exporta lo filtrado.</p></div>
-        <div class="step"><strong>Pulsa "Exportar a Excel"</strong><p>El archivo se descarga con nombre <code>matriz_riesgos_AAAA-MM-DD.xlsx</code>.</p></div>
-      </div>
-
-      <h3>Qué incluye el archivo</h3>
-      <p>Una hoja con una fila por riesgo y estas columnas:</p>
-      <ul style="padding-left: 1.25rem;">
-        <li>Departamento, tipo de amenaza, descripción</li>
-        <li>Probabilidad, impacto y nivel inherente</li>
-        <li>Estrategia y los 3 mitigantes con su tipo</li>
-        <li>Probabilidad, impacto y nivel residual</li>
-        <li>Fecha de creación</li>
-      </ul>
-    </section>
-
-    <!-- 11. Invitaciones -->
-    <section class="doc" id="invitaciones">
-      <h2><span class="anchor">#</span>Códigos de invitación</h2>
-      <p>El registro de nuevos usuarios está protegido por códigos de invitación. Solo los administradores pueden generarlos. Esto evita que cualquier persona se cree una cuenta sin autorización.</p>
-
-      <h3>Cómo funciona un código</h3>
-      <ul style="padding-left: 1.25rem;">
-        <li>Tiene formato <code>XXXX-XXXX-XXXX</code> (12 caracteres alfanuméricos).</li>
-        <li>Se excluyen letras y números que se confunden visualmente (O, 0, I, 1).</li>
-        <li>Cada código solo se puede usar <strong>una vez</strong>.</li>
-        <li>Opcionalmente puede tener fecha de expiración y estar vinculado a un email específico.</li>
-      </ul>
-
-      <h3>Generar un código (solo admin)</h3>
-      <div class="steps">
-        <div class="step"><strong>Entra a "Códigos de invitación"</strong><p>Aparece en el menú lateral solo si eres administrador.</p></div>
-        <div class="step"><strong>Pulsa "Nuevo código"</strong><p>Se genera un código aleatorio automáticamente.</p></div>
-        <div class="step"><strong>(Opcional) Restringe el código</strong><p>Puedes vincularlo a un email concreto y/o ponerle expiración. Agrega notas para recordar a quién se lo diste.</p></div>
-        <div class="step"><strong>Compártelo</strong><p>Envíalo de forma segura a la persona que quieres invitar.</p></div>
-      </div>
-
+    <section class="doc" id="plan-analisis">
+      <h2><span class="anchor">#</span>Análisis <span class="module-tag t-plan">Planeación Estratégica</span></h2>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Pantalla</th><th>Qué se hace</th><th>A dónde va</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Análisis del cliente</strong></td><td>Nueve preguntas abiertas sobre quién es el cliente.</td><td>Contexto del plan.</td></tr>
+          <tr><td><strong>Análisis del mercado</strong></td><td>Hasta 5 competidores, comparados en precio, servicio, post-venta, entrega e imagen, mercado, y audiencia y publicidad.</td><td>Mejores que tú: amenazas. Peores: oportunidades.</td></tr>
+          <tr><td><strong>Oportunidades del mercado</strong></td><td>Cuatro preguntas: qué eliminar, reducir, crear e incrementar.</td><td>«Crear» e «Incrementar»: oportunidades.</td></tr>
+          <tr><td><strong>Conclusiones del mercado</strong></td><td>En cada aspecto se elige «Voy a mantener» o «Voy a cambiar». La app sugiere, la decisión es tuya.</td><td>Mantener: fortalezas. Cambiar: debilidades.</td></tr>
+          <tr><td><strong>Análisis de oportunidades</strong></td><td>Preguntas de Sí o No sobre las palancas del negocio.</td><td>Alimenta la conclusión.</td></tr>
+          <tr><td><strong>Conclusión de oportunidades</strong></td><td>Se llena sola: Sí es mantener, No es cambiar. Se puede ajustar a mano; el ajuste se respeta.</td><td>Fortalezas y debilidades.</td></tr>
+          <tr><td><strong>Estrategias financieras</strong></td><td>Paso 1: marcar las situaciones que existen hoy. Paso 2: marcar las decisiones que se van a gestionar.</td><td>Situaciones: FODA. Decisiones: priorización.</td></tr>
+          <tr><td><strong>Diagnóstico externo</strong></td><td>19 preguntas de Sí o No sobre el entorno. Cada «Sí» trae su estrategia e iniciativa sugerida.</td><td>Oportunidades y amenazas.</td></tr>
+        </tbody>
+      </table></div>
       <div class="card">
-        <div class="icon-row" style="color: var(--accent);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Caracteres confiables
-        </div>
-        <p style="margin:0;">No tengas que pedirle al destinatario que repita el código por teléfono: las letras O e I, y los números 0 y 1, nunca aparecen, así que no hay confusión.</p>
+        <div class="icon-row" style="color: var(--accent);">Estrategias financieras se llena a mano</div>
+        <p style="margin:0;">Esta pantalla no lee los datos del módulo de Análisis Financiero. Conviene tener el informe financiero a la vista al contestarla.</p>
       </div>
     </section>
 
-    <!-- 12. Usuarios -->
-    <section class="doc" id="usuarios">
-      <h2><span class="anchor">#</span>Gestión de usuarios</h2>
-      <p>La sección <em>Gestión de usuarios</em> (solo admin) te permite ver a todas las personas con acceso al sistema, cambiar sus roles y suspender cuentas cuando ya no deban tener acceso.</p>
+    <section class="doc" id="plan-estrategia">
+      <h2><span class="anchor">#</span>Estrategia <span class="module-tag t-plan">Planeación Estratégica</span></h2>
 
-      <h3>Acciones disponibles</h3>
-      <table class="docs">
+      <h3>FODA</h3>
+      <p>Es de solo lectura: se arma con lo contestado en Análisis. Cada elemento tiene un enlace para corregirlo en su pantalla de origen. Los riesgos críticos de la matriz aparecen con la etiqueta «Riesgo crítico»: los internos como debilidades y los externos como amenazas.</p>
+
+      <h3>Resumen y priorización</h3>
+      <p>Reúne todo lo que se decidió cambiar. Cada estrategia se califica en cuatro aspectos y la app calcula su prioridad. Si falta un aspecto queda «Sin calificar».</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Aspecto</th><th>Peso</th><th>Puntos</th></tr></thead>
+        <tbody>
+          <tr><td>Riesgo</td><td>50%</td><td rowspan="3">Bajo 1 · Medio 2 · Alto 3</td></tr>
+          <tr><td>Costo</td><td>20%</td></tr>
+          <tr><td>Complejidad</td><td>15%</td></tr>
+          <tr><td>Beneficio</td><td>15%</td><td>Ingresos 1 · Ahorros 2</td></tr>
+        </tbody>
+      </table></div>
+      <p>Un puntaje más bajo significa empezar antes, porque la estrategia es menos riesgosa, costosa y compleja:</p>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 1rem;">
+        <span class="badge-level lvl-tolerable">Alta · de 1 a 1.39 · «¡Empieza por aquí!»</span>
+        <span class="badge-level lvl-medium">Media · de 1.4 a 2.34 · «Para después»</span>
+        <span class="badge-level lvl-low">Baja · de 2.35 a 3 · «Puede esperar»</span>
+      </div>
+
+      <h3>Riesgos de la matriz</h3>
+      <p>Lista los riesgos con nivel <strong>inherente</strong> Alto o Intolerable. Entran solos, siempre con prioridad alta y sin calificarlos. Si a un riesgo le falta perspectiva se asigna ahí mismo. Para corregir un riesgo sobreestimado hay que editarlo en la Matriz de Riesgos. Quien no tiene acceso al módulo de riesgos no ve esta información.</p>
+
+      <h3>Mapa estratégico y Mapa calibrado</h3>
+      <p>El mapa coloca estrategias y riesgos críticos en cinco carriles, uno por perspectiva, y se lee de abajo hacia arriba. El <strong>mapa calibrado</strong> deja solo lo importante: los riesgos críticos y las estrategias de prioridad alta. Ambos son de solo lectura.</p>
+    </section>
+
+    <section class="doc" id="plan-accion">
+      <h2><span class="anchor">#</span>Plan de acción <span class="module-tag t-plan">Planeación Estratégica</span></h2>
+
+      <h3>Iniciativas estratégicas</h3>
+      <p>Empieza con «La identidad de tu empresa»: visión, misión y valores. Después lista los objetivos de prioridad alta, con los riesgos críticos primero. A cada objetivo se le agregan iniciativas con nombre, resultado esperado, área, responsable, fechas, presupuesto, KPI y plan de trabajo.</p>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Riesgos:</strong> los controles capturados en la matriz se convierten en iniciativa con «Convertir en iniciativa». La fecha sugerida es a 30 días para un riesgo Intolerable y a 60 para uno Alto. Si el riesgo se aceptó, «Lo tengo controlado» lo confirma.</li>
+        <li><strong>Diagnóstico externo:</strong> la iniciativa sugerida se agrega con «Agregar al plan».</li>
+        <li><strong>IA:</strong> «Sugerir iniciativa con IA» propone dos opciones por objetivo.</li>
+        <li><strong>«Exportar a Excel»</strong> descarga el plan completo.</li>
+      </ul>
+      <p>La app avisa, sin bloquear, cuando un riesgo crítico no tiene plan, cuando una iniciativa de riesgo queda demasiado lejos o sin responsable, y cuando una sola persona concentra más de la mitad de las iniciativas de riesgo.</p>
+
+      <h3>Score Card ejecutivo</h3>
+      <p>Es el resumen para presentar: misión, visión y valores, y una tabla por perspectiva con objetivo, iniciativa, área, responsable, plazo y presupuesto, más los totales. «Imprimir / PDF» lo deja listo para compartir.</p>
+    </section>
+
+    <!-- ============ HERRAMIENTAS ============ -->
+    <section class="doc" id="ia">
+      <h2><span class="anchor">#</span>Asistente de IA</h2>
+      <p>No es un chat. Son cinco botones repartidos en la plataforma: la IA propone y la persona decide qué aplicar. Cada resultado lleva la nota «Generado con IA» y debe revisarse.</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Botón</th><th>Dónde está</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Sugerir con IA</strong></td><td>Al agregar o editar un riesgo</td><td>Propone redacción, evaluación, tres controles y el riesgo residual. Cada parte se aplica por separado o con «Aplicar todo».</td></tr>
+          <tr><td><strong>Importar desde PDF</strong></td><td>Estado de Resultados y Balance General</td><td>Lee los estados financieros de un PDF o una imagen y llena las cifras que elijas.</td></tr>
+          <tr><td><strong>Explicar con IA</strong></td><td>Informe financiero</td><td>Diagnóstico con salud general, fortalezas, alertas, tendencias y preguntas para el contador. Guarda la última versión.</td></tr>
+          <tr><td><strong>Sugerir iniciativa con IA</strong></td><td>Iniciativas estratégicas</td><td>Dos opciones por objetivo: «Rápida y de bajo costo» y «Más completa».</td></tr>
+          <tr><td><strong>Resumen ejecutivo con IA</strong></td><td>Pantalla de módulos</td><td>Junta lo más importante de los módulos en un documento imprimible. Solo lo ven los administradores de la plataforma.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="card tip">
+        <div class="icon-row">Límites de uso</div>
+        <p style="margin:0;">Cada persona puede hacer hasta 40 consultas o gastar 2 USD en 24 horas; al llegar al tope aparece «Alcanzaste el límite diario». Toda la plataforma tiene un tope de 150 USD cada 30 días. Quien tiene «Solo ver» no ve estos botones, y tampoco están disponibles para un mentor mientras trabaja dentro de una empresa.</p>
+      </div>
+    </section>
+
+    <section class="doc" id="claude">
+      <h2><span class="anchor">#</span>Conectar Claude</h2>
+      <p>Cada usuario puede conectar su cuenta de Claude a la plataforma y conversar con sus datos: «¿cuáles son mis riesgos intolerables?», «resume mi situación de liquidez». Claude solo <strong>lee</strong>; no puede modificar nada. Cada quien ve únicamente lo de sus módulos, y la conversación corre por cuenta de su suscripción de Claude.</p>
+      <div class="steps">
+        <div class="step"><strong>Agrega el conector</strong><p>En Claude: Configuración → Conectores → Agregar conector personalizado, con la dirección <code>https://app.mara-perez.online/mcp</code>.</p></div>
+        <div class="step"><strong>Inicia sesión</strong><p>Se abre la pantalla «Conectar con tu cuenta» de la plataforma.</p></div>
+        <div class="step"><strong>Pulsa «Permitir»</strong><p>El acceso se puede revocar en cualquier momento desde Claude.</p></div>
+      </div>
+      <p>Claude puede consultar la lista y el detalle de riesgos, el resumen del plan estratégico, FODA, prioridades e iniciativas, y los estados y razones financieras. El manual paso a paso para clientes se entrega por separado en PDF.</p>
+    </section>
+
+    <!-- ============ ADMINISTRACIÓN ============ -->
+    <section class="doc" id="admin-empresas">
+      <h2><span class="anchor">#</span>Empresas y mentores <span class="module-tag t-admin">Administración</span></h2>
+      <p>La pantalla «Empresas» lista todas las empresas con sus usuarios, módulos y mentor. Tiene un buscador por empresa, usuario o mentor.</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th>Tarea</th><th>Cómo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Módulos contratados</strong></td><td>Marca los módulos de cada empresa. El administrador de la empresa los reparte después entre su equipo.</td></tr>
+          <tr><td><strong>Nombrar un mentor</strong></td><td>«Dar rol de mentor a…» y elige al usuario. Un administrador de la plataforma también puede ser mentor.</td></tr>
+          <tr><td><strong>Asignar mentor a una empresa</strong></td><td>«Asignar mentor…» en la empresa, y marca qué módulos podrá abrir. Solo se pueden asignar módulos que la empresa tiene contratados.</td></tr>
+          <tr><td><strong>Ver si la empresa retiró el acceso</strong></td><td>Junto al mentor aparece «la empresa le retiró el acceso». Solo la empresa puede devolverlo.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="card">
+        <div class="icon-row" style="color: var(--accent);">Reglas</div>
+        <p style="margin:0;">Un mentor no puede ser miembro de la empresa que acompaña. Al quitarle el rol de mentor a alguien se borran todas sus asignaciones.</p>
+      </div>
+    </section>
+
+    <section class="doc" id="usuarios">
+      <h2><span class="anchor">#</span>Gestión de usuarios <span class="module-tag t-admin">Administración</span></h2>
+      <p>Lista todas las cuentas de la plataforma con nombre, correo, rol, estado, fecha de registro y último acceso.</p>
+      <div class="table-scroll"><table class="docs">
         <thead><tr><th>Acción</th><th>Qué hace</th></tr></thead>
         <tbody>
-          <tr><td><strong>Cambiar rol</strong></td><td>Promueve un usuario a admin o lo degrada a usuario normal.</td></tr>
-          <tr><td><strong>Suspender</strong></td><td>Bloquea el acceso del usuario sin borrar sus datos. Puede reactivarse después.</td></tr>
-          <tr><td><strong>Reactivar</strong></td><td>Devuelve el acceso a un usuario suspendido.</td></tr>
-          <tr><td><strong>Ver actividad</strong></td><td>Identifica qué departamentos y riesgos fueron creados por cada persona.</td></tr>
+          <tr><td><strong>Hacer admin / Quitar admin</strong></td><td>Da o retira el rol de administrador de la plataforma.</td></tr>
+          <tr><td><strong>Suspender</strong></td><td>La persona no puede iniciar sesión. Sus datos se conservan.</td></tr>
+          <tr><td><strong>Reactivar</strong></td><td>Devuelve el acceso a una cuenta suspendida.</td></tr>
         </tbody>
-      </table>
-
-      <div class="card tip">
-        <div class="icon-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Cuándo suspender en vez de eliminar
-        </div>
-        <p style="margin:0;">Cuando una persona deja la organización, suspende su cuenta. Así conservas la trazabilidad de qué riesgos y departamentos creó, sin que pueda seguir entrando.</p>
-      </div>
+      </table></div>
+      <p>Los permisos por módulo ya no se asignan aquí: los módulos son de la empresa (pantalla «Empresas») y cada empresa los reparte en «Mi empresa».</p>
     </section>
 
-    <!-- 13. FAQ -->
+    <section class="doc" id="invitaciones">
+      <h2><span class="anchor">#</span>Códigos de invitación <span class="module-tag t-admin">Administración</span></h2>
+      <p>Hay dos formas de crear una cuenta, y sirven para cosas distintas:</p>
+      <div class="table-scroll"><table class="docs">
+        <thead><tr><th></th><th>Código de invitación</th><th>Enlace de invitación</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quién lo genera</strong></td><td>Un administrador de la plataforma</td><td>El administrador de una empresa, en «Mi empresa»</td></tr>
+          <tr><td><strong>Para qué sirve</strong></td><td>Dar de alta a un cliente nuevo; al registrarse se crea su empresa</td><td>Sumar una persona a una empresa que ya existe</td></tr>
+          <tr><td><strong>Vigencia</strong></td><td>La fecha de expiración es opcional</td><td>14 días</td></tr>
+        </tbody>
+      </table></div>
+      <p>Un código tiene formato <code>XXXX-XXXX-XXXX</code>, sirve <strong>una sola vez</strong> y no usa O, 0, I ni 1 para evitar confusiones. Al generarlo con «Generar Código» se puede vincular a un correo, ponerle fecha de expiración y agregar notas. La lista muestra cada código como «Disponible», «Usado» o «Expirado».</p>
+    </section>
+
+    <section class="doc" id="uso-ia">
+      <h2><span class="anchor">#</span>Uso de IA <span class="module-tag t-admin">Administración</span></h2>
+      <p>Muestra cuánto se usa y cuánto cuesta el asistente de IA.</p>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Estado del asistente:</strong> «Configurado», «Sin llave de API» o «Sin respuesta», con el modelo y los topes vigentes.</li>
+        <li><strong>Cifras:</strong> gasto total, gasto y llamadas de los últimos 30 días, y costo promedio por llamada.</li>
+        <li><strong>Gasto por usuario:</strong> llamadas, gasto y última vez de cada persona.</li>
+        <li><strong>Últimas 50 llamadas:</strong> qué función se usó, costo, duración y si terminó bien.</li>
+      </ul>
+    </section>
+
     <section class="doc" id="faq">
       <h2><span class="anchor">#</span>Preguntas frecuentes</h2>
 
       <details class="collapsible">
-        <summary>¿Tengo que llenar el riesgo residual obligatoriamente?</summary>
-        <div class="content"><p>No es obligatorio para guardar el riesgo, pero <strong>sí lo recomendamos</strong>. El dashboard usa el nivel residual para todos los indicadores; un riesgo sin nivel residual no aparece en las gráficas con el color correcto.</p></div>
+        <summary>Un usuario dice que no ve ningún módulo</summary>
+        <div class="content"><p>Revisa dos cosas. En Administración → «Empresas», que su empresa tenga módulos contratados. Después, que el administrador de su empresa le haya asignado módulos en «Mi empresa». Un miembro sin módulos ve el mensaje «El administrador de tu empresa todavía no te asigna módulos».</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿Puedo registrar más de 3 mitigantes para un mismo riesgo?</summary>
-        <div class="content"><p>La plataforma soporta hasta 3 mitigantes por riesgo. Si necesitas más, lo recomendable es agruparlos: por ejemplo, "Programa de capacitación trimestral" en lugar de listar cada curso por separado.</p></div>
+        <summary>Un usuario no encuentra los botones para editar</summary>
+        <div class="content"><p>Tiene «Solo ver» en ese módulo. El administrador de su empresa puede cambiarlo a «Ver y editar» en «Mi empresa».</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿Qué pasa si me equivoqué al calificar un riesgo?</summary>
-        <div class="content"><p>Puedes editar cualquier riesgo en cualquier momento. Abre el riesgo desde el listado del departamento o desde "Todos los riesgos", ajusta los valores y guarda. El historial de cambios no se conserva, así que asegúrate de revisar bien antes de borrar mitigantes.</p></div>
+        <summary>¿El cliente puede saber qué cambió su mentor?</summary>
+        <div class="content"><p>Sí. En «Mi empresa» → «Historial de cambios», con la casilla «Solo cambios de mentores», ve cada corrección con el valor anterior y el nuevo.</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿Cómo sé qué estrategia elegir: aceptar, reducir o transferir?</summary>
-        <div class="content"><p>Una regla práctica: si el riesgo es <strong>Tolerable o Bajo</strong> y mitigar cuesta más que la consecuencia, <em>acepta</em>. Si es <strong>Medio o Alto</strong>, casi siempre debes <em>reducir</em>. Si es <strong>Intolerable</strong> y tu organización no puede absorber el impacto, considera <em>transferir</em> (seguros, contratos).</p></div>
+        <summary>¿Por qué un riesgo aparece en la Planeación Estratégica si ya está controlado?</summary>
+        <div class="content"><p>Porque la planeación toma el nivel <strong>inherente</strong>: lo grave que es el riesgo sin contar los controles. Un riesgo Alto o Intolerable siempre pasa. En Iniciativas estratégicas sus controles se pueden convertir en iniciativa o, si el riesgo se aceptó, confirmarse con «Lo tengo controlado».</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>El sistema dice "Código inválido" al registrarme, ¿qué hago?</summary>
-        <div class="content"><p>Verifica que escribiste el código exactamente como te lo enviaron, incluyendo los guiones. Si el código está vinculado a un email específico, debes registrarte con ese email. Si ya lo usaste antes, no funciona dos veces. Si nada de esto aplica, contacta al administrador que te envió el código.</p></div>
+        <summary>¿Tengo que llenar el riesgo residual?</summary>
+        <div class="content"><p>No es obligatorio para guardar, pero el Dashboard usa el nivel residual en casi todos sus indicadores. Un riesgo sin residual cuenta como «Sin clasificar» en la gráfica de distribución.</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿Puedo cambiar el idioma de la aplicación?</summary>
-        <div class="content"><p>Sí. En el menú lateral hay un selector de idioma (ES/EN). Esta documentación, por ahora, está disponible únicamente en español.</p></div>
+        <summary>¿Puedo registrar más de 3 medidas de mitigación en un riesgo?</summary>
+        <div class="content"><p>No. Si necesitas más, agrúpalas: «Programa de capacitación trimestral» en lugar de listar cada curso.</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿Cómo cierro sesión?</summary>
-        <div class="content"><p>En la parte inferior del menú lateral hay un botón "Cerrar sesión". Te regresa a la pantalla de inicio y elimina tu sesión activa.</p></div>
+        <summary>El balance no cuadra, ¿qué reviso?</summary>
+        <div class="content"><p>Primero, que el Estado de Resultados de ese año esté capturado: de ahí sale el resultado neto del periodo. Después, que las cifras estén en miles y que «Resultados acumulados» tenga el valor correcto; la app muestra un valor sugerido que se usa con un clic.</p></div>
       </details>
 
       <details class="collapsible">
-        <summary>¿La información está respaldada?</summary>
-        <div class="content"><p>Sí. Toda la información se guarda en una base de datos administrada con respaldos automáticos. Aun así, si vas a hacer un cambio masivo (por ejemplo, eliminar muchos riesgos), recomendamos <em>exportar a Excel</em> antes como respaldo manual.</p></div>
+        <summary>Una estrategia no aparece en el mapa calibrado ni en las iniciativas</summary>
+        <div class="content"><p>Solo aparecen las de prioridad alta. Si le falta alguna de las cuatro calificaciones en «Resumen y priorización» queda «Sin calificar» y no entra.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>El sistema dice «Código inválido» al registrarse</summary>
+        <div class="content"><p>Hay que escribirlo tal cual, con guiones. Si el código está vinculado a un correo, el registro debe hacerse con ese correo. Cada código sirve una sola vez. Quien recibió un enlace de invitación de su empresa no necesita código.</p></div>
+      </details>
+
+      <details class="collapsible">
+        <summary>¿Cuándo conviene suspender una cuenta?</summary>
+        <div class="content"><p>Cuando una persona ya no debe entrar a la plataforma. Sus datos se conservan y la cuenta se puede reactivar. Si solo dejó una empresa, basta con que el administrador de esa empresa la quite del equipo.</p></div>
       </details>
     </section>
 
     <footer style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border); color: var(--fg-muted); font-size: .85rem;">
-      <p>Documentación · Matriz de Riesgos · Acceso restringido a administradores</p>
+      <p>Documentación de la plataforma · Actualizada en noviembre de 2026 · Para administradores</p>
     </footer>
 
   </main>
 </div>
+
 
 <script>
   // ===== Theme toggle =====
