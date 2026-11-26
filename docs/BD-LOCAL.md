@@ -87,3 +87,31 @@ Pruebas de la segunda fase (invitaciones y permisos por módulo):
 docker exec -i supabase_db_hcmeoducjqudokfhhvyc psql -U postgres -d postgres -q < scripts/check-empresas-usuarios.sql
 docker exec -i supabase_db_hcmeoducjqudokfhhvyc psql -U postgres -d postgres -q < scripts/check-empresas-mentores.sql
 ```
+
+Ensayo de «deshacer» con las tres fases aplicadas:
+
+```bash
+npm run db:local:ensayar-rollback
+```
+
+Aplica `supabase-empresas-rollback.sql`, comprueba que todo vuelve a la regla
+«solo el dueño» (mismas reglas de seguridad que producción, la app anterior
+puede guardar, cada usuario ve solo lo suyo) y vuelve a aplicar las tres fases
+encima. Corre dentro de una transacción que se revierte al final: la base
+local queda como estaba.
+
+## Orden para estrenar empresas en producción
+
+1. Desplegar las funciones `ia` y `mcp`. Entienden la base de antes y la de
+   después, así que pueden ir primero sin afectar a nadie.
+2. Correr, en este orden: `supabase-empresas.sql`,
+   `supabase-empresas-usuarios.sql` y `supabase-empresas-mentores.sql`.
+3. Publicar el código de la app.
+
+La función `ia` va antes que el SQL porque la fase 3 cambia cómo se guardan
+los resultados del asistente (uno por usuario, empresa y tipo) y la versión
+anterior de la función no puede guardar con esa regla.
+
+Para deshacer: `supabase-empresas-rollback.sql`. La versión anterior de la app
+vuelve a funcionar y no se borra nada; las tres fases se pueden volver a
+aplicar encima.

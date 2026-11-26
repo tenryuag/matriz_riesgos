@@ -9,6 +9,7 @@
     "db:local:copiar": "scripts/bd-local.sh copiar",
     "db:local:cargar": "scripts/bd-local.sh cargar",
     "db:local:empresas": "scripts/bd-local.sh empresas",
+    "db:local:ensayar-rollback": "node scripts/check-empresas-rollback.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
