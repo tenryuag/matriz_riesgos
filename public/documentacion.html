@@ -605,15 +605,19 @@
         <div class="step"><strong>Trabaja dentro de la empresa</strong><p>Una franja en la parte superior indica en qué empresa está. Lo que capture o corrija se guarda en los datos de esa empresa.</p></div>
         <div class="step"><strong>Sale cuando termina</strong><p>Desde la misma franja regresa a su propio espacio.</p></div>
       </div>
+      <p>Dentro de la empresa, el asistente de IA trabaja con los datos de ese cliente, en los módulos que el mentor acompaña. Lo que genera el mentor no lo ve el cliente, y su uso cuenta en el límite diario del propio mentor.</p>
       <div class="card tip">
         <div class="icon-row">Si la empresa retira el acceso</div>
-        <p style="margin:0;">El mentor regresa a su inicio y ve el aviso «Ya no tienes acceso a…». Solo el administrador de esa empresa puede devolvérselo. Mientras actúa como mentor, el asistente de IA no está disponible.</p>
+        <p style="margin:0;">El mentor regresa a su inicio y ve el aviso «Ya no tienes acceso a…». Solo el administrador de esa empresa puede devolvérselo.</p>
       </div>
     </section>
 
     <section class="doc" id="mi-empresa">
       <h2><span class="anchor">#</span>Mi empresa</h2>
       <p>El botón con el nombre de la empresa, en el menú lateral, abre <strong>«Mi empresa»</strong>. El administrador de la empresa gestiona ahí a su equipo; los miembros solo ven la información.</p>
+
+      <h3>Datos de la empresa</h3>
+      <p>La tarjeta «Datos de la empresa» muestra el giro, el tamaño y la <strong>persona a cargo</strong>: nombre, puesto, teléfono y correo de contacto. Se capturan al registrar la empresa y el administrador los corrige con «Editar». El nombre de la empresa se cambia con el lápiz que está junto al título.</p>
 
       <h3>Invitar a una persona</h3>
       <div class="steps">
@@ -1026,7 +1030,7 @@
 
     <section class="doc" id="claude">
       <h2><span class="anchor">#</span>Conectar Claude</h2>
-      <p>Cada usuario puede conectar su cuenta de Claude a la plataforma y conversar con sus datos: «¿cuáles son mis riesgos intolerables?», «resume mi situación de liquidez». Claude solo <strong>lee</strong>; no puede modificar nada. Cada quien ve únicamente lo de sus módulos, y la conversación corre por cuenta de su suscripción de Claude.</p>
+      <p>Cada usuario puede conectar su cuenta de Claude a la plataforma y conversar con sus datos: «¿cuáles son mis riesgos intolerables?», «resume mi situación de liquidez». Claude solo <strong>lee</strong>; no puede modificar nada. Cada quien ve únicamente los datos de su propia empresa, en los módulos que tiene asignados (un mentor no ve ahí las empresas que acompaña), y la conversación corre por cuenta de su suscripción de Claude.</p>
       <div class="steps">
         <div class="step"><strong>Agrega el conector</strong><p>En Claude: Configuración → Conectores → Agregar conector personalizado, con la dirección <code>https://app.mara-perez.online/mcp</code>.</p></div>
         <div class="step"><strong>Inicia sesión</strong><p>Se abre la pantalla «Conectar con tu cuenta» de la plataforma.</p></div>
@@ -1038,7 +1042,7 @@
     <!-- ============ ADMINISTRACIÓN ============ -->
     <section class="doc" id="admin-empresas">
       <h2><span class="anchor">#</span>Empresas y mentores <span class="module-tag t-admin">Administración</span></h2>
-      <p>La pantalla «Empresas» lista todas las empresas con sus usuarios, módulos y mentor. Tiene un buscador por empresa, usuario o mentor.</p>
+      <p>La pantalla «Empresas» lista todas las empresas con sus usuarios, módulos y mentor. Tiene un buscador por empresa, usuario o mentor. Al abrir una empresa se ven también los datos que dio al registrarse: giro, tamaño y persona a cargo.</p>
       <div class="table-scroll"><table class="docs">
         <thead><tr><th>Tarea</th><th>Cómo</th></tr></thead>
         <tbody>
@@ -1076,6 +1080,7 @@
         <tbody>
           <tr><td><strong>Quién lo genera</strong></td><td>Un administrador de la plataforma</td><td>El administrador de una empresa, en «Mi empresa»</td></tr>
           <tr><td><strong>Para qué sirve</strong></td><td>Dar de alta a un cliente nuevo; al registrarse se crea su empresa</td><td>Sumar una persona a una empresa que ya existe</td></tr>
+          <tr><td><strong>Qué pide el registro</strong></td><td>Datos de la empresa (nombre, giro y número de colaboradores) y de la persona a cargo (nombre, puesto y teléfono), además del correo, la contraseña y el código. Solo son obligatorios el nombre de la empresa, el nombre de la persona, el correo y la contraseña.</td><td>Nombre y contraseña; el correo ya viene fijo</td></tr>
           <tr><td><strong>Vigencia</strong></td><td>La fecha de expiración es opcional</td><td>14 días</td></tr>
         </tbody>
       </table></div>
