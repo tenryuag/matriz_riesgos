@@ -100,6 +100,12 @@ puede guardar, cada usuario ve solo lo suyo) y vuelve a aplicar las tres fases
 encima. Corre dentro de una transacción que se revierte al final: la base
 local queda como estaba.
 
+## Staging con su propia base
+
+Para probar en línea sin tocar producción hay una rama de Supabase con datos
+de ejemplo, conectada al sitio de staging. Cómo se crea, se carga y se conecta:
+[STAGING.md](STAGING.md).
+
 ## Orden para estrenar empresas en producción
 
 1. Desplegar las funciones `ia` y `mcp`. Entienden la base de antes y la de
