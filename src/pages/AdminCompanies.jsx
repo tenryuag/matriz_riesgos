@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { PlatformAdmin, User } from "@/api/entities";
 import { getAssignableModules } from "@/config/modules";
+import { companySizeLabel } from "@/config/companyProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/LanguageContext";
@@ -101,32 +102,61 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
 
   return (
     <div className="px-4 sm:px-6 pb-6 pt-2 space-y-6">
+      {/* Datos que la empresa dio al registrarse (los corrige ella en «Mi empresa») */}
+      <section className="space-y-1">
+        <h3 className="text-sm font-subtitle">{t("companyProfileTitle")}</h3>
+        <dl className="grid sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">{t("companyProfileIndustryShort")}</dt>
+            <dd className={company.industry ? "break-words" : "text-muted"}>
+              {company.industry || t("companyNoData")}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">{t("companyProfileSize")}</dt>
+            <dd className={company.size ? "" : "text-muted"}>
+              {companySizeLabel(company.size, t) || t("companyNoData")}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">{t("companyProfileContact")}</dt>
+            <dd className={company.contact_name ? "break-words" : "text-muted"}>
+              {company.contact_name || t("companyNoData")}
+            </dd>
+            {[company.contact_title, company.contact_phone, company.contact_email].some(Boolean) && (
+              <dd className="text-xs text-muted break-words">
+                {[company.contact_title, company.contact_phone, company.contact_email].filter(Boolean).join(" · ")}
+              </dd>
+            )}
+          </div>
+        </dl>
+      </section>
+
       {/* Módulos de la empresa */}
       <section className="space-y-2">
-        <h3 className="text-sm font-subtitle">Módulos contratados</h3>
+        <h3 className="text-sm font-subtitle">{t("adminCompaniesModulesTitle")}</h3>
         <div className="flex flex-wrap items-center gap-3">
           <ModuleChecks modules={assignable} value={modules} onChange={setModules} disabled={busy} t={t} />
           <Button
             size="sm"
             disabled={busy || sameSet(modules, company.modules)}
             onClick={() =>
-              run(() => PlatformAdmin.setCompanyModules(company.id, modules), "Módulos de la empresa guardados")
+              run(() => PlatformAdmin.setCompanyModules(company.id, modules), t("adminCompaniesModulesSaved"))
             }
             className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
           >
-            <Save className="w-4 h-4 mr-1.5" /> Guardar
+            <Save className="w-4 h-4 mr-1.5" /> {t("save")}
           </Button>
         </div>
-        <p className="text-xs text-muted">
-          La empresa reparte estos módulos entre su gente desde «Mi empresa». Al quitar uno, lo pierden todos
-          sus usuarios y sus mentores; los datos se conservan.
-        </p>
+        <p className="text-xs text-muted">{t("adminCompaniesModulesNote")}</p>
       </section>
 
       {/* Personas */}
       <section className="space-y-2">
         <h3 className="text-sm font-subtitle">
-          {company.members.length === 1 ? "1 usuario" : `${company.members.length} usuarios`}
+          {company.members.length === 1
+            ? t("adminCompaniesUserOne")
+            : t("adminCompaniesUserMany", { count: company.members.length })}
         </h3>
         <ul className="text-sm space-y-1">
           {company.members.map((m) => (
@@ -135,7 +165,7 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
               {m.full_name && <span className="text-xs text-muted">{m.email}</span>}
               {m.role === "admin" && (
                 <span className="text-[11px] px-2 py-0.5 rounded-full border border-accent/40 text-accent">
-                  administrador
+                  {t("adminCompaniesAdminBadge")}
                 </span>
               )}
             </li>
@@ -146,9 +176,9 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
       {/* Mentores */}
       <section className="space-y-3">
         <h3 className="text-sm font-subtitle flex items-center gap-1.5">
-          <GraduationCap className="w-4 h-4 text-indigo-500" /> Mentores
+          <GraduationCap className="w-4 h-4 text-indigo-500" /> {t("adminCompaniesMentors")}
         </h3>
-        {company.mentors.length === 0 && <p className="text-sm text-muted">Esta empresa no tiene mentor asignado.</p>}
+        {company.mentors.length === 0 && <p className="text-sm text-muted">{t("adminCompaniesNoMentor")}</p>}
         {company.mentors.map((m) => {
           const draft = mentorDrafts[m.mentor_id] || [];
           return (
@@ -157,7 +187,7 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
                 <div className="font-subtitle text-sm">{personName(m)}</div>
                 <div className="text-xs text-muted">
                   {m.email}
-                  {!m.active && <span className="text-amber-500"> · la empresa le retiró el acceso</span>}
+                  {!m.active && <span className="text-amber-500"> · {t("adminCompaniesMentorRevoked")}</span>}
                 </div>
               </div>
               <ModuleChecks
@@ -173,21 +203,28 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
                 onClick={() =>
                   run(
                     () => PlatformAdmin.setCompanyMentor(company.id, m.mentor_id, draft),
-                    "Módulos del mentor guardados",
+                    t("adminCompaniesMentorModulesSaved"),
                   )
                 }
                 className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
               >
-                <Save className="w-4 h-4 mr-1.5" /> Guardar
+                <Save className="w-4 h-4 mr-1.5" /> {t("save")}
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
                 disabled={busy}
-                title={`Quitar a ${personName(m)} de esta empresa`}
+                title={t("adminCompaniesMentorRemoveTitle", { name: personName(m) })}
                 onClick={() => {
-                  if (window.confirm(`¿Quitar a ${personName(m)} como mentor de ${company.name}?`))
-                    run(() => PlatformAdmin.setCompanyMentor(company.id, m.mentor_id, []), "Mentor retirado");
+                  if (
+                    window.confirm(
+                      t("adminCompaniesMentorRemoveConfirm", { name: personName(m), company: company.name }),
+                    )
+                  )
+                    run(
+                      () => PlatformAdmin.setCompanyMentor(company.id, m.mentor_id, []),
+                      t("adminCompaniesMentorRemoved"),
+                    );
                 }}
                 className="text-red-500 hover:text-red-500"
               >
@@ -199,21 +236,19 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
 
         {/* Asignar uno nuevo */}
         {companyModules.length === 0 ? (
-          <p className="text-xs text-muted">Asigna primero algún módulo a la empresa.</p>
+          <p className="text-xs text-muted">{t("adminCompaniesNeedModule")}</p>
         ) : available.length === 0 ? (
-          <p className="text-xs text-muted">
-            No hay más mentores disponibles. Da el rol de mentor a alguien en la sección «Mentores» de arriba.
-          </p>
+          <p className="text-xs text-muted">{t("adminCompaniesNoMoreMentors")}</p>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <select
-              aria-label="Mentor a asignar"
+              aria-label={t("adminCompaniesMentorSelectLabel")}
               value={newMentor.id}
               onChange={(e) => setNewMentor({ ...newMentor, id: e.target.value })}
               disabled={busy}
               className={`${inputClass} min-w-[14rem]`}
             >
-              <option value="">Asignar mentor…</option>
+              <option value="">{t("adminCompaniesMentorSelect")}</option>
               {available.map((m) => (
                 <option key={m.id} value={m.id}>
                   {personName(m)}
@@ -237,11 +272,11 @@ function CompanyDetail({ company, eligibleMentors, assignable, onChanged, t }) {
                     run(async () => {
                       await PlatformAdmin.setCompanyMentor(company.id, newMentor.id, newMentor.modules);
                       setNewMentor({ id: "", modules: [] });
-                    }, "Mentor asignado")
+                    }, t("adminCompaniesMentorAssigned"))
                   }
                   className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
                 >
-                  <UserPlus className="w-4 h-4 mr-1.5" /> Asignar
+                  <UserPlus className="w-4 h-4 mr-1.5" /> {t("adminCompaniesAssign")}
                 </Button>
               </>
             )}
@@ -277,10 +312,12 @@ export default function AdminCompanies() {
       setData({ companies: res.companies || [], mentors: res.mentors || [] });
       setUsers(usersRes?.users || []);
     } catch (err) {
-      toast.error(err.message || "No se pudieron cargar las empresas");
+      toast.error(err.message || t("adminCompaniesLoadError"));
     } finally {
       setLoading(false);
     }
+    // `t` cambia de identidad en cada render: no va en las dependencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -292,7 +329,7 @@ export default function AdminCompanies() {
     if (!q) return data.companies;
     return data.companies.filter(
       (c) =>
-        c.name.toLowerCase().includes(q) ||
+        `${c.name} ${c.industry || ""} ${c.contact_name || ""} ${c.contact_email || ""}`.toLowerCase().includes(q) ||
         c.members.some((m) => `${m.full_name} ${m.email}`.toLowerCase().includes(q)) ||
         c.mentors.some((m) => `${m.full_name} ${m.email}`.toLowerCase().includes(q)),
     );
@@ -307,7 +344,7 @@ export default function AdminCompanies() {
       setNewMentorId("");
       await load();
     } catch (err) {
-      toast.error(err.message || "No se pudo cambiar el rol");
+      toast.error(err.message || t("adminCompaniesRoleError"));
     } finally {
       setBusy(false);
     }
@@ -322,22 +359,17 @@ export default function AdminCompanies() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-title text-3xl mb-1">Empresas</h1>
-        <p className="text-muted">
-          Módulos contratados por cada empresa y mentores que las acompañan.
-        </p>
+        <h1 className="font-title text-3xl mb-1">{t("navCompanies")}</h1>
+        <p className="text-muted">{t("adminCompaniesSubtitle")}</p>
       </div>
 
       {/* Mentores de la plataforma */}
       <Card className="glass">
         <CardHeader>
           <CardTitle className="font-subtitle flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-indigo-500" /> Mentores
+            <GraduationCap className="w-5 h-5 text-indigo-500" /> {t("adminCompaniesMentors")}
           </CardTitle>
-          <p className="text-sm text-muted">
-            Pueden acompañar empresas quienes tienen rol de mentor y los administradores. Un mentor solo ve las
-            empresas que se le asignan aquí abajo.
-          </p>
+          <p className="text-sm text-muted">{t("adminCompaniesMentorsIntro")}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -348,20 +380,16 @@ export default function AdminCompanies() {
                   <span className="font-subtitle">{personName(m)}</span>
                   <span className="text-xs text-muted">
                     {m.role === "admin" ? "admin · " : ""}
-                    {count === 1 ? "1 empresa" : `${count} empresas`}
+                    {count === 1 ? t("adminCompaniesCompanyOne") : t("adminCompaniesCompanyMany", { count })}
                   </span>
                   {m.role === "mentor" ? (
                     <button
                       type="button"
                       disabled={busy}
-                      title={`Quitar el rol de mentor a ${personName(m)}`}
+                      title={t("adminCompaniesMentorRoleRemoveTitle", { name: personName(m) })}
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `¿Quitar el rol de mentor a ${personName(m)}?\n\nDejará de ver todas sus empresas asignadas.`,
-                          )
-                        )
-                          setRole(m.id, "user", "Rol de mentor retirado");
+                        if (window.confirm(t("adminCompaniesMentorRoleRemoveConfirm", { name: personName(m) })))
+                          setRole(m.id, "user", t("adminCompaniesMentorRoleRemoved"));
                       }}
                       className="w-6 h-6 rounded-full inline-flex items-center justify-center text-red-500 hover:bg-red-500/15"
                     >
@@ -376,13 +404,13 @@ export default function AdminCompanies() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <select
-              aria-label="Usuario al que dar rol de mentor"
+              aria-label={t("adminCompaniesNewMentorLabel")}
               value={newMentorId}
               onChange={(e) => setNewMentorId(e.target.value)}
               disabled={busy}
               className={`${inputClass} min-w-[18rem]`}
             >
-              <option value="">Dar rol de mentor a…</option>
+              <option value="">{t("adminCompaniesNewMentorSelect")}</option>
               {candidates.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.full_name ? `${u.full_name} — ${u.email}` : u.email}
@@ -392,10 +420,10 @@ export default function AdminCompanies() {
             <Button
               size="sm"
               disabled={busy || !newMentorId}
-              onClick={() => setRole(newMentorId, "mentor", "Ahora es mentor")}
+              onClick={() => setRole(newMentorId, "mentor", t("adminCompaniesNowMentor"))}
               className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
             >
-              <UserPlus className="w-4 h-4 mr-1.5" /> Hacer mentor
+              <UserPlus className="w-4 h-4 mr-1.5" /> {t("adminCompaniesMakeMentor")}
             </Button>
           </div>
         </CardContent>
@@ -408,7 +436,7 @@ export default function AdminCompanies() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar empresa, usuario o mentor"
+          placeholder={t("adminCompaniesSearch")}
           className="w-full pl-10 pr-4 py-2.5 glass rounded-xl text-foreground placeholder:text-muted outline-none focus:border-accent"
         />
       </div>
@@ -417,7 +445,11 @@ export default function AdminCompanies() {
         <CardHeader>
           <CardTitle className="font-subtitle flex items-center gap-2">
             <Building2 className="w-5 h-5 text-accent" />
-            {loading ? "Empresas" : `${filtered.length} ${filtered.length === 1 ? "empresa" : "empresas"}`}
+            {loading
+              ? t("navCompanies")
+              : filtered.length === 1
+                ? t("adminCompaniesCompanyOne")
+                : t("adminCompaniesCompanyMany", { count: filtered.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -447,11 +479,11 @@ export default function AdminCompanies() {
                         <span className="text-xs text-muted block truncate">
                           {c.members.length === 1
                             ? c.members[0].email
-                            : `${c.members.length} usuarios · ${c.members.find((m) => m.role === "admin")?.email || ""}`}
+                            : `${t("adminCompaniesUserMany", { count: c.members.length })} · ${c.members.find((m) => m.role === "admin")?.email || ""}`}
                         </span>
                       </span>
                       <span className="text-xs text-muted">
-                        {c.modules.length ? c.modules.map(moduleName).join(" · ") : "Sin módulos"}
+                        {c.modules.length ? c.modules.map(moduleName).join(" · ") : t("adminCompaniesNoModules")}
                       </span>
                       {c.mentors.length > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-indigo-500/15 text-indigo-500 border border-indigo-500/30">
@@ -473,7 +505,9 @@ export default function AdminCompanies() {
                   </li>
                 );
               })}
-              {filtered.length === 0 && <li className="text-center text-muted py-10">No hay empresas que coincidan.</li>}
+              {filtered.length === 0 && (
+                <li className="text-center text-muted py-10">{t("adminCompaniesNoMatch")}</li>
+              )}
             </ul>
           )}
         </CardContent>

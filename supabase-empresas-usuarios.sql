@@ -47,6 +47,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS company_invitations_pending_uidx
 ALTER TABLE public.company_invitations ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.company_invitations TO service_role;
 
+-- ── 2b. Datos de la empresa y de la persona a cargo ──────────────────────────
+-- Se capturan en el registro y se corrigen desde «Mi empresa».
+
+ALTER TABLE public.companies
+  ADD COLUMN IF NOT EXISTS industry      text CHECK (char_length(industry) <= 120),
+  ADD COLUMN IF NOT EXISTS size          text CHECK (size IN ('1-10', '11-50', '51-250', '251+')),
+  ADD COLUMN IF NOT EXISTS contact_name  text CHECK (char_length(contact_name) <= 120),
+  ADD COLUMN IF NOT EXISTS contact_title text CHECK (char_length(contact_title) <= 120),
+  ADD COLUMN IF NOT EXISTS contact_phone text CHECK (char_length(contact_phone) <= 40),
+  ADD COLUMN IF NOT EXISTS contact_email text CHECK (char_length(contact_email) <= 200);
+
+-- Empresas que ya existían: la persona a cargo es quien abrió la cuenta.
+UPDATE public.companies c
+   SET contact_name  = NULLIF(left(trim(u.raw_user_meta_data->>'full_name'), 120), ''),
+       contact_email = left(u.email, 200)
+  FROM auth.users u
+ WHERE u.id = c.created_by AND c.contact_name IS NULL AND c.contact_email IS NULL;
+
 -- ── 3. Acceso efectivo ───────────────────────────────────────────────────────
 
 -- Empresas a las que el usuario en sesión tiene acceso para un módulo.
@@ -100,13 +118,16 @@ $$;
 REVOKE ALL ON FUNCTION public._apply_invitation(public.company_invitations, uuid) FROM PUBLIC, anon, authenticated;
 
 -- Alta de usuario: con enlace de invitación válido entra a esa empresa; sin
--- él, recibe su propia empresa (como en la fase 1).
+-- él, recibe su propia empresa con los datos que dio en el registro (empresa
+-- y persona a cargo). Esos datos llegan en los metadatos del usuario, que él
+-- mismo escribe: por eso se recortan y el tamaño solo acepta valores conocidos.
 CREATE OR REPLACE FUNCTION public.create_company_for_new_user() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
 DECLARE
   cid uuid;
   inv public.company_invitations;
+  md  jsonb := COALESCE(NEW.raw_user_meta_data, '{}'::jsonb);
 BEGIN
   IF EXISTS (SELECT 1 FROM public.company_members WHERE user_id = NEW.id) THEN
     RETURN NEW;
@@ -121,8 +142,18 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  INSERT INTO public.companies (name, created_by)
-  VALUES (COALESCE(NULLIF(trim(NEW.raw_user_meta_data->>'full_name'), ''), NEW.email, 'Empresa'), NEW.id)
+  INSERT INTO public.companies
+    (name, created_by, industry, size, contact_name, contact_title, contact_phone, contact_email)
+  VALUES (
+    COALESCE(NULLIF(left(trim(md->>'company_name'), 120), ''),
+             NULLIF(left(trim(md->>'full_name'), 120), ''), NEW.email, 'Empresa'),
+    NEW.id,
+    NULLIF(left(trim(md->>'company_industry'), 120), ''),
+    CASE WHEN md->>'company_size' IN ('1-10', '11-50', '51-250', '251+') THEN md->>'company_size' END,
+    NULLIF(left(trim(md->>'full_name'), 120), ''),
+    NULLIF(left(trim(md->>'job_title'), 120), ''),
+    NULLIF(left(trim(md->>'phone'), 40), ''),
+    left(NEW.email, 200))
   RETURNING id INTO cid;
   INSERT INTO public.company_members (company_id, user_id, role) VALUES (cid, NEW.id, 'admin');
   INSERT INTO public.company_modules (company_id, module_key) VALUES (cid, 'risk');
@@ -202,7 +233,7 @@ BEGIN
   IF cid IS NULL THEN RETURN jsonb_build_object('company', NULL); END IF;
   adm := public.is_company_admin(cid);
   RETURN jsonb_build_object(
-    'company', (SELECT jsonb_build_object('id', c.id, 'name', c.name) FROM public.companies c WHERE c.id = cid),
+    'company', (SELECT to_jsonb(c) - 'created_by' - 'created_at' FROM public.companies c WHERE c.id = cid),
     'is_admin', adm,
     'modules', (SELECT COALESCE(jsonb_agg(module_key ORDER BY module_key), '[]'::jsonb)
                   FROM public.company_modules WHERE company_id = cid),

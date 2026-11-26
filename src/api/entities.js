@@ -373,7 +373,10 @@ export const User = {
   },
 
   // 🔹 Registrar nuevo usuario con código de invitación
-  async register(email, password, fullName, invitationCode) {
+  // `company` trae los datos de la empresa que se da de alta y de la persona
+  // a cargo: { name, industry, size, jobTitle, phone }. La base crea la
+  // empresa con ellos (create_company_for_new_user).
+  async register(email, password, fullName, invitationCode, company = {}) {
     try {
       // 1. Validar el código de invitación primero
       const validationResult = await InvitationCode.validate(
@@ -397,6 +400,11 @@ export const User = {
           // el propio usuario.
           data: {
             full_name: fullName,
+            company_name: company.name || "",
+            company_industry: company.industry || "",
+            company_size: company.size || "",
+            job_title: company.jobTitle || "",
+            phone: company.phone || "",
           },
         },
       });
@@ -693,6 +701,16 @@ function unwrapRpc(data, error, fallback) {
   return data;
 }
 
+// Columnas de `companies` que el administrador de la empresa puede corregir.
+const COMPANY_PROFILE_FIELDS = [
+  "industry",
+  "size",
+  "contact_name",
+  "contact_title",
+  "contact_phone",
+  "contact_email",
+];
+
 // 🔹 Empresa: los datos pertenecen a la empresa y su administrador decide
 // quién de su gente entra a cada módulo y si solo ve o también edita.
 export const Company = {
@@ -715,6 +733,19 @@ export const Company = {
       .from("companies")
       .update({ name })
       .eq("id", companyId);
+    if (error) handleQueryError(error);
+  },
+
+  // Datos de la empresa y de la persona a cargo. Solo pasa los campos
+  // conocidos; los vacíos se guardan como «sin dato».
+  async updateProfile(companyId, profile) {
+    const fields = Object.fromEntries(
+      COMPANY_PROFILE_FIELDS.filter((k) => k in profile).map((k) => [
+        k,
+        String(profile[k] ?? "").trim() || null,
+      ]),
+    );
+    const { error } = await supabase.from("companies").update(fields).eq("id", companyId);
     if (error) handleQueryError(error);
   },
 

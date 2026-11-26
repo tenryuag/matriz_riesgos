@@ -9,6 +9,7 @@ import {
   Copy,
   GraduationCap,
   History,
+  IdCard,
   Mail,
   Pencil,
   Save,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { Company } from "@/api/entities";
 import { MODULES } from "@/config/modules";
+import { COMPANY_SIZES, companySizeLabel } from "@/config/companyProfile";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,9 +34,9 @@ import { useModuleAccess } from "@/hooks/useModuleAccess";
 // miembros ven la lista sin poder cambiarla.
 
 const LEVELS = [
-  { value: "", label: "Sin acceso" },
-  { value: "view", label: "Solo ver" },
-  { value: "edit", label: "Ver y editar" },
+  { value: "", labelKey: "companyLevelNone" },
+  { value: "view", labelKey: "companyLevelView" },
+  { value: "edit", labelKey: "companyLevelEdit" },
 ];
 
 const inputClass =
@@ -44,17 +46,18 @@ function inviteLink(token) {
   return `${window.location.origin}/register?invite=${token}`;
 }
 
-async function copyText(text, okMessage) {
+async function copyText(text, okMessage, errorMessage) {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(okMessage);
   } catch {
-    toast.error("No se pudo copiar. Selecciona el enlace y cópialo a mano.");
+    toast.error(errorMessage);
   }
 }
 
 // Selector de nivel por módulo (sin acceso / ver / editar).
 function LevelSelect({ value, onChange, disabled, label }) {
+  const { t } = useLanguage();
   return (
     <select
       aria-label={label}
@@ -65,7 +68,7 @@ function LevelSelect({ value, onChange, disabled, label }) {
     >
       {LEVELS.map((l) => (
         <option key={l.value} value={l.value}>
-          {l.label}
+          {t(l.labelKey)}
         </option>
       ))}
     </select>
@@ -79,16 +82,17 @@ LevelSelect.propTypes = {
 };
 
 function RoleSelect({ value, onChange, disabled }) {
+  const { t } = useLanguage();
   return (
     <select
-      aria-label="Papel en la empresa"
+      aria-label={t("companyRoleLabel")}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className={`${inputClass} py-1.5 disabled:opacity-60`}
     >
-      <option value="member">Miembro</option>
-      <option value="admin">Administrador</option>
+      <option value="member">{t("companyRoleMember")}</option>
+      <option value="admin">{t("companyRoleAdmin")}</option>
     </select>
   );
 }
@@ -107,8 +111,177 @@ const sameDraft = (a, b) =>
   JSON.stringify(Object.entries(cleanModules(a.modules)).sort()) ===
     JSON.stringify(Object.entries(cleanModules(b.modules)).sort());
 
-export default function CompanyTeam() {
+// Campos de la tarjeta «Datos de la empresa» (columnas de `companies`).
+const PROFILE_FIELDS = ["industry", "size", "contact_name", "contact_title", "contact_phone", "contact_email"];
+const profileOf = (company) => Object.fromEntries(PROFILE_FIELDS.map((k) => [k, company?.[k] || ""]));
+
+// Datos de la empresa y de la persona a cargo. Se capturan al registrarse;
+// el administrador de la empresa los corrige aquí.
+function CompanyProfileCard({ company, canEdit, onSaved }) {
   const { t } = useLanguage();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(profileOf(company));
+  const [saving, setSaving] = useState(false);
+
+  const set = (key) => (e) => setDraft({ ...draft, [key]: e.target.value });
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await Company.updateProfile(company.id, draft);
+      await onSaved();
+      setEditing(false);
+      toast.success(t("companyProfileSaved"));
+    } catch (err) {
+      toast.error(err.message || t("companyProfileSaveError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const contactLine = [company.contact_title, company.contact_phone, company.contact_email].filter(Boolean);
+  const items = [
+    { label: t("companyProfileIndustryShort"), value: company.industry },
+    { label: t("companyProfileSize"), value: companySizeLabel(company.size, t) },
+    { label: t("companyProfileContact"), value: company.contact_name, extra: contactLine },
+  ];
+  const empty = PROFILE_FIELDS.every((k) => !company[k]);
+
+  return (
+    <Card className="glass">
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="font-subtitle flex items-center gap-2">
+            <IdCard className="w-5 h-5 text-accent" /> {t("companyProfileTitle")}
+          </CardTitle>
+          {canEdit && !editing && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDraft(profileOf(company));
+                setEditing(true);
+              }}
+            >
+              <Pencil className="w-4 h-4 mr-1.5" /> {empty ? t("companyProfileComplete") : t("edit")}
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {editing ? (
+          <form onSubmit={save} className="space-y-5">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="space-y-1.5">
+                <span className="block text-xs text-muted">{t("companyProfileIndustry")}</span>
+                <input value={draft.industry} onChange={set("industry")} maxLength={120} className={`${inputClass} w-full`} />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block text-xs text-muted">{t("companyProfileEmployees")}</span>
+                <select value={draft.size} onChange={set("size")} className={`${inputClass} w-full`}>
+                  <option value="">{t("companyProfileUnspecified")}</option>
+                  {COMPANY_SIZES.map((size) => (
+                    <option key={size.value} value={size.value}>
+                      {t(size.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div>
+              <h3 className="text-sm font-subtitle mb-2">{t("companyProfileContact")}</h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="space-y-1.5">
+                  <span className="block text-xs text-muted">{t("companyProfileFullName")}</span>
+                  <input
+                    value={draft.contact_name}
+                    onChange={set("contact_name")}
+                    maxLength={120}
+                    autoComplete="name"
+                    className={`${inputClass} w-full`}
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="block text-xs text-muted">{t("companyProfileJobTitle")}</span>
+                  <input
+                    value={draft.contact_title}
+                    onChange={set("contact_title")}
+                    maxLength={120}
+                    placeholder={t("companyProfileJobTitleExample")}
+                    className={`${inputClass} w-full`}
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="block text-xs text-muted">{t("companyProfilePhone")}</span>
+                  <input
+                    type="tel"
+                    value={draft.contact_phone}
+                    onChange={set("contact_phone")}
+                    maxLength={40}
+                    autoComplete="tel"
+                    className={`${inputClass} w-full`}
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="block text-xs text-muted">{t("companyProfileContactEmail")}</span>
+                  <input
+                    type="email"
+                    value={draft.contact_email}
+                    onChange={set("contact_email")}
+                    maxLength={200}
+                    autoComplete="email"
+                    className={`${inputClass} w-full`}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={saving}
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                <Save className="w-4 h-4 mr-1.5" /> {t("save")}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(false)}>
+                {t("cancel")}
+              </Button>
+            </div>
+          </form>
+        ) : empty ? (
+          <p className="text-sm text-muted">
+            {canEdit ? t("companyProfileEmptyAdmin") : t("companyProfileEmpty")}
+          </p>
+        ) : (
+          <dl className="grid sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+            {items.map((item) => (
+              <div key={item.label} className="min-w-0">
+                <dt className="text-xs text-muted mb-0.5">{item.label}</dt>
+                <dd className={item.value ? "font-subtitle break-words" : "text-muted"}>
+                  {item.value || t("companyNoData")}
+                </dd>
+                {item.extra?.length > 0 && (
+                  <dd className="text-xs text-muted break-words mt-0.5">{item.extra.join(" · ")}</dd>
+                )}
+              </div>
+            ))}
+          </dl>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+CompanyProfileCard.propTypes = {
+  company: PropTypes.object.isRequired,
+  canEdit: PropTypes.bool,
+  onSaved: PropTypes.func.isRequired,
+};
+
+export default function CompanyTeam() {
+  const { t, language } = useLanguage();
+  const dateLocale = language === "en" ? "en-US" : "es-MX";
   const { refresh: refreshAccess } = useModuleAccess();
 
   const [team, setTeam] = useState(null);
@@ -130,10 +303,12 @@ export default function CompanyTeam() {
         ),
       );
     } catch (err) {
-      toast.error(err.message || "No se pudo cargar tu empresa");
+      toast.error(err.message || t("companyLoadError"));
     } finally {
       setLoading(false);
     }
+    // `t` cambia de identidad en cada render: no va en las dependencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -153,7 +328,7 @@ export default function CompanyTeam() {
       to={createPageUrl("ModuleLauncher")}
       className="inline-flex items-center text-sm text-muted hover:text-accent"
     >
-      <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver a los módulos
+      <ArrowLeft className="w-4 h-4 mr-1.5" /> {t("companyBackToModules")}
     </Link>
   );
 
@@ -163,10 +338,8 @@ export default function CompanyTeam() {
         {backLink}
         <Card className="glass">
           <CardContent className="p-10 text-center text-muted">
-            <p className="text-lg font-subtitle mb-2">Tu cuenta no pertenece a ninguna empresa</p>
-            <p className="text-sm">
-              Pide al administrador de tu empresa que te invite de nuevo con este mismo correo.
-            </p>
+            <p className="text-lg font-subtitle mb-2">{t("companyNoCompanyTitle")}</p>
+            <p className="text-sm">{t("companyNoCompanyDesc")}</p>
           </CardContent>
         </Card>
       </div>
@@ -181,18 +354,12 @@ export default function CompanyTeam() {
 
   const setMentorAccess = async (mentor, active) => {
     const who = mentor.full_name || mentor.email;
-    if (
-      !active &&
-      !window.confirm(
-        `¿Retirar el acceso de ${who}?\n\nDejará de ver y editar los datos de tu empresa. Puedes devolvérselo cuando quieras.`,
-      )
-    )
-      return;
+    if (!active && !window.confirm(t("companyMentorRevokeConfirm", { who }))) return;
     setBusy(mentor.mentor_id);
     try {
       await Company.setMentorAccess(mentor.mentor_id, active);
       await load();
-      toast.success(active ? `${who} vuelve a tener acceso` : `${who} ya no tiene acceso`);
+      toast.success(t(active ? "companyAccessRestored" : "companyAccessRemoved", { who }));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -210,9 +377,9 @@ export default function CompanyTeam() {
       await Company.rename(team.company.id, name);
       setEditingName(false);
       await Promise.all([load(), refreshAccess()]);
-      toast.success("Nombre actualizado");
+      toast.success(t("companyNameUpdated"));
     } catch (err) {
-      toast.error(err.message || "No se pudo cambiar el nombre");
+      toast.error(err.message || t("companyNameError"));
     }
   };
 
@@ -223,7 +390,7 @@ export default function CompanyTeam() {
       await Company.updateMember(m.user_id, d.role, cleanModules(d.modules));
       await load();
       if (m.is_me) await refreshAccess();
-      toast.success("Permisos guardados");
+      toast.success(t("companyPermissionsSaved"));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -233,17 +400,12 @@ export default function CompanyTeam() {
 
   const removeMember = async (m) => {
     const who = m.full_name || m.email;
-    if (
-      !window.confirm(
-        `¿Dar de baja a ${who}?\n\nDejará de ver los datos de la empresa. Lo que haya capturado se conserva.`,
-      )
-    )
-      return;
+    if (!window.confirm(t("companyRemoveConfirm", { who }))) return;
     setBusy(m.user_id);
     try {
       await Company.removeMember(m.user_id);
       await load();
-      toast.success(`${who} ya no tiene acceso`);
+      toast.success(t("companyAccessRemoved", { who }));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -291,7 +453,7 @@ export default function CompanyTeam() {
           <Building2 className="w-7 h-7 text-accent" />
         </div>
         <div className="flex-grow min-w-0">
-          <p className="text-xs uppercase tracking-wider text-muted">Mi empresa</p>
+          <p className="text-xs uppercase tracking-wider text-muted">{t("companyMyCompany")}</p>
           {editingName ? (
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <input
@@ -302,14 +464,14 @@ export default function CompanyTeam() {
                   if (e.key === "Enter") saveName();
                   if (e.key === "Escape") setEditingName(false);
                 }}
-                aria-label="Nombre de la empresa"
+                aria-label={t("companyNameLabel")}
                 className={`${inputClass} text-lg w-full max-w-md`}
               />
               <Button size="sm" onClick={saveName} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Check className="w-4 h-4 mr-1" /> Guardar
+                <Check className="w-4 h-4 mr-1" /> {t("save")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>
-                Cancelar
+                {t("cancel")}
               </Button>
             </div>
           ) : (
@@ -319,7 +481,7 @@ export default function CompanyTeam() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Cambiar el nombre"
+                  title={t("companyRenameTitle")}
                   onClick={() => {
                     setNameDraft(team.company.name);
                     setEditingName(true);
@@ -335,24 +497,24 @@ export default function CompanyTeam() {
           to={createPageUrl("ChangeLog")}
           className="glass glass-hover rounded-2xl px-4 py-3 inline-flex items-center gap-2 text-sm font-subtitle"
         >
-          <History className="w-4 h-4 text-accent" /> Historial de cambios
+          <History className="w-4 h-4 text-accent" /> {t("changeLogTitle")}
         </Link>
         <div className="glass rounded-2xl px-5 py-3 text-center">
           <div className="font-title text-2xl">{members.length}</div>
-          <div className="text-xs text-muted">{members.length === 1 ? "usuario" : "usuarios"}</div>
+          <div className="text-xs text-muted">{t(members.length === 1 ? "companyUserOne" : "companyUserMany")}</div>
         </div>
       </div>
+
+      <CompanyProfileCard company={team.company} canEdit={isAdmin} onSaved={load} />
 
       {/* Equipo */}
       <Card className="glass">
         <CardHeader>
           <CardTitle className="font-subtitle flex items-center gap-2">
-            <Users className="w-5 h-5 text-accent" /> Equipo
+            <Users className="w-5 h-5 text-accent" /> {t("companyTeamTitle")}
           </CardTitle>
           <p className="text-sm text-muted">
-            {isAdmin
-              ? "Decide a qué módulos entra cada persona y si solo ve o también edita. Los administradores entran a todo."
-              : "Estas son las personas de tu empresa. Solo un administrador puede cambiar los permisos."}
+            {isAdmin ? t("companyTeamIntroAdmin") : t("companyTeamIntroMember")}
           </p>
         </CardHeader>
         <CardContent>
@@ -360,8 +522,8 @@ export default function CompanyTeam() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--card-border)] text-muted">
-                  <th className="text-left py-3 px-3 font-subtitle">Persona</th>
-                  <th className="text-left py-3 px-3 font-subtitle">Papel</th>
+                  <th className="text-left py-3 px-3 font-subtitle">{t("companyColPerson")}</th>
+                  <th className="text-left py-3 px-3 font-subtitle">{t("companyColRole")}</th>
                   {modules.map((m) => (
                     <th key={m.key} className="text-left py-3 px-3 font-subtitle whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5">
@@ -384,7 +546,7 @@ export default function CompanyTeam() {
                           {m.full_name || "—"}
                           {m.is_me && (
                             <span className="px-2 py-0.5 rounded-full text-[11px] border border-accent/40 text-accent">
-                              tú
+                              {t("companyYou")}
                             </span>
                           )}
                         </div>
@@ -398,14 +560,14 @@ export default function CompanyTeam() {
                             disabled={rowBusy}
                           />
                         ) : (
-                          <span>{m.role === "admin" ? "Administrador" : "Miembro"}</span>
+                          <span>{t(m.role === "admin" ? "companyRoleAdmin" : "companyRoleMember")}</span>
                         )}
                       </td>
                       {d.role === "admin" ? (
                         modules.length > 0 && (
                           <td colSpan={modules.length} className="py-3 px-3">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-subtitle border border-accent/40 bg-accent/10 text-accent">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Todos los módulos, con edición
+                              <ShieldCheck className="w-3.5 h-3.5" /> {t("companyAllModulesEdit")}
                             </span>
                           </td>
                         )
@@ -414,7 +576,10 @@ export default function CompanyTeam() {
                           <td key={mod.key} className="py-3 px-3">
                             {isAdmin ? (
                               <LevelSelect
-                                label={`${t(mod.nameKey)} para ${m.full_name || m.email}`}
+                                label={t("companyLevelFor", {
+                                  module: t(mod.nameKey),
+                                  person: m.full_name || m.email,
+                                })}
                                 value={d.modules?.[mod.key]}
                                 onChange={(level) =>
                                   setDraft(m.user_id, { modules: { ...d.modules, [mod.key]: level } })
@@ -423,7 +588,7 @@ export default function CompanyTeam() {
                               />
                             ) : (
                               <span className={m.modules?.[mod.key] ? "" : "text-muted"}>
-                                {LEVELS.find((l) => l.value === (m.modules?.[mod.key] || ""))?.label}
+                                {t(LEVELS.find((l) => l.value === (m.modules?.[mod.key] || ""))?.labelKey)}
                               </span>
                             )}
                           </td>
@@ -438,13 +603,13 @@ export default function CompanyTeam() {
                               disabled={!dirty || rowBusy}
                               className="bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
                             >
-                              <Save className="w-4 h-4 mr-1.5" /> Guardar
+                              <Save className="w-4 h-4 mr-1.5" /> {t("save")}
                             </Button>
                             {!m.is_me && (
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                title={`Dar de baja a ${m.full_name || m.email}`}
+                                title={t("companyRemoveTitle", { who: m.full_name || m.email })}
                                 onClick={() => removeMember(m)}
                                 disabled={rowBusy}
                                 className="text-red-500 hover:text-red-500"
@@ -469,14 +634,15 @@ export default function CompanyTeam() {
         <Card className="glass">
           <CardHeader>
             <CardTitle className="font-subtitle flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-indigo-500" /> {mentors.length === 1 ? "Tu mentor" : "Tus mentores"}
+              <GraduationCap className="w-5 h-5 text-indigo-500" />{" "}
+              {t(mentors.length === 1 ? "companyMentorOne" : "companyMentorMany")}
             </CardTitle>
             <p className="text-sm text-muted">
-              Tu mentor puede ver y corregir los datos de estos módulos. Todo lo que cambie queda en el{" "}
+              {t("companyMentorsIntro")}{" "}
               <Link to={createPageUrl("ChangeLog")} className="text-accent hover:underline">
-                historial de cambios
+                {t("companyMentorsIntroLink")}
               </Link>
-              .{isAdmin ? " Tú decides si conserva el acceso." : ""}
+              .{isAdmin ? ` ${t("companyMentorsIntroAdmin")}` : ""}
             </p>
           </CardHeader>
           <CardContent>
@@ -490,7 +656,7 @@ export default function CompanyTeam() {
                       {modules
                         .filter((mod) => mentor.modules.includes(mod.key))
                         .map((mod) => t(mod.nameKey))
-                        .join(" · ") || "sin módulos"}
+                        .join(" · ") || t("companyMentorNoModules")}
                     </div>
                   </div>
                   <span
@@ -500,7 +666,7 @@ export default function CompanyTeam() {
                         : "border-[var(--card-border)] text-muted"
                     }`}
                   >
-                    {mentor.active ? "Con acceso" : "Acceso retirado"}
+                    {t(mentor.active ? "companyMentorActive" : "companyMentorRevoked")}
                   </span>
                   {isAdmin && (
                     <Button
@@ -514,7 +680,7 @@ export default function CompanyTeam() {
                           : "bg-accent text-accent-foreground hover:bg-accent/90"
                       }
                     >
-                      {mentor.active ? "Retirar acceso" : "Devolver acceso"}
+                      {t(mentor.active ? "companyMentorRevoke" : "companyMentorRestore")}
                     </Button>
                   )}
                 </li>
@@ -529,29 +695,26 @@ export default function CompanyTeam() {
         <Card className="glass">
           <CardHeader>
             <CardTitle className="font-subtitle flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-accent" /> Invitar a alguien
+              <UserPlus className="w-5 h-5 text-accent" /> {t("companyInviteTitle")}
             </CardTitle>
-            <p className="text-sm text-muted">
-              Se crea un enlace personal para ese correo. Compártelo por el medio que prefieras: la persona
-              crea su contraseña y entra directo a tu empresa. El enlace dura 14 días.
-            </p>
+            <p className="text-sm text-muted">{t("companyInviteIntro")}</p>
           </CardHeader>
           <CardContent className="space-y-5">
             <form onSubmit={sendInvite} className="space-y-4">
               <div className="flex flex-wrap items-end gap-4">
                 <label className="flex-grow min-w-[16rem] space-y-1.5">
-                  <span className="text-xs text-muted">Correo</span>
+                  <span className="text-xs text-muted">{t("companyEmail")}</span>
                   <input
                     type="email"
                     required
                     value={invite.email}
                     onChange={(e) => setInvite({ ...invite, email: e.target.value })}
-                    placeholder="persona@tuempresa.com"
+                    placeholder={t("companyInviteEmailPlaceholder")}
                     className={`${inputClass} w-full`}
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="block text-xs text-muted">Papel</span>
+                  <span className="block text-xs text-muted">{t("companyColRole")}</span>
                   <RoleSelect value={invite.role} onChange={(role) => setInvite({ ...invite, role })} />
                 </label>
                 {invite.role !== "admin" &&
@@ -571,22 +734,20 @@ export default function CompanyTeam() {
                   disabled={busy === "invite"}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  <Mail className="w-4 h-4 mr-2" /> Crear invitación
+                  <Mail className="w-4 h-4 mr-2" /> {t("companyInviteCreate")}
                 </Button>
               </div>
               {invite.role === "admin" && (
-                <p className="text-xs text-muted">
-                  Un administrador entra a todos los módulos de la empresa y puede invitar y dar de baja.
-                </p>
+                <p className="text-xs text-muted">{t("companyInviteAdminNote")}</p>
               )}
             </form>
 
             {lastInvite && (
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-4 space-y-2">
                 <p className="text-sm font-subtitle">
-                  {lastInvite.has_account
-                    ? `${lastInvite.email} ya tiene cuenta: entrará a tu empresa la próxima vez que inicie sesión.`
-                    : `Invitación lista para ${lastInvite.email}. Envíale este enlace:`}
+                  {t(lastInvite.has_account ? "companyInviteHasAccount" : "companyInviteReady", {
+                    email: lastInvite.email,
+                  })}
                 </p>
                 {!lastInvite.has_account && (
                   <div className="flex flex-wrap items-center gap-2">
@@ -595,10 +756,12 @@ export default function CompanyTeam() {
                     </code>
                     <Button
                       size="sm"
-                      onClick={() => copyText(inviteLink(lastInvite.token), "Enlace copiado")}
+                      onClick={() =>
+                        copyText(inviteLink(lastInvite.token), t("companyLinkCopied"), t("companyCopyFailed"))
+                      }
                       className="bg-accent text-accent-foreground hover:bg-accent/90"
                     >
-                      <Copy className="w-4 h-4 mr-1.5" /> Copiar
+                      <Copy className="w-4 h-4 mr-1.5" /> {t("companyCopy")}
                     </Button>
                   </div>
                 )}
@@ -607,7 +770,7 @@ export default function CompanyTeam() {
 
             {invitations.length > 0 && (
               <div>
-                <h3 className="text-sm font-subtitle text-muted mb-2">Invitaciones pendientes</h3>
+                <h3 className="text-sm font-subtitle text-muted mb-2">{t("companyInvitesPending")}</h3>
                 <ul className="divide-y divide-[var(--card-border)]">
                   {invitations.map((inv) => (
                     <li key={inv.id} className="py-3 flex flex-wrap items-center gap-3">
@@ -615,27 +778,32 @@ export default function CompanyTeam() {
                         <div className="font-subtitle truncate">{inv.email}</div>
                         <div className="text-xs text-muted">
                           {inv.role === "admin"
-                            ? "Administrador"
+                            ? t("companyRoleAdmin")
                             : modules
                                 .filter((mod) => inv.modules?.[mod.key])
                                 .map(
                                   (mod) =>
-                                    `${t(mod.nameKey)}: ${inv.modules[mod.key] === "edit" ? "editar" : "ver"}`,
+                                    `${t(mod.nameKey)}: ${t(inv.modules[mod.key] === "edit" ? "companyInviteLevelEdit" : "companyInviteLevelView")}`,
                                 )
-                                .join(" · ") || "Sin módulos asignados"}
+                                .join(" · ") || t("companyNoModulesAssigned")}
                           {" · "}
                           {inv.expired
-                            ? "vencida"
-                            : `vence el ${new Date(inv.expires_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
+                            ? t("companyInviteExpired")
+                            : t("companyInviteExpires", {
+                                date: new Date(inv.expires_at).toLocaleDateString(dateLocale, {
+                                  day: "numeric",
+                                  month: "short",
+                                }),
+                              })}
                         </div>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => copyText(inviteLink(inv.token), "Enlace copiado")}
+                        onClick={() => copyText(inviteLink(inv.token), t("companyLinkCopied"), t("companyCopyFailed"))}
                         disabled={inv.expired}
                       >
-                        <Copy className="w-4 h-4 mr-1.5" /> Copiar enlace
+                        <Copy className="w-4 h-4 mr-1.5" /> {t("companyCopyLink")}
                       </Button>
                       <Button
                         size="sm"
@@ -644,7 +812,7 @@ export default function CompanyTeam() {
                         disabled={busy === inv.id}
                         className="text-red-500 hover:text-red-500"
                       >
-                        <X className="w-4 h-4 mr-1" /> Cancelar
+                        <X className="w-4 h-4 mr-1" /> {t("cancel")}
                       </Button>
                     </li>
                   ))}

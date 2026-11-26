@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider, useLanguage } from '@/components/LanguageContext';
+import { COMPANY_SIZES } from '@/config/companyProfile';
 
 const RegisterScreen = ({ theme, toggleTheme }) => {
   const { language, changeLanguage, t } = useLanguage();
@@ -26,7 +27,13 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
     password: '',
     confirmPassword: '',
     fullName: '',
-    invitationCode: ''
+    invitationCode: '',
+    // Empresa que se da de alta (no aplica a quien llega invitado)
+    companyName: '',
+    companyIndustry: '',
+    companySize: '',
+    jobTitle: '',
+    phone: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -56,8 +63,11 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
   };
 
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.fullName || (!invited && !formData.invitationCode)) {
-      setError(t('registerAllFieldsRequired'));
+    const missing =
+      !formData.email || !formData.password || !formData.confirmPassword || !formData.fullName.trim() ||
+      (!invited && (!formData.invitationCode || !formData.companyName.trim()));
+    if (missing) {
+      setError(t('registerRequiredMissing'));
       return false;
     }
 
@@ -100,8 +110,15 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
         await User.register(
           formData.email,
           formData.password,
-          formData.fullName,
-          formData.invitationCode
+          formData.fullName.trim(),
+          formData.invitationCode,
+          {
+            name: formData.companyName.trim(),
+            industry: formData.companyIndustry.trim(),
+            size: formData.companySize,
+            jobTitle: formData.jobTitle.trim(),
+            phone: formData.phone.trim()
+          }
         );
       }
 
@@ -328,20 +345,18 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
           {/* Register Content */}
           <div className="space-y-6">
             <div className="text-center lg:text-left">
-              <h2 className="text-3xl font-title text-foreground mb-3">{t('registerTitle')}</h2>
-              <p className="text-muted text-lg">{invited ? 'Crea tu cuenta para entrar al espacio de tu empresa' : t('registerSubtitle')}</p>
+              <h2 className="text-3xl font-title text-foreground mb-3">{invited ? t('registerTitle') : t('registerCompanyTitle')}</h2>
+              <p className="text-muted text-lg">{invited ? t('registerInvitedSubtitle') : t('registerSubtitle')}</p>
             </div>
 
             {invited && (
               <div className="rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm text-foreground">
-                <strong className="font-subtitle">{invitation.company_name}</strong> te invitó a su espacio de trabajo.
-                Crea tu contraseña para entrar.
+                <strong className="font-subtitle">{invitation.company_name}</strong> {t('registerInvitedNotice')}
               </div>
             )}
             {inviteToken && invitation && !invitation.valid && (
               <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-foreground">
-                Este enlace de invitación ya no es válido: venció, se canceló o ya se usó.
-                Pide a tu empresa que te envíe uno nuevo.
+                {t('registerInviteInvalid')}
               </div>
             )}
 
@@ -374,16 +389,98 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
 
             {/* Form Inputs */}
             <div className="space-y-4">
-              <input
-                type="text"
-                placeholder={t('registerFullName')}
-                value={formData.fullName}
-                onChange={handleChange('fullName')}
-                className="input-glass w-full p-3 rounded-xl"
-              />
+              {/* Empresa que se da de alta: quien llega invitado ya tiene una */}
+              {!invited && (
+                <fieldset className="space-y-3">
+                  <legend className="text-xs uppercase tracking-wider text-muted mb-2">{t('registerSectionCompany')}</legend>
+                  <input
+                    type="text"
+                    autoComplete="organization"
+                    maxLength={120}
+                    aria-label={t('registerCompanyName')}
+                    placeholder={`${t('registerCompanyName')} *`}
+                    value={formData.companyName}
+                    onChange={handleChange('companyName')}
+                    className="input-glass w-full p-3 rounded-xl"
+                  />
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      maxLength={120}
+                      aria-label={t('registerCompanyIndustry')}
+                      placeholder={`${t('registerCompanyIndustry')} (${t('registerOptional')})`}
+                      value={formData.companyIndustry}
+                      onChange={handleChange('companyIndustry')}
+                      className="input-glass w-full p-3 rounded-xl"
+                    />
+                    <select
+                      aria-label={t('registerCompanySize')}
+                      value={formData.companySize}
+                      onChange={handleChange('companySize')}
+                      className={`input-glass w-full p-3 rounded-xl ${formData.companySize ? '' : 'text-muted'}`}
+                    >
+                      <option value="">{`${t('registerCompanySize')} (${t('registerOptional')})`}</option>
+                      {COMPANY_SIZES.map((size) => (
+                        <option key={size.value} value={size.value}>{t(size.labelKey)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </fieldset>
+              )}
+
+              <fieldset className="space-y-3">
+                {!invited && (
+                  <legend className="text-xs uppercase tracking-wider text-muted mb-2">
+                    {t('registerSectionContact')}
+                    <span className="block normal-case tracking-normal mt-0.5">{t('registerContactHint')}</span>
+                  </legend>
+                )}
+                <input
+                  type="text"
+                  autoComplete="name"
+                  maxLength={120}
+                  aria-label={t('registerFullName')}
+                  placeholder={`${t('registerFullName')} *`}
+                  value={formData.fullName}
+                  onChange={handleChange('fullName')}
+                  className="input-glass w-full p-3 rounded-xl"
+                />
+                {!invited && (
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      autoComplete="organization-title"
+                      maxLength={120}
+                      aria-label={t('registerJobTitle')}
+                      placeholder={`${t('registerJobTitle')} (${t('registerOptional')})`}
+                      title={t('registerJobTitleExample')}
+                      value={formData.jobTitle}
+                      onChange={handleChange('jobTitle')}
+                      className="input-glass w-full p-3 rounded-xl"
+                    />
+                    <input
+                      type="tel"
+                      autoComplete="tel"
+                      maxLength={40}
+                      aria-label={t('registerPhone')}
+                      placeholder={`${t('registerPhone')} (${t('registerOptional')})`}
+                      value={formData.phone}
+                      onChange={handleChange('phone')}
+                      className="input-glass w-full p-3 rounded-xl"
+                    />
+                  </div>
+                )}
+              </fieldset>
+
+              <fieldset className="space-y-3">
+              {!invited && (
+                <legend className="text-xs uppercase tracking-wider text-muted mb-2">{t('registerSectionAccess')}</legend>
+              )}
               <input
                 type="email"
-                placeholder={t('Email')}
+                autoComplete="email"
+                aria-label={t('Email')}
+                placeholder={`${t('Email')} *`}
                 value={formData.email}
                 onChange={handleChange('email')}
                 readOnly={invited}
@@ -392,7 +489,9 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder={t('Contraseña')}
+                  autoComplete="new-password"
+                  aria-label={t('Contraseña')}
+                  placeholder={`${t('Contraseña')} *`}
                   value={formData.password}
                   onChange={handleChange('password')}
                   className="input-glass w-full p-3 rounded-xl pr-12"
@@ -408,7 +507,9 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder={t('registerConfirmPassword')}
+                  autoComplete="new-password"
+                  aria-label={t('registerConfirmPassword')}
+                  placeholder={`${t('registerConfirmPassword')} *`}
                   value={formData.confirmPassword}
                   onChange={handleChange('confirmPassword')}
                   className="input-glass w-full p-3 rounded-xl pr-12"
@@ -423,10 +524,13 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
               </div>
               {!invited && (
               <div className="relative">
-                <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
+                {/* z-10: el desenfoque del campo no debe tapar el icono */}
+                <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted z-10 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder={t('registerInvitationCode')}
+                  autoComplete="off"
+                  aria-label={t('registerInvitationCode')}
+                  placeholder={`${t('registerInvitationCode')} *`}
                   value={formData.invitationCode}
                   onChange={handleChange('invitationCode')}
                   className="input-glass w-full p-3 pl-12 rounded-xl uppercase"
@@ -434,6 +538,7 @@ const RegisterScreen = ({ theme, toggleTheme }) => {
                 />
               </div>
               )}
+              </fieldset>
               <Button
                 onClick={handleRegister}
                 disabled={isLoading || success}

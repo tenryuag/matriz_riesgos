@@ -799,18 +799,18 @@ const AppLayout = ({ children, currentPageName }) => {
             <div className="max-w-7xl mx-auto px-6 lg:px-12 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <EyeIcon className="w-4 h-4 flex-shrink-0" />
               <span className="flex-grow min-w-0">
-                Modo mentor: estás viendo y editando los datos de{' '}
+                {t('mentorModeBanner')}{' '}
                 <strong className="font-subtitle">{actingCompany.name}</strong>
               </span>
               <Link to={createPageUrl('ChangeLog')} className="underline underline-offset-4 hover:no-underline">
-                Historial de cambios
+                {t('changeLogTitle')}
               </Link>
               <button
                 type="button"
                 onClick={exitCompany}
                 className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1 font-subtitle"
               >
-                Salir de esta empresa
+                {t('mentorModeExit')}
               </button>
             </div>
           </div>
@@ -833,7 +833,7 @@ const AppLayout = ({ children, currentPageName }) => {
                 </Button>
                 {company && !actingCompany && (
                   <Link to={createPageUrl('Company')}>
-                    <Button variant="ghost" className="nav-glass text-foreground max-w-[16rem]" title="Mi empresa">
+                    <Button variant="ghost" className="nav-glass text-foreground max-w-[16rem]" title={t('companyMyCompany')}>
                       <Building2 className="w-4 h-4 mr-2 flex-shrink-0" />
                       <span className="font-subtitle text-sm truncate">{company.name}</span>
                     </Button>
@@ -1009,7 +1009,7 @@ const AppLayout = ({ children, currentPageName }) => {
                   <Link
                     to={createPageUrl('Company')}
                     className="flex items-center gap-1.5 text-xs text-muted hover:text-accent mb-3 min-w-0"
-                    title="Mi empresa"
+                    title={t('companyMyCompany')}
                   >
                     <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{company.name}</span>
@@ -1050,8 +1050,8 @@ const AppLayout = ({ children, currentPageName }) => {
                   <style>{READ_ONLY_CSS}</style>
                   <EyeIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
                   <span>
-                    <strong className="font-subtitle">Solo lectura.</strong>{' '}
-                    Tu empresa te dio permiso para consultar este módulo. Si necesitas editarlo, pídeselo al administrador de tu empresa.
+                    <strong className="font-subtitle">{t('readOnlyTitle')}</strong>{' '}
+                    {t('readOnlyDesc')}
                   </span>
                 </div>
               )}

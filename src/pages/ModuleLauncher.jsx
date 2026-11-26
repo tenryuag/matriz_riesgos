@@ -50,6 +50,9 @@ export default function ModuleLauncher() {
     setMentorAccessLost(null);
     setLostAccess(null);
   };
+  // Cuando no se conoce el nombre de la empresa, el aviso guarda «La empresa»
+  // (leaveLostCompany, en ModuleAccessContext): se muestra en el idioma activo.
+  const lostAccessName = lostAccess === "La empresa" ? t("mentorLostAccessUnknown") : lostAccess;
 
   // Rota las frases de carga cada 1.8 s mientras se cargan los módulos.
   const [phraseIdx, setPhraseIdx] = useState(0);
@@ -105,17 +108,13 @@ export default function ModuleLauncher() {
             <ShieldOff className="w-5 h-5 text-indigo-500" />
           </div>
           <div className="flex-grow min-w-0">
-            <h2 className="font-subtitle">Ya no tienes acceso a {lostAccess}</h2>
-            <p className="text-sm text-muted mt-0.5">
-              La empresa retiró tu acceso como mentor, así que saliste de sus datos y volviste a tu propio
-              espacio. Lo que ya habías guardado se conserva. Si fue un error, pídele a su administrador que
-              te lo devuelva desde «Mi empresa».
-            </p>
+            <h2 className="font-subtitle">{t("mentorLostAccessTitle", { company: lostAccessName })}</h2>
+            <p className="text-sm text-muted mt-0.5">{t("mentorLostAccessDesc")}</p>
           </div>
           <button
             type="button"
             onClick={dismissLostAccess}
-            aria-label="Cerrar aviso"
+            aria-label={t("mentorLostAccessClose")}
             className="w-8 h-8 rounded-full inline-flex items-center justify-center text-muted hover:bg-indigo-500/15"
           >
             <X className="w-4 h-4" />
@@ -130,7 +129,7 @@ export default function ModuleLauncher() {
         </h1>
         <p className="text-lg text-muted">
           {actingCompany
-            ? `Estás en ${actingCompany.name}. ¿Qué módulo quieres revisar?`
+            ? t("mentorModeLauncherQuestion", { company: actingCompany.name })
             : "¿Con qué módulo quieres trabajar hoy?"}
         </p>
       </div>
@@ -140,13 +139,13 @@ export default function ModuleLauncher() {
         <Card className="glass">
           <CardContent className="p-10 text-center text-muted">
             <p className="text-lg font-subtitle mb-2">
-              {noCompany ? "Tu cuenta no pertenece a ninguna empresa" : t("moduleNoneTitle")}
+              {noCompany ? t("companyNoCompanyTitle") : t("moduleNoneTitle")}
             </p>
             <p className="text-sm">
               {noCompany
-                ? "Pide al administrador de tu empresa que te invite de nuevo con este mismo correo."
+                ? t("companyNoCompanyDesc")
                 : company
-                  ? "El administrador de tu empresa todavía no te asigna módulos. Pídele que te dé acceso desde «Mi empresa»."
+                  ? t("companyNoModulesYet")
                   : t("moduleNoneDesc")}
             </p>
           </CardContent>
@@ -195,7 +194,7 @@ export default function ModuleLauncher() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <GraduationCap className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-title text-xl">Empresas que acompañas</h2>
+            <h2 className="font-title text-xl">{t("mentorCompaniesTitle")}</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {mentorCompanies.map((c) => {
@@ -211,10 +210,10 @@ export default function ModuleLauncher() {
                       <h3 className="font-subtitle truncate">{c.name}</h3>
                       <p className="text-xs text-muted">
                         {!c.active
-                          ? "La empresa retiró tu acceso"
+                          ? t("mentorCompanyRevoked")
                           : names.length > 0
                             ? names.join(" · ")
-                            : "Sin módulos asignados"}
+                            : t("companyNoModulesAssigned")}
                       </p>
                     </div>
                     <button
@@ -223,7 +222,7 @@ export default function ModuleLauncher() {
                       onClick={() => enterCompany(c)}
                       className="inline-flex items-center text-sm font-subtitle text-indigo-500 hover:underline underline-offset-4 disabled:opacity-40 disabled:no-underline"
                     >
-                      Entrar <ArrowRight className="w-4 h-4 ml-1" />
+                      {t("moduleEnter")} <ArrowRight className="w-4 h-4 ml-1" />
                     </button>
                   </CardContent>
                 </Card>

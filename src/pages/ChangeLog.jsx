@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, History, GraduationCap, Plus, Pencil, Trash2 } from "lucide-react";
 import { Company } from "@/api/entities";
@@ -22,30 +22,32 @@ import { useModuleAccess } from "@/hooks/useModuleAccess";
 // cambios hechos por un mentor se distinguen, para que el cliente vea qué le
 // corrigieron. Lo arma la base (trigger log_change) en cada guardado.
 
-const TABLE_LABEL = {
-  risks: "Riesgo",
-  departments: "Departamento",
-  strategic_plans: "Plan estratégico",
-  plan_answers: "Respuesta del plan",
-  competitors: "Competidor",
-  strategic_initiatives: "Iniciativa",
-  fin_analyses: "Datos generales",
-  fin_years: "Periodo",
-  fin_lines: "Segmento",
-  fin_values: "Cifra",
+// Los textos salen de las traducciones (LanguageContext): aquí van sus claves.
+const TABLE_LABEL_KEY = {
+  risks: "changeLogTableRisks",
+  departments: "changeLogTableDepartments",
+  strategic_plans: "changeLogTableStrategicPlans",
+  plan_answers: "changeLogTablePlanAnswers",
+  competitors: "changeLogTableCompetitors",
+  strategic_initiatives: "changeLogTableInitiatives",
+  fin_analyses: "changeLogTableFinAnalyses",
+  fin_years: "changeLogTableFinYears",
+  fin_lines: "changeLogTableFinLines",
+  fin_values: "changeLogTableFinValues",
 };
 
-const FIN_SECTION_LABEL = {
-  income: "Estado de resultados",
-  balance: "Balance general",
-  cashflow: "Flujo de efectivo",
-  sales: "Ventas por segmento",
-  segcost: "Costo por segmento",
-  expenses: "Gastos",
-  seasonality: "Estacionalidad",
+const FIN_SECTION_LABEL_KEY = {
+  income: "changeLogFinIncome",
+  balance: "changeLogFinBalance",
+  cashflow: "changeLogFinCashflow",
+  sales: "changeLogFinSales",
+  segcost: "changeLogFinSegcost",
+  expenses: "changeLogFinExpenses",
+  seasonality: "changeLogFinSeasonality",
 };
 
-// Nombre legible de cada concepto financiero, por su clave.
+// Nombre legible de cada concepto financiero, por su clave. Viene del catálogo
+// del módulo financiero, que solo está en español.
 const FIN_CONCEPT_LABEL = Object.fromEntries(
   [
     ...INCOME_ROWS,
@@ -61,28 +63,29 @@ const FIN_CONCEPT_LABEL = Object.fromEntries(
 );
 
 const ACTION = {
-  insert: { label: "Agregó", icon: Plus, cls: "text-emerald-500 bg-emerald-500/15" },
-  update: { label: "Cambió", icon: Pencil, cls: "text-accent bg-accent/15" },
-  delete: { label: "Borró", icon: Trash2, cls: "text-red-500 bg-red-500/15" },
+  insert: { labelKey: "changeLogActionInsert", icon: Plus, cls: "text-emerald-500 bg-emerald-500/15" },
+  update: { labelKey: "changeLogActionUpdate", icon: Pencil, cls: "text-accent bg-accent/15" },
+  delete: { labelKey: "changeLogActionDelete", icon: Trash2, cls: "text-red-500 bg-red-500/15" },
 };
 
-const numberFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 });
-
-function showValue(v) {
-  if (v === null || v === undefined || v === "") return "vacío";
+function showValue(v, t, numberFmt) {
+  if (v === null || v === undefined || v === "") return t("changeLogValueEmpty");
   if (typeof v === "number") return numberFmt.format(v);
-  if (typeof v === "boolean") return v ? "sí" : "no";
+  if (typeof v === "boolean") return t(v ? "changeLogValueYes" : "changeLogValueNo");
   const text = typeof v === "string" ? v : JSON.stringify(v);
   return text.length > 140 ? `${text.slice(0, 140)}…` : text;
 }
 
 // A qué registro se refiere el cambio, en palabras.
-function describeRow(entry) {
+function describeRow(entry, t) {
   const k = entry.row_key || {};
-  const table = TABLE_LABEL[entry.table_name] || entry.table_name;
+  const tableKey = TABLE_LABEL_KEY[entry.table_name];
+  const table = tableKey ? t(tableKey) : entry.table_name;
   if (entry.table_name === "fin_values") {
-    const section = FIN_SECTION_LABEL[k.section] || k.section;
-    const concept = FIN_CONCEPT_LABEL[k.concept_key] || (k.section?.startsWith("s") ? "segmento" : k.concept_key);
+    const sectionKey = FIN_SECTION_LABEL_KEY[k.section];
+    const section = sectionKey ? t(sectionKey) : k.section;
+    const concept =
+      FIN_CONCEPT_LABEL[k.concept_key] || (k.section?.startsWith("s") ? t("changeLogSegment") : k.concept_key);
     const period = k.year ? yearLabel({ year: k.year, months: k.months ?? 12 }) : "";
     return [section, concept, period].filter(Boolean).join(" · ");
   }
@@ -95,10 +98,15 @@ function describeRow(entry) {
   return k.label ? `${table}: ${k.label}` : table;
 }
 
-const dateFmt = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
-
 export default function ChangeLog() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // Fechas y cifras en el idioma activo.
+  const locale = language === "en" ? "en-US" : "es-MX";
+  const numberFmt = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }), [locale]);
+  const dateFmt = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
+    [locale],
+  );
   const { actingCompany, company } = useModuleAccess();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +140,8 @@ export default function ChangeLog() {
         to={createPageUrl(actingCompany ? "ModuleLauncher" : "Company")}
         className="inline-flex items-center text-sm text-muted hover:text-accent"
       >
-        <ArrowLeft className="w-4 h-4 mr-1.5" /> {actingCompany ? "Volver a los módulos" : "Volver a Mi empresa"}
+        <ArrowLeft className="w-4 h-4 mr-1.5" />{" "}
+        {t(actingCompany ? "companyBackToModules" : "changeLogBackToCompany")}
       </Link>
 
       <div className="flex flex-wrap items-center gap-4">
@@ -140,9 +149,10 @@ export default function ChangeLog() {
           <History className="w-7 h-7 text-accent" />
         </div>
         <div className="flex-grow min-w-0">
-          <h1 className="font-title text-3xl">Historial de cambios</h1>
+          <h1 className="font-title text-3xl">{t("changeLogTitle")}</h1>
           <p className="text-sm text-muted">
-            {companyName ? `${companyName} · ` : ""}quién cambió qué dato y cuándo, del más reciente al más antiguo.
+            {companyName ? `${companyName} · ` : ""}
+            {t("changeLogSubtitle")}
           </p>
         </div>
       </div>
@@ -155,16 +165,16 @@ export default function ChangeLog() {
             onChange={(e) => setOnlyMentor(e.target.checked)}
             className="accent-[var(--accent-color,#d4af37)]"
           />
-          Solo cambios de mentores
+          {t("changeLogOnlyMentors")}
         </label>
         {modulesInLog.length > 1 && (
           <select
-            aria-label="Módulo"
+            aria-label={t("changeLogModule")}
             value={moduleKey}
             onChange={(e) => setModuleKey(e.target.value)}
             className="glass rounded-xl px-3 py-2 text-sm text-foreground outline-none"
           >
-            <option value="">Todos los módulos</option>
+            <option value="">{t("changeLogAllModules")}</option>
             {modulesInLog.map((k) => (
               <option key={k} value={k}>
                 {moduleName(k)}
@@ -182,9 +192,7 @@ export default function ChangeLog() {
             </div>
           ) : shown.length === 0 ? (
             <p className="text-center text-muted py-14 px-6">
-              {onlyMentor
-                ? "Ningún mentor ha hecho cambios todavía."
-                : "Todavía no hay cambios registrados. Aparecerán aquí a partir de ahora, cada vez que alguien guarde algo."}
+              {t(onlyMentor ? "changeLogEmptyMentor" : "changeLogEmpty")}
             </p>
           ) : (
             <ul className="divide-y divide-[var(--card-border)]">
@@ -202,7 +210,7 @@ export default function ChangeLog() {
                         <span className="font-subtitle">{e.actor_name}</span>
                         {e.actor_role === "mentor" && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-indigo-500/15 text-indigo-500 border border-indigo-500/30">
-                            <GraduationCap className="w-3 h-3" /> Mentor
+                            <GraduationCap className="w-3 h-3" /> {t("changeLogMentorBadge")}
                           </span>
                         )}
                         <span className="text-xs text-muted">
@@ -210,7 +218,7 @@ export default function ChangeLog() {
                         </span>
                       </div>
                       <p className="text-sm mt-0.5">
-                        <span className="text-muted">{act.label}</span> {describeRow(e)}
+                        <span className="text-muted">{t(act.labelKey)}</span> {describeRow(e, t)}
                       </p>
                       {e.action === "update" && (
                         <ul className="mt-1.5 space-y-1 text-sm">
@@ -219,15 +227,17 @@ export default function ChangeLog() {
                               {fields.length > 1 || e.table_name !== "fin_values" ? (
                                 <span className="text-xs text-muted">{field}:</span>
                               ) : null}
-                              <span className="line-through text-muted break-words">{showValue(before)}</span>
+                              <span className="line-through text-muted break-words">
+                                {showValue(before, t, numberFmt)}
+                              </span>
                               <span className="text-muted">→</span>
-                              <span className="font-subtitle break-words">{showValue(after)}</span>
+                              <span className="font-subtitle break-words">{showValue(after, t, numberFmt)}</span>
                             </li>
                           ))}
                         </ul>
                       )}
                       {e.action !== "update" && e.table_name === "fin_values" && fields.length > 0 && (
-                        <p className="text-sm font-subtitle mt-0.5">{showValue(e.changes.amount)}</p>
+                        <p className="text-sm font-subtitle mt-0.5">{showValue(e.changes.amount, t, numberFmt)}</p>
                       )}
                     </div>
                   </li>

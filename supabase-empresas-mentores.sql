@@ -325,7 +325,7 @@ BEGIN
   IF cid IS NULL THEN RETURN jsonb_build_object('company', NULL); END IF;
   adm := public.is_company_admin(cid);
   RETURN jsonb_build_object(
-    'company', (SELECT jsonb_build_object('id', c.id, 'name', c.name) FROM public.companies c WHERE c.id = cid),
+    'company', (SELECT to_jsonb(c) - 'created_by' - 'created_at' FROM public.companies c WHERE c.id = cid),
     'is_admin', adm,
     'modules', (SELECT COALESCE(jsonb_agg(module_key ORDER BY module_key), '[]'::jsonb)
                   FROM public.company_modules WHERE company_id = cid),
@@ -449,6 +449,9 @@ BEGIN
     'success', true,
     'companies', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
         'id', c.id, 'name', c.name, 'created_at', c.created_at,
+        'industry', c.industry, 'size', c.size,
+        'contact_name', c.contact_name, 'contact_title', c.contact_title,
+        'contact_phone', c.contact_phone, 'contact_email', c.contact_email,
         'modules', (SELECT COALESCE(jsonb_agg(module_key ORDER BY module_key), '[]'::jsonb)
                       FROM public.company_modules WHERE company_id = c.id),
         'members', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -534,5 +537,37 @@ REVOKE ALL ON FUNCTION public.company_changes(integer, boolean), public.mentor_c
 GRANT EXECUTE ON FUNCTION public.company_changes(integer, boolean), public.mentor_companies(),
   public.company_set_mentor_access(uuid, boolean), public.admin_companies(),
   public.admin_set_company_modules(uuid, text[]), public.admin_set_company_mentor(uuid, uuid, text[]) TO authenticated;
+
+-- ── 7. Asistente de IA por empresa ───────────────────────────────────────────
+-- Los resultados guardados del asistente eran uno por usuario y tipo. Un
+-- mentor trabaja sobre varias empresas, así que pasan a ser uno por usuario,
+-- EMPRESA y tipo, y cada quien solo lee el de la empresa en la que está
+-- trabajando (la suya o, en modo mentor, la del cliente).
+--
+-- La función `ia` nueva entiende la tabla de antes y la de ahora; la anterior
+-- no puede guardar con la restricción nueva. Por eso la función se despliega
+-- ANTES de correr este archivo.
+DO $$
+BEGIN
+  IF to_regclass('public.ia_resultados') IS NULL THEN RETURN; END IF;
+
+  ALTER TABLE public.ia_resultados
+    ADD COLUMN IF NOT EXISTS company_id uuid REFERENCES public.companies(id) ON DELETE CASCADE;
+
+  UPDATE public.ia_resultados r SET company_id = m.company_id
+    FROM public.company_members m
+   WHERE m.user_id = r.user_id AND r.company_id IS NULL;
+
+  ALTER TABLE public.ia_resultados DROP CONSTRAINT IF EXISTS ia_resultados_user_id_kind_key;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ia_resultados_user_company_kind_key') THEN
+    ALTER TABLE public.ia_resultados
+      ADD CONSTRAINT ia_resultados_user_company_kind_key UNIQUE NULLS NOT DISTINCT (user_id, company_id, kind);
+  END IF;
+
+  DROP POLICY IF EXISTS "read own ia results" ON public.ia_resultados;
+  CREATE POLICY "read own ia results" ON public.ia_resultados FOR SELECT TO authenticated
+    USING (user_id = (SELECT auth.uid())
+           AND company_id IS NOT DISTINCT FROM (SELECT public.active_company_id()));
+END $$;
 
 COMMIT;
