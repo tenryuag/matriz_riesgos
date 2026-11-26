@@ -93,6 +93,8 @@ npx @modelcontextprotocol/inspector
 
 Las herramientas se ofrecen **según los módulos a los que el usuario tiene acceso** (misma regla que la app: `is_admin()` y la tabla `user_module_access`). Un administrador ve todas; un usuario con solo "Gestión del Riesgo" ve únicamente las de riesgos; una cuenta sin módulos solo ve `resumen_general`, que le indica pedir acceso. Por eso la pantalla de consentimiento habla en general de "tu cuenta en el software de Mara Pérez" sin listar módulos.
 
+**Con empresas (multiempresa).** Cuando la base ya tiene la migración de empresas, el acceso sale de `my_access()`: los módulos que la empresa del usuario contrató y le asignó (el administrador de la empresa tiene todos; «solo ver» basta, porque el conector solo lee). Los datos son los de su propia empresa, también los que capturó otra persona del equipo. No hay modo mentor en el conector: un mentor ve únicamente su empresa, no las que acompaña. Si `my_access()` no existe (base anterior a la migración) se sigue usando `user_module_access`.
+
 | Módulo | Herramientas |
 |---|---|
 | (siempre) | `resumen_general` |

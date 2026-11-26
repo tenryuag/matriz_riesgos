@@ -10,8 +10,9 @@
 //     (auth.getUser). No se usa withSupabase({ auth: 'user' }) porque esa
 //     verificación es local contra el JWKS y rechaza los tokens HS256 del
 //     esquema de llaves heredado que usa este proyecto. Con el token del
-//     usuario se crea el cliente de datos → las políticas RLS "solo el
-//     dueño" aplican a cada herramienta sin código adicional.
+//     usuario se crea el cliente de datos → las políticas RLS (los datos
+//     de su empresa, según los módulos que tiene asignados) aplican a cada
+//     herramienta sin código adicional.
 // Los cálculos (estados financieros, prioridades, FODA) son los MISMOS
 // módulos puros que usa la app, copiados con `npm run mcp:sync`.
 //
@@ -77,7 +78,7 @@ import {
   buildFoda,
 } from '../_shared/app/strategicCalc.js'
 
-const VERSION = '1.1.0'
+const VERSION = '1.2.0'
 
 // deno-lint-ignore no-explicit-any
 type Db = any
@@ -250,17 +251,23 @@ async function clientForRequest(req: Request): Promise<Db | null> {
 }
 
 // ---------- accesos por módulo ----------
-// Mismas reglas que la app: los administradores (is_admin) ven todo; el resto
-// solo los módulos concedidos en user_module_access (RLS: cada quien lee los
-// suyos). Las herramientas se registran según estos accesos.
+// Mismas reglas que la app: los administradores de la plataforma (is_admin)
+// ven todo lo de su empresa; el resto, los módulos efectivos que devuelve
+// my_access() —los que su empresa contrató y le asignó; el administrador de
+// la empresa tiene todos los de la empresa—. El conector trabaja siempre
+// sobre la empresa propia del usuario (no hay modo mentor aquí).
+// En una base anterior a la migración de empresas (sin my_access) se usan
+// los concedidos en user_module_access, como antes.
+// Las herramientas se registran según estos accesos.
 type Access = { admin: boolean; modules: Set<string> }
 async function accessFor(supabase: Db): Promise<Access> {
-  const [adminRes, rowsRes] = await Promise.all([
-    supabase.rpc('is_admin'),
-    supabase.from('user_module_access').select('module_key'),
-  ])
+  const [adminRes, mineRes] = await Promise.all([supabase.rpc('is_admin'), supabase.rpc('my_access')])
+  const admin = adminRes?.data === true
+  const mine = !mineRes?.error && mineRes?.data && typeof mineRes.data === 'object' ? (mineRes.data as Db) : null
+  if (mine) return { admin, modules: new Set<string>(Object.keys(mine.modules || {})) }
+  const rowsRes = await supabase.from('user_module_access').select('module_key')
   const modules = new Set<string>(((rowsRes?.data as Db[]) || []).map((r: Db) => r.module_key))
-  return { admin: adminRes?.data === true, modules }
+  return { admin, modules }
 }
 const can = (a: Access, m: string) => a.admin || a.modules.has(m)
 

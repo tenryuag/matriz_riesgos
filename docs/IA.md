@@ -232,6 +232,12 @@ Las cinco respuestas se piden con **structured outputs** (`output_config.format 
 
 Misma regla que la app y el servidor MCP: `accessFor(supabase)` consulta `is_admin()` y `user_module_access.module_key` con el cliente del usuario; `can(access, m) = admin || modules.has(m)`. Una cuenta sin módulos (y no admin) recibe `sin_acceso` en cualquier acción salvo `estado`. Cada acción declara `requires` (`'fin-analysis'`, `'risk'`, `'strategic'` o `null`); el Resumen ejecutivo (`null`) reúne únicamente los módulos a los que el usuario tiene acceso y le dice al modelo cuáles quedaron fuera. Los administradores tienen acceso a todo, pero —como en el resto de la app— solo ven **sus propios** datos: la RLS "solo el dueño" aplica también dentro de la función.
 
+**Con empresas (multiempresa).** Cuando la base ya tiene la migración de empresas, `accessFor` usa `my_access()`: los módulos efectivos del usuario en su empresa (el administrador de la empresa tiene todos los que la empresa contrató). Si `my_access()` no existe (base anterior a la migración) sigue leyendo `user_module_access`, así que la misma función sirve antes y después.
+
+**Modo mentor.** La app manda el encabezado `x-company-id` con la empresa del cliente (`callIa` en `src/api/ia.js`). La función lo reenvía a la base, de modo que las reglas de seguridad solo muestran esa empresa si quien llama es su mentor activo, y el acceso pasa a ser el de `mentor_modules(empresa)`. Si la empresa retiró el acceso, responde `sin_acceso`. El gasto cuenta en los topes del propio mentor.
+
+**Resultados guardados por empresa.** `ia_resultados` guarda un resultado por usuario, empresa y tipo (`UNIQUE NULLS NOT DISTINCT (user_id, company_id, kind)`, fase 3 de empresas), y cada quien solo lee el de la empresa en la que está trabajando. `store.ts` intenta primero ese esquema y, si la tabla aún no tiene `company_id`, guarda como antes (uno por usuario y tipo).
+
 ## Topes de gasto y bitácora
 
 Antes de cada acción (menos `estado`) la función llama a la RPC `ia_reserve(p_user, p_action, p_est, …)` con `service_role`. Bajo un candado de transacción por usuario (`pg_advisory_xact_lock`), la RPC lee `ia_usage_window(p_user)`, compara con los topes **sumando el costo estimado de la acción** (`extraer_estados` 0.30 USD, `interpretar_informe` y `resumen_ejecutivo` 0.20, el resto 0.10) y, si cabe, inserta de inmediato la fila `en_curso` en `ia_usage`. Así dos peticiones en paralelo del mismo usuario no se cuelan por debajo del tope. Los topes:

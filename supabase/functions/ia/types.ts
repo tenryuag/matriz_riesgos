@@ -2,7 +2,17 @@
 // deno-lint-ignore no-explicit-any
 export type Db = any
 
-export type Access = { admin: boolean; modules: Set<string> }
+// `admin`: ve todos los módulos de su propia empresa (administrador de la
+// plataforma fuera del modo mentor). `company`: empresa sobre la que se
+// trabaja (la propia o, en modo mentor, la del cliente); null en una base
+// sin empresas. `platformAdmin` solo decide qué se muestra en `estado`.
+export type Access = {
+  admin: boolean
+  modules: Set<string>
+  company: string | null
+  mentor: boolean
+  platformAdmin: boolean
+}
 
 export type Usage = {
   model: string

@@ -6,7 +6,10 @@
 //   1. Se responde el preflight CORS y se verifica el token con Auth
 //      (auth.getUser), igual que el servidor MCP → cliente con RLS del usuario.
 //      Solo después se lee y valida el cuerpo (tamaño, JSON, objeto plano).
-//   2. Se comprueba el acceso por módulo que exige la acción.
+//   2. Se comprueba el acceso por módulo que exige la acción. En modo mentor
+//      la app manda el encabezado `x-company-id` con la empresa del cliente:
+//      se reenvía a la base (que solo muestra esa empresa si el usuario es su
+//      mentor activo) y el acceso es el de los módulos que acompaña ahí.
 //   3. Se aplican los topes de gasto (por usuario en 24 h y global en 30 días)
 //      con la RPC ia_reserve: bajo un candado por usuario comprueba los topes
 //      e inserta en ia_usage una fila 'en_curso' con el costo estimado, de
@@ -31,7 +34,7 @@ import { action as sugerirRiesgo } from './actions/riesgo.ts'
 import { action as sugerirIniciativa } from './actions/iniciativa.ts'
 import { action as resumenEjecutivo } from './actions/resumen.ts'
 
-export const VERSION = '1.0.0'
+export const VERSION = '1.1.0'
 
 const ACTIONS: Record<string, Action> = {
   interpretar_informe: interpretarInforme,
@@ -72,7 +75,7 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-company-id',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -81,19 +84,28 @@ const json = (body: unknown, status = 200) =>
 
 const fail = (code: string, message: string, status: number) => json({ ok: false, error: { code, message } }, status)
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // Cliente con el token del usuario (RLS del usuario) + datos del usuario.
-async function userClient(req: Request): Promise<{ supabase: Db; user: { id: string; email: string | null } } | null> {
+// `company` es la empresa que pide la app en `x-company-id` (modo mentor), o
+// null. El encabezado se reenvía tal cual a la base: por sí solo no da acceso
+// a nada, las reglas de seguridad comprueban que el usuario sea su mentor.
+async function userClient(
+  req: Request
+): Promise<{ supabase: Db; user: { id: string; email: string | null }; company: string | null } | null> {
   const header = req.headers.get('authorization') || ''
   const match = /^Bearer\s+(.+)$/i.exec(header)
   if (!match) return null
   const token = match[1].trim()
+  const asked = (req.headers.get('x-company-id') || '').trim()
+  const company = UUID.test(asked) ? asked.toLowerCase() : null
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
+    global: { headers: { Authorization: `Bearer ${token}`, ...(company ? { 'x-company-id': company } : {}) } },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
   const { data, error } = await supabase.auth.getUser(token)
   if (error || !data?.user || data.user.role !== 'authenticated') return null
-  return { supabase, user: { id: data.user.id, email: data.user.email ?? null } }
+  return { supabase, user: { id: data.user.id, email: data.user.email ?? null }, company }
 }
 
 const adminClient = () =>
@@ -147,7 +159,7 @@ Deno.serve(async (req) => {
   // Autenticación ANTES de leer el cuerpo.
   const auth = await userClient(req)
   if (!auth) return fail('sin_sesion', 'Inicia sesión para usar el asistente', 401)
-  const { supabase, user } = auth
+  const { supabase, user, company } = auth
 
   // Cuerpo: tamaño, JSON válido y objeto plano.
   const length = Number(req.headers.get('content-length') || 0)
@@ -168,7 +180,7 @@ Deno.serve(async (req) => {
   delete body.action
 
   const admin = adminClient()
-  const access = await accessFor(supabase)
+  const access = await accessFor(supabase, company)
 
   // Estado: ¿configurado?, modelo, topes y uso actual del usuario. El gasto
   // global y el tope mensual solo se muestran a administradores.
@@ -180,11 +192,11 @@ Deno.serve(async (req) => {
       console.error(err)
     }
     const limites: Record<string, number> = { diario_usd: LIMITS.daily_usd, llamadas_dia: LIMITS.daily_calls }
-    if (access.admin) limites.mensual_usd = LIMITS.monthly_usd
+    if (access.platformAdmin) limites.mensual_usd = LIMITS.monthly_usd
     let usoOut: Record<string, number> | null = null
     if (uso) {
       usoOut = { usuario_24h_usd: uso.user_24h_usd, usuario_24h_llamadas: uso.user_24h_calls }
-      if (access.admin) usoOut.global_30d_usd = uso.global_30d_usd
+      if (access.platformAdmin) usoOut.global_30d_usd = uso.global_30d_usd
     }
     return json({
       ok: true,
@@ -200,6 +212,9 @@ Deno.serve(async (req) => {
   if (!action) return fail('peticion_invalida', `Acción desconocida: ${actionName || '(vacía)'}`, 400)
   if (!isConfigured()) return fail('no_configurado', 'Falta el secreto ANTHROPIC_API_KEY en la función', 503)
 
+  if (access.mentor && access.modules.size === 0) {
+    return fail('sin_acceso', 'Ya no tienes acceso a esta empresa como mentor', 403)
+  }
   if (!access.admin && access.modules.size === 0) return fail('sin_acceso', 'Esta cuenta no tiene módulos asignados', 403)
   if (action.requires && !can(access, action.requires)) {
     return fail('sin_acceso', `Necesitas el módulo ${action.requires} para usar esta función`, 403)

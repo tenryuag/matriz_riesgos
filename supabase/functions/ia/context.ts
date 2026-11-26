@@ -1,7 +1,8 @@
 // ============================================================
 // Contexto de la empresa para los prompts del asistente.
 // ------------------------------------------------------------
-// Lee los datos del usuario con SU cliente (RLS "solo el dueño") y los
+// Lee los datos con el cliente del usuario (RLS: su empresa o, en modo
+// mentor, la del cliente que indica el encabezado x-company-id) y los
 // compacta en objetos pequeños y en español: estados financieros y razones
 // (mismos cálculos que la app, módulos copiados con `npm run mcp:sync`),
 // matriz de riesgos y planeación estratégica. Todas las funciones toleran
@@ -43,13 +44,32 @@ import { n1 } from './claude.ts'
 import type { Access, Db } from './types.ts'
 
 // ---------- acceso por módulo (mismas reglas que la app y el MCP) ----------
-export async function accessFor(supabase: Db): Promise<Access> {
-  const [adminRes, rowsRes] = await Promise.all([
-    supabase.rpc('is_admin'),
-    supabase.from('user_module_access').select('module_key'),
-  ])
-  const modules = new Set<string>(((rowsRes?.data as Db[]) || []).map((r: Db) => r.module_key))
-  return { admin: adminRes?.data === true, modules }
+// Con empresas (la base tiene my_access): los módulos efectivos del usuario
+// en SU empresa —el administrador de la empresa tiene todos los que la
+// empresa contrató—. En modo mentor (`requested` = empresa del encabezado
+// x-company-id, distinta de la propia): solo los módulos que acompaña en esa
+// empresa; si ya no es su mentor activo, ninguno.
+// Sin empresas (base anterior a la migración): los concedidos en
+// user_module_access, como antes.
+export async function accessFor(supabase: Db, requested: string | null = null): Promise<Access> {
+  const [adminRes, mineRes] = await Promise.all([supabase.rpc('is_admin'), supabase.rpc('my_access')])
+  const platformAdmin = adminRes?.data === true
+  const mine = !mineRes?.error && mineRes?.data && typeof mineRes.data === 'object' ? (mineRes.data as Db) : null
+
+  if (!mine) {
+    const rowsRes = await supabase.from('user_module_access').select('module_key')
+    const modules = new Set<string>(((rowsRes?.data as Db[]) || []).map((r: Db) => r.module_key))
+    return { admin: platformAdmin, modules, company: null, mentor: false, platformAdmin }
+  }
+
+  const own: string | null = mine.company?.id ?? null
+  if (requested && requested !== own) {
+    const res = await supabase.rpc('mentor_modules', { p_company: requested })
+    const modules = new Set<string>(Array.isArray(res?.data) ? (res.data as string[]) : [])
+    return { admin: false, modules, company: requested, mentor: true, platformAdmin }
+  }
+  const modules = new Set<string>(Object.keys(mine.modules || {}))
+  return { admin: platformAdmin, modules, company: own, mentor: false, platformAdmin }
 }
 export const can = (a: Access, m: string) => a.admin || a.modules.has(m)
 

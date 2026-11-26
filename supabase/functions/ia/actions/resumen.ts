@@ -179,7 +179,7 @@ export const action: Action = {
     const hash = await hashOf(input)
 
     if (!force) {
-      const saved = await getSaved(admin, user.id, KIND)
+      const saved = await getSaved(admin, user.id, access.company, KIND)
       if (saved && saved.input_hash === hash) {
         return { result: saved.result, usage: null, cached: true, generated_at: saved.created_at }
       }
@@ -199,7 +199,7 @@ export const action: Action = {
       maxTokens: 16000,
     })
 
-    const created_at = await saveResult(admin, user.id, KIND, hash, usage.model, data, usage.cost_usd)
+    const created_at = await saveResult(admin, user.id, access.company, KIND, hash, usage.model, data, usage.cost_usd)
     return { result: data, usage, cached: false, generated_at: created_at }
   },
 }
