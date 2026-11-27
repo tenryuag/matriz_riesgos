@@ -207,6 +207,11 @@ delete from public.risks           where company_id in (select id from _qa_c);
 delete from public.departments     where company_id in (select id from _qa_c);
 delete from public.strategic_plans where company_id in (select id from _qa_c);
 delete from public.fin_analyses    where company_id in (select id from _qa_c);
+do $$ begin
+  if to_regclass('public.dep_measurements') is not null then
+    delete from public.dep_measurements where company_id in (select id from _qa_c);
+  end if;
+end $$;
 delete from public.ia_resultados   where user_id in (select id from _qa_u);
 delete from public.ia_usage        where user_id in (select id from _qa_u);
 delete from public.user_module_access where user_id in (select id from _qa_u);
@@ -219,7 +224,7 @@ EOF
 # Crea una empresa cliente con un análisis financiero mínimo y una mentora
 # asignada a ese módulo; prueba con ellas la API de la rama y las borra.
 prueba_api() {
-  local pass otra antes despues falla=0
+  local pass otra antes despues falla=0 con_mapa=0
   pass=$(openssl rand -base64 30 | tr -d '/+=' | cut -c1-24)
   quitar_qa   # por si quedó algo de una corrida interrumpida
   antes=$(uno "select (select count(*) from auth.users) || ' usuarios, ' || (select count(*) from public.companies) || ' empresas'")
@@ -259,7 +264,12 @@ select m.company_id, (select id from auth.users where email = 'qa.staging.mentor
  where u.email = 'qa.staging.cliente@example.com';
 commit;
 EOF
-  STAGING_URL="$R_URL" STAGING_KEY="$R_KEY" QA_PASSWORD="$pass" OTRA_EMPRESA="$otra" ORIGEN="$URL_STAGING" \
+  # Si la rama ya tiene el Mapa de dependencia, la empresa de prueba lo recibe y también se prueba.
+  if [ "$(uno "select to_regclass('public.dep_measurements') is not null")" = "t" ]; then
+    con_mapa=1
+    print "insert into public.company_modules (company_id, module_key) select m.company_id, 'dependency' from public.company_members m join auth.users u on u.id = m.user_id where u.email = 'qa.staging.cliente@example.com' on conflict do nothing" | psql_rama >/dev/null
+  fi
+  STAGING_URL="$R_URL" STAGING_KEY="$R_KEY" QA_PASSWORD="$pass" OTRA_EMPRESA="$otra" ORIGEN="$URL_STAGING" CON_MAPA="$con_mapa" \
     node scripts/check-staging.mjs || falla=1
   quitar_qa
   despues=$(uno "select (select count(*) from auth.users) || ' usuarios, ' || (select count(*) from public.companies) || ' empresas'")
@@ -475,6 +485,8 @@ mapa() {
   aplicar supabase-mapa-dependencia.sql
   echo "Pruebas (no dejan nada en la base):"
   prueba_sql scripts/check-mapa-dependencia.sql
+  echo "Prueba por la API, con dos cuentas temporales:"
+  prueba_api
   echo "Tablas del módulo en la rama: $(uno "select count(*) from pg_tables where schemaname = 'public' and tablename like 'dep\_%'")"
 }
 

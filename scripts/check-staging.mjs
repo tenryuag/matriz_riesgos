@@ -1,11 +1,13 @@
 // Prueba la base de STAGING por su API pública, como la usa la app. La corre
 // `npm run db:staging:preparar`, que antes crea dos cuentas temporales (una
 // empresa cliente con un análisis financiero mínimo y su mentora) y después
-// las borra. Solo lee.
+// las borra. Solo lee, salvo la prueba del Mapa de dependencia (CON_MAPA=1),
+// que captura una medición en la empresa temporal; se borra con ella.
 //   STAGING_URL, STAGING_KEY  dirección y llave pública de la rama
 //   QA_PASSWORD               contraseña de las dos cuentas temporales
 //   OTRA_EMPRESA              una empresa real de la copia: nadie de fuera debe verla
 //   ORIGEN                    dirección del sitio de staging (para el permiso del navegador)
+//   CON_MAPA                  "1" si la rama ya tiene el módulo Mapa de dependencia
 const URL_ = process.env.STAGING_URL;
 const KEY = process.env.STAGING_KEY;
 const PASS = process.env.QA_PASSWORD;
@@ -120,6 +122,56 @@ if (mentor && company) {
   if (OTHER) {
     const other = await sees(mentor, ALL, OTHER);
     check("mentora, pidiendo una empresa que no acompaña: no ve nada", same(other, zeros(ALL)), show(other));
+  }
+}
+
+// Mapa de dependencia: la API expone sus tablas, el cliente captura en su
+// empresa, nadie escribe diagnósticos desde fuera, la mentora sin ese módulo no
+// lo ve y la función `ia` conoce la acción (sin llamar a la IA: no gasta).
+if (process.env.CON_MAPA === "1" && client && company) {
+  const post = async (table, rows) => {
+    const res = await fetch(`${URL_}/rest/v1/${table}`, {
+      method: "POST",
+      headers: { ...headers(client), "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(rows),
+    });
+    return { status: res.status, rows: res.ok ? await res.json() : null };
+  };
+  const ia = async (body) => {
+    const res = await fetch(`${URL_}/functions/v1/ia`, {
+      method: "POST",
+      headers: { ...headers(client), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    return { status: res?.status || 0, body: res ? await res.json().catch(() => null) : null };
+  };
+  const created = await post("dep_measurements", [{ title: "QA semana" }]);
+  const m = created.rows?.[0];
+  check("mapa de dependencia: el cliente crea una medición y queda en su empresa", m?.company_id === company, `respuesta ${created.status}`);
+  if (m) {
+    const acts = await post(
+      "dep_activities",
+      Array.from({ length: 5 }, (_, i) => ({
+        measurement_id: m.id, activity_date: `2026-11-${16 + i}`, description: `QA actividad ${i + 1}`, purpose: "QA", minutes: 60, position: i,
+      })),
+    );
+    check("mapa de dependencia: guarda su bitácora", acts.rows?.length === 5, `respuesta ${acts.status}`);
+    const forged = await post("dep_diagnoses", [{ measurement_id: m.id, status: "listo", input_hash: "x" }]);
+    check("mapa de dependencia: el diagnóstico no se puede escribir desde la app", forged.status >= 400, `respuesta ${forged.status}`);
+    if (mentor) {
+      const got = await sees(mentor, ["dep_measurements", "dep_activities"], company);
+      check("mapa de dependencia: la mentora, sin ese módulo asignado, no lo ve", same(got, zeros(["dep_measurements", "dep_activities"])), show(got));
+    }
+    const state = await ia({ action: "estado" });
+    if (state.body?.configurado === false) {
+      const r = await ia({ action: "mapa_dependencia", measurement_id: m.id });
+      check("mapa de dependencia: la función ia conoce la acción (sin llave responde «no configurado»)",
+        r.status === 503 && r.body?.error?.code === "no_configurado", `respuesta ${r.status} ${r.body?.error?.code || ""}`);
+    } else if (state.body?.configurado) {
+      note("mapa de dependencia: la llave de Anthropic está puesta; no se pide el análisis para no gastar");
+    } else {
+      check("mapa de dependencia: la función ia responde", false, `respuesta ${state.status}`);
+    }
   }
 }
 

@@ -82,9 +82,11 @@ la rama. Hoy es el Mapa de dependencia:
 npm run db:staging:mapa
 ```
 
-Aplica `supabase-mapa-dependencia.sql` en la rama (se puede repetir) y corre
-sus pruebas, que no dejan nada. Una copia nueva de producción lo borra: hay
-que volver a correrlo.
+Aplica `supabase-mapa-dependencia.sql` en la rama (se puede repetir), corre
+sus pruebas SQL y lo prueba por la API con dos cuentas temporales; no deja
+nada. Va después de `db:staging:funciones`, porque comprueba que la función
+`ia` ya conozca el análisis. Una copia nueva de producción lo borra: hay que
+volver a correrlo.
 
 `npm run db:staging:estado` dice en cualquier momento qué hay en la rama, de
 cuándo es la copia, qué funciones y secretos tiene y si Netlify ya apunta a
