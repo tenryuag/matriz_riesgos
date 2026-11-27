@@ -842,7 +842,7 @@ const AppLayout = ({ children, currentPageName }) => {
 
         {/* Mobile Menu Button (solo dentro de un módulo) */}
         {!isLauncherMode && (
-          <div className="lg:hidden fixed top-6 left-6 z-50">
+          <div className="lg:hidden print:hidden fixed top-6 left-6 z-50">
             <Button onClick={() => setSidebarOpen(!sidebarOpen)} size="icon" className="glass">
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>

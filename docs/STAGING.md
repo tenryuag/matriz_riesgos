@@ -75,6 +75,17 @@ un administrador también puede generar más desde el panel.
    despliegue de la rama `staging`; los valores de producción se comprueban
    antes y después. Surte efecto en el siguiente despliegue de staging.
 
+Un módulo nuevo que trae su propio SQL se aplica aparte, después de preparar
+la rama. Hoy es el Mapa de dependencia:
+
+```bash
+npm run db:staging:mapa
+```
+
+Aplica `supabase-mapa-dependencia.sql` en la rama (se puede repetir) y corre
+sus pruebas, que no dejan nada. Una copia nueva de producción lo borra: hay
+que volver a correrlo.
+
 `npm run db:staging:estado` dice en cualquier momento qué hay en la rama, de
 cuándo es la copia, qué funciones y secretos tiene y si Netlify ya apunta a
 ella.

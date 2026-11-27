@@ -270,8 +270,12 @@ BEGIN
           LEFT JOIN auth.users u ON u.id = l.actor_id
          WHERE l.company_id = cid
            AND (NOT p_only_mentor OR l.actor_role = 'mentor')
-           AND l.module_key IN (SELECT k FROM unnest(ARRAY['risk', 'strategic', 'fin-analysis']) k
-                                 WHERE cid = ANY (public.accessible_companies(k, false)))
+           -- Módulos que aparecen en el historial de la empresa (sin lista fija:
+           -- un módulo nuevo no obliga a tocar esta función).
+           AND l.module_key IN (SELECT m.k
+                                  FROM (SELECT DISTINCT c.module_key AS k FROM public.change_log c
+                                         WHERE c.company_id = cid) m
+                                 WHERE cid = ANY (public.accessible_companies(m.k, false)))
          ORDER BY l.created_at DESC, l.id DESC
          LIMIT LEAST(GREATEST(COALESCE(p_limit, 200), 1), 1000)
       ) x);

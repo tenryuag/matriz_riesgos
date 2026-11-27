@@ -116,6 +116,7 @@ Piezas en el repositorio:
 | `sugerir_riesgo` | `risk` | `{ descripcion, perspectiva_key?, tipo_amenaza?, departamento? }` | 16000 | `companyContext` + hasta 15 riesgos ya capturados (`riskContext(15)`, opcional: si falla sigue sin ellos) | no |
 | `sugerir_iniciativa` | `strategic` | `{ objetivo: { id, label, tipo, perspectiva?, estrategia?, nivel?, controles?, fuente? }, existentes?: string[] }` | 16000 | `companyContext` + plan acotado (visión, misión, ≤ 10 fortalezas, ≤ 10 debilidades por prioridad) | no |
 | `resumen_ejecutivo` | ninguno en particular (≥ 1 módulo) | `{ force?: boolean }` | 16000 | según acceso: `riskContext(40)`, `planContext`, `finSummary`, `companyContext` | `ia_resultados` (`resumen_ejecutivo`) |
+| `mapa_dependencia` | `dependency` (con permiso de edición) | `{ measurement_id, respuestas?: string[], reiniciar?: boolean }` | 16000 | la medición con su bitácora y sus decisiones (`dep_*`); cada petición es un paso: clasificar o redactar | `dep_diagnoses` (ver [MAPA-DEPENDENCIA.md](MAPA-DEPENDENCIA.md)) |
 | `estado` | — | `{}` | — | `ia_usage_window` | no |
 
 **Validaciones y saneo por acción:**

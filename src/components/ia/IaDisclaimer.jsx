@@ -12,7 +12,8 @@ export default function IaDisclaimer({ generatedAt, cached = false, text, classN
   const when = generatedAt ? new Date(generatedAt) : null;
   const fecha =
     when && !Number.isNaN(when.getTime())
-      ? when.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })
+      ? // «p.m.» ya termina en punto: sin él, la frase no queda con dos.
+        when.toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }).replace(/\.$/, "")
       : null;
   const extra = [fecha, cached ? CACHED_SUFFIX : null].filter(Boolean).join("; ");
   return (

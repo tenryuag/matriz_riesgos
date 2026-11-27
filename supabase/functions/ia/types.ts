@@ -41,7 +41,7 @@ export type ActionResult = {
 export type Action = {
   // Módulo que el usuario debe tener para usar la acción (null = cualquiera
   // con al menos un módulo).
-  requires: 'risk' | 'strategic' | 'fin-analysis' | null
+  requires: 'risk' | 'strategic' | 'fin-analysis' | 'dependency' | null
   run: (ctx: ActionCtx) => Promise<ActionResult>
 }
 

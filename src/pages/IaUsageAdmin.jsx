@@ -31,6 +31,7 @@ const ACTION_LABELS = {
   sugerir_riesgo: "Sugerencia de riesgo",
   sugerir_iniciativa: "Iniciativa sugerida",
   resumen_ejecutivo: "Resumen ejecutivo",
+  mapa_dependencia: "Mapa de dependencia",
   estado: "Estado del asistente",
 };
 const actionLabel = (a) => ACTION_LABELS[a] || a || "—";

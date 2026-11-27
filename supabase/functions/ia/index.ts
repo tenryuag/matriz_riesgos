@@ -33,8 +33,9 @@ import { action as extraerEstados } from './actions/extraer.ts'
 import { action as sugerirRiesgo } from './actions/riesgo.ts'
 import { action as sugerirIniciativa } from './actions/iniciativa.ts'
 import { action as resumenEjecutivo } from './actions/resumen.ts'
+import { action as mapaDependencia } from './actions/mapa.ts'
 
-export const VERSION = '1.1.0'
+export const VERSION = '1.2.0'
 
 const ACTIONS: Record<string, Action> = {
   interpretar_informe: interpretarInforme,
@@ -42,6 +43,7 @@ const ACTIONS: Record<string, Action> = {
   sugerir_riesgo: sugerirRiesgo,
   sugerir_iniciativa: sugerirIniciativa,
   resumen_ejecutivo: resumenEjecutivo,
+  mapa_dependencia: mapaDependencia,
 }
 
 // Topes de gasto (secretos IA_DAILY_USD, IA_DAILY_CALLS, IA_MONTHLY_USD).
@@ -61,6 +63,8 @@ const ESTIMATE: Record<string, number> = {
   resumen_ejecutivo: 0.2,
   sugerir_riesgo: 0.1,
   sugerir_iniciativa: 0.1,
+  // Cada paso del mapa (clasificar, redactar) es una llamada y una reserva.
+  mapa_dependencia: 0.25,
 }
 const LIMIT_MESSAGES: Record<string, string> = {
   limite_diario: 'Alcanzaste el límite diario del asistente',
@@ -265,7 +269,7 @@ Deno.serve(async (req) => {
     const ia = err instanceof IaError ? err : null
     const usage = (err as { usage?: Usage })?.usage || null
     console.error(`ia/${actionName}:`, err)
-    if (!usage && ia && (ia.code === 'sin_datos' || ia.code === 'peticion_invalida' || ia.code === 'archivo_grande')) {
+    if (!usage && ia && ['sin_datos', 'peticion_invalida', 'archivo_grande', 'sin_acceso'].includes(ia.code)) {
       // Error sin costo: se libera la reserva.
       await dropReservation(admin, reservationId)
     } else {

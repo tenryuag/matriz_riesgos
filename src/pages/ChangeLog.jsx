@@ -34,6 +34,9 @@ const TABLE_LABEL_KEY = {
   fin_years: "changeLogTableFinYears",
   fin_lines: "changeLogTableFinLines",
   fin_values: "changeLogTableFinValues",
+  dep_measurements: "changeLogTableDepMeasurements",
+  dep_activities: "changeLogTableDepActivities",
+  dep_decisions: "changeLogTableDepDecisions",
 };
 
 const FIN_SECTION_LABEL_KEY = {

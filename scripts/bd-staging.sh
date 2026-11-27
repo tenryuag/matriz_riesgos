@@ -7,6 +7,7 @@
 #   npm run db:staging:preparar  → copia producción a la rama y hace ahí el estreno de empresas
 #   npm run db:staging:funciones → despliega en la rama las funciones `ia` y `mcp` de este repo
 #   npm run db:staging:conectar  → apunta el sitio de staging (Netlify) a la rama
+#   npm run db:staging:mapa      → aplica en la rama el módulo Mapa de dependencia y lo prueba
 #
 # Producción solo se LEE (un volcado de sus datos). Todo lo que se escribe va
 # a la rama: sus credenciales las pide la CLI de Supabase en cada corrida
@@ -462,10 +463,26 @@ conectar() {
   echo "Surte efecto en el siguiente despliegue de staging (al subir código o con «Trigger deploy»)."
 }
 
+# Módulo Mapa de dependencia en la rama: aplica su SQL (se puede repetir) y
+# corre sus pruebas, que van en una transacción que se revierte.
+mapa() {
+  rama; conectar_bd
+  echo "Destino: base de la rama «$RAMA» ($R_REF). Producción ($PROD) no se toca."
+  if [ "$(uno "select to_regprocedure('public.log_change()') is not null")" != "t" ]; then
+    echo "La rama aún no tiene las fases de empresas. Corre antes: npm run db:staging:preparar"; exit 1
+  fi
+  echo "Aplicando supabase-mapa-dependencia.sql…"
+  aplicar supabase-mapa-dependencia.sql
+  echo "Pruebas (no dejan nada en la base):"
+  prueba_sql scripts/check-mapa-dependencia.sql
+  echo "Tablas del módulo en la rama: $(uno "select count(*) from pg_tables where schemaname = 'public' and tablename like 'dep\_%'")"
+}
+
 case "$1" in
   estado) estado ;;
   preparar) preparar ;;
   funciones) funciones ;;
   conectar) conectar ;;
-  *) echo "Uso: $0 estado | preparar | funciones | conectar   (RAMA=nombre para otra rama)"; exit 1 ;;
+  mapa) mapa ;;
+  *) echo "Uso: $0 estado | preparar | funciones | conectar | mapa   (RAMA=nombre para otra rama)"; exit 1 ;;
 esac

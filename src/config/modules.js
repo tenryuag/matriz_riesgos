@@ -35,6 +35,9 @@ import {
   Radar,
   ShieldAlert,
   History,
+  Waypoints,
+  NotebookPen,
+  MessagesSquare,
 } from "lucide-react";
 
 // ============================================================
@@ -147,6 +150,25 @@ export const MODULES = [
       // Mockups anteriores; accesibles por URL sin aparecer en el menú.
       { pageKey: "SwotAnalysis", hidden: true },
       { pageKey: "BusinessAnalysis", hidden: true },
+    ],
+  },
+  {
+    // Mapa de dependencia (VIA · Modo Director · Semana 1): el empresario
+    // registra una semana de actividades y de decisiones que le llegan; la
+    // app calcula la línea base y el asistente redacta el diagnóstico.
+    key: "dependency",
+    nameKey: "moduleDependency",
+    descKey: "moduleDependencyDesc",
+    icon: Waypoints,
+    accent: "text-violet-500",
+    bg: "bg-violet-500/15",
+    status: "ready",
+    home: "DependencyHome",
+    pages: [
+      { pageKey: "DependencyHome", nameKey: "navDependencyHome", icon: Waypoints },
+      { pageKey: "DependencyLog", nameKey: "navDependencyLog", icon: NotebookPen },
+      { pageKey: "DependencyDecisions", nameKey: "navDependencyDecisions", icon: MessagesSquare },
+      { pageKey: "DependencyMap", nameKey: "navDependencyMap", icon: Waypoints },
     ],
   },
   {

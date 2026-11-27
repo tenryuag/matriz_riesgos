@@ -15,6 +15,7 @@ for (const f of [
   "strategicCalc.js",
   "perspectives.js",
   "riskCalc.js",
+  "dependencyCalc.js",
 ]) {
   copyFileSync(join(root, "src", "config", f), join(dest, f));
   console.log("sincronizado", f);

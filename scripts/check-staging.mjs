@@ -132,7 +132,12 @@ if (client) {
   }).catch(() => null);
   const body = res ? await res.json().catch(() => null) : null;
   if (!res || !body?.version) note(`función ia: sin respuesta útil (${res ? res.status : "sin conexión"}); hay que desplegarla en la rama`);
-  else note(`función ia: versión ${body.version}${body.version === "1.1.0" ? "" : " — falta desplegar la 1.1.0 (modo mentor)"}; llave de Anthropic ${body.configurado ? "puesta" : "SIN poner (el asistente responde «no configurado»)"}`);
+  else {
+    // 1.1.0 trajo el modo mentor; 1.2.0, el Mapa de dependencia.
+    const [major, minor] = String(body.version || "0.0").split(".").map(Number);
+    const falta = major > 1 || minor >= 2 ? "" : minor === 1 ? " — falta desplegar la 1.2.0 (Mapa de dependencia)" : " — falta desplegar la 1.2.0 (modo mentor y Mapa de dependencia)";
+    note(`función ia: versión ${body.version}${falta}; llave de Anthropic ${body.configurado ? "puesta" : "SIN poner (el asistente responde «no configurado»)"}`);
+  }
 }
 
 console.log(failed ? `    ${failed} comprobaciones fallaron` : "    Todo en orden");

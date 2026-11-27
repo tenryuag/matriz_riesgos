@@ -92,6 +92,10 @@ import FinAnalysisSegments from "./FinAnalysisSegments";
 import FinAnalysisExpenses from "./FinAnalysisExpenses";
 
 import FinAnalysisSeasonality from "./FinAnalysisSeasonality";
+import DependencyHome from "./DependencyHome";
+import DependencyLog from "./DependencyLog";
+import DependencyDecisions from "./DependencyDecisions";
+import DependencyMap from "./DependencyMap";
 
 import OAuthConsent from "./OAuthConsent";
 
@@ -206,6 +210,10 @@ const PAGES = {
     FinAnalysisExpenses: FinAnalysisExpenses,
 
     FinAnalysisSeasonality: FinAnalysisSeasonality,
+    DependencyHome: DependencyHome,
+    DependencyLog: DependencyLog,
+    DependencyDecisions: DependencyDecisions,
+    DependencyMap: DependencyMap,
 
     FinancialHistory: FinancialHistory,
 
@@ -524,6 +532,26 @@ function PagesContent() {
             <Route path="/FinancialCurrent" element={
                 <Layout currentPageName={currentPage}>
                     <FinancialCurrent />
+                </Layout>
+            } />
+            <Route path="/DependencyHome" element={
+                <Layout currentPageName={currentPage}>
+                    <DependencyHome />
+                </Layout>
+            } />
+            <Route path="/DependencyLog" element={
+                <Layout currentPageName={currentPage}>
+                    <DependencyLog />
+                </Layout>
+            } />
+            <Route path="/DependencyDecisions" element={
+                <Layout currentPageName={currentPage}>
+                    <DependencyDecisions />
+                </Layout>
+            } />
+            <Route path="/DependencyMap" element={
+                <Layout currentPageName={currentPage}>
+                    <DependencyMap />
                 </Layout>
             } />
             {/* Cualquier ruta desconocida (por ejemplo, pantallas que ya no existen) vuelve al inicio. */}

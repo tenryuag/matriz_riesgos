@@ -31,6 +31,9 @@ se ven en http://127.0.0.1:54344.
 ```bash
 npm run db:local:copiar  # baja esquema y datos de producción (solo lectura)
 npm run db:local:cargar  # borra la base LOCAL y le carga la última copia
+npm run db:local:empresas   # aplica los tres SQL de empresas
+npm run db:local:mapa       # aplica el módulo Mapa de dependencia y corre sus pruebas
+npm run db:local:mapa:demo  # semana de ejemplo (inventada) para la cuenta demo
 supabase stop            # apaga los contenedores (los datos se conservan)
 supabase start -x logflare,vector,imgproxy,supavisor   # los vuelve a encender
 ```
@@ -113,6 +116,9 @@ se carga y se conecta: [STAGING.md](STAGING.md).
 2. Correr, en este orden: `supabase-empresas.sql`,
    `supabase-empresas-usuarios.sql` y `supabase-empresas-mentores.sql`.
 3. Publicar el código de la app.
+
+El módulo Mapa de dependencia va después de las tres fases: su orden está en
+[MAPA-DEPENDENCIA.md](MAPA-DEPENDENCIA.md).
 
 La función `ia` va antes que el SQL porque la fase 3 cambia cómo se guardan
 los resultados del asistente (uno por usuario, empresa y tipo) y la versión

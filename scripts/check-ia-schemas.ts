@@ -1,7 +1,8 @@
-// Verifica que los schemas de las cinco acciones del asistente de IA cumplan
+// Verifica que los schemas de las acciones del asistente de IA cumplan
 // las restricciones de structured outputs (additionalProperties:false,
 // required completo, sin min/max/format/anyOf) y que los enums del asistente
-// de riesgos coincidan con los catálogos. Correr: `npm run ia:check`.
+// de riesgos y del mapa de dependencia coincidan con los catálogos. Correr:
+// `npm run ia:check`.
 // Rutas relativas a este archivo (scripts/), para correrlo desde cualquier carpeta.
 const base = new URL('../supabase/functions/', import.meta.url).href
 const mods: Record<string, string> = {
@@ -10,6 +11,7 @@ const mods: Record<string, string> = {
   riesgo: base + 'ia/actions/riesgo.ts',
   iniciativa: base + 'ia/actions/iniciativa.ts',
   resumen: base + 'ia/actions/resumen.ts',
+  mapa: base + 'ia/actions/mapa.ts',
 }
 const FORBIDDEN = new Set(['minimum', 'maximum', 'minLength', 'maxLength', 'pattern', 'format', 'minItems', 'maxItems', 'uniqueItems', 'multipleOf'])
 let problems = 0
@@ -29,9 +31,15 @@ function walk(node: unknown, path: string) {
 }
 for (const [name, url] of Object.entries(mods)) {
   const m = await import(url)
-  const before = problems
-  walk(m.SCHEMA, name)
-  console.log(name, 'schema', JSON.stringify(m.SCHEMA).length, 'bytes', problems === before ? 'OK' : 'CON PROBLEMAS')
+  // Una acción exporta SCHEMA, o varios SCHEMA_* si llama a Claude en pasos.
+  const schemas = Object.entries(m).filter(([k]) => k === 'SCHEMA' || k.startsWith('SCHEMA_'))
+  if (schemas.length === 0) { problems++; console.log(name, 'no exporta ningún schema') }
+  for (const [key, schema] of schemas) {
+    const before = problems
+    const label = key === 'SCHEMA' ? name : `${name}.${key.slice(7).toLowerCase()}`
+    walk(schema, label)
+    console.log(label, 'schema', JSON.stringify(schema).length, 'bytes', problems === before ? 'OK' : 'CON PROBLEMAS')
+  }
 }
 // Enums de riesgo vs catálogos
 const rc = await import(base + '_shared/app/riskCalc.js')
@@ -50,5 +58,16 @@ const checks: [string, boolean][] = [
   ['residual_probabilidad', same(p.residual_probabilidad.enum, rc.PROBABILITY_LEVELS)],
   ['residual_impacto', same(p.residual_impacto.enum, rc.IMPACT_LEVELS)],
 ]
+// Enums del mapa de dependencia vs catálogo
+const dc = await import(base + '_shared/app/dependencyCalc.js')
+const mapa = (await import(mods.mapa)) as Record<string, any>
+const fila = (s: Record<string, any>, campo: string) => s.properties[campo].items.properties.categoria.enum
+const mp = mapa.SCHEMA_REDACTAR.properties
+checks.push(
+  ['mapa.clasificar.categoria', same(fila(mapa.SCHEMA_CLASIFICAR, 'clasificacion'), dc.CATEGORY_KEYS)],
+  ['mapa.redactar.categoria', same(fila(mapa.SCHEMA_REDACTAR, 'reclasificaciones'), dc.CATEGORY_KEYS)],
+  ['mapa.interpretaciones', same(Object.keys(mp.interpretaciones.properties), dc.CATEGORY_KEYS)],
+  ['mapa.apartados', same(Object.keys(mp.mapa.properties), dc.MAP_SECTION_KEYS)],
+)
 for (const [k, ok] of checks) { if (!ok) problems++; console.log('enum', k, ok ? 'OK' : 'DIFIERE') }
 console.log(problems === 0 ? 'TODO OK' : `PROBLEMAS: ${problems}`)

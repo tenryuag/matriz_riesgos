@@ -67,9 +67,30 @@ empresas() {
   docker exec -i "$DB" psql -U postgres -d postgres -At -q -c "notify pgrst, 'reload schema'; select 'Listo: ' || count(*) || ' empresas' from public.companies"
 }
 
+# Aplica en la base LOCAL el módulo Mapa de dependencia (requiere `empresas`)
+# y corre sus pruebas, que no dejan nada en la base.
+mapa() {
+  DB=supabase_db_hcmeoducjqudokfhhvyc
+  echo "Aplicando supabase-mapa-dependencia.sql…"
+  docker exec -i "$DB" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 < supabase-mapa-dependencia.sql 2>&1 | grep -v "NOTICE" || true
+  echo "Pruebas…"
+  docker exec -i "$DB" psql -U postgres -d postgres -q < scripts/check-mapa-dependencia.sql 2>&1 \
+    | sed -n -e 's/^.*NOTICE: *\(OK.*\)$/  \1/p' -e '/ERROR/p' -e '/ASSERT/p'
+}
+
+# Carga en la base LOCAL una semana de ejemplo (datos inventados) para una
+# cuenta: por omisión, la cuenta demo. Otra cuenta: scripts/bd-local.sh mapa-demo correo@…
+mapa_demo() {
+  DB=supabase_db_hcmeoducjqudokfhhvyc
+  docker exec -i "$DB" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 -v "email=${1:-demo.admin@example.com}" \
+    < supabase-seed-mapa-demo.sql 2>&1 | sed -n -e 's/^.*NOTICE: *//p' -e '/ERROR/p'
+}
+
 case "$1" in
   copiar) copiar ;;
   cargar) cargar ;;
   empresas) empresas ;;
-  *) echo "Uso: $0 copiar | cargar | empresas"; exit 1 ;;
+  mapa) mapa ;;
+  mapa-demo) mapa_demo "$2" ;;
+  *) echo "Uso: $0 copiar | cargar | empresas | mapa | mapa-demo [correo]"; exit 1 ;;
 esac
