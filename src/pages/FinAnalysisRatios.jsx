@@ -21,7 +21,8 @@ import {
   toNumber,
 } from "@/config/finConfig";
 import { computeRatios, summarizeRatios, ratioTrend } from "@/config/finCalc";
-import { SemaforoDot, SemaforoBadge, STATUS_STYLES } from "@/components/fin/Semaforo";
+import { SemaforoDot, SemaforoBadge } from "@/components/fin/Semaforo";
+import { STATUS_STYLES } from "@/components/fin/semaforoStyles";
 
 // Razones financieras del modelo MP-AFH1: seis grupos de indicadores
 // calculados en vivo a partir del Estado de Resultados, del Balance General

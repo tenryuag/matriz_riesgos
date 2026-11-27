@@ -14,10 +14,11 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { collectStrategies } from "./StrategicSummary";
-import { perspectiveFor, LANES } from "./StrategicMap";
+import { LANES } from "./StrategicMap";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import {
+  collectStrategies,
+  perspectiveFor,
   riskObjectivesFrom,
   objectivesById,
   isRiskObjectiveId,

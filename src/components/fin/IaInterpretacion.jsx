@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { callIa, iaSavedResult, IaError, fmtUsd } from "@/api/ia";
 import IaDisclaimer from "@/components/ia/IaDisclaimer";
-import { SemaforoDot, STATUS_STYLES } from "@/components/fin/Semaforo";
+import { SemaforoDot } from "@/components/fin/Semaforo";
+import { STATUS_STYLES } from "@/components/fin/semaforoStyles";
 
 // Explicación con IA del Informe financiero (acción `interpretar_informe`).
 // Al abrir muestra el diagnóstico guardado si existe. El botón pide uno nuevo

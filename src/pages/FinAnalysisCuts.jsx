@@ -29,7 +29,8 @@ import {
   sameCutPriorYear,
 } from "@/config/finCalc";
 import { Delta, DeltaPP } from "@/components/fin/Delta";
-import { SemaforoDot, STATUS_STYLES } from "@/components/fin/Semaforo";
+import { SemaforoDot } from "@/components/fin/Semaforo";
+import { STATUS_STYLES } from "@/components/fin/semaforoStyles";
 import { incomeComparison } from "@/lib/finIncomeCompare";
 
 // Comparativo de cortes. Toma un corte (por defecto el más reciente) y lo

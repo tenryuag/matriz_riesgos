@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { perspectiveFor, LANES } from "./StrategicMap";
+import { LANES } from "./StrategicMap";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
@@ -30,8 +30,11 @@ import RiskWarningsCard from "@/components/strategy/RiskWarningsCard";
 import RiskObjectiveBadges from "@/components/strategy/RiskObjectiveBadges";
 import IaInitiativeSuggest from "@/components/strategy/IaInitiativeSuggest";
 import InlinePerspectivePicker from "@/components/strategy/InlinePerspectivePicker";
-import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
 import {
+  collectStrategies,
+  scoreFor,
+  priorityFor,
+  perspectiveFor,
   RISK_ACKNOWLEDGED,
   riskObjectivesFrom,
   localISODate,

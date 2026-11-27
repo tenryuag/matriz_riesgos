@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { User, ModuleAccess } from "@/api/entities";
 import { getAssignableModules } from "@/config/modules";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,13 @@ import { LayoutGrid, Search, Check, ShieldCheck, Save } from "lucide-react";
 
 // Pantalla de administrador: asigna qué módulos puede ver cada usuario.
 // Los administradores tienen acceso a todo automáticamente (no se editan aquí).
+// Copia el mapa usuario → módulos, con un conjunto nuevo por usuario.
+const cloneMap = (m) => {
+  const out = {};
+  Object.keys(m).forEach((k) => (out[k] = new Set(m[k])));
+  return out;
+};
+
 export default function ModuleAccessAdmin() {
   const { t } = useLanguage();
   const assignable = getAssignableModules();
@@ -47,12 +54,6 @@ export default function ModuleAccessAdmin() {
       console.error("Error al cargar accesos:", error);
     }
     setLoading(false);
-  };
-
-  const cloneMap = (m) => {
-    const out = {};
-    Object.keys(m).forEach((k) => (out[k] = new Set(m[k])));
-    return out;
   };
 
   const toggle = (userId, key) => {

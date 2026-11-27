@@ -13,7 +13,6 @@ import {
   Users,
   BookOpen,
   Settings,
-  LayoutGrid,
   Calculator,
   Globe,
   ClipboardCheck,

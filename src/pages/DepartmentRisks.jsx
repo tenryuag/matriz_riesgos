@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/api/supabaseClient";
+import { useState, useEffect, useCallback } from "react";
 import { Department } from "@/api/entities";
 import { Risk } from "@/api/entities";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +11,6 @@ import {
   Plus,
   Filter,
   Search,
-  Eye,
   Edit
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

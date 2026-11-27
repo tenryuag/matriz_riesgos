@@ -1,5 +1,6 @@
 
 import { createContext, useState, useContext, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 const translations = {
   es: {
@@ -1880,6 +1881,10 @@ export const LanguageProvider = ({ children }) => {
       {children}
     </LanguageContext.Provider>
   );
+};
+
+LanguageProvider.propTypes = {
+  children: PropTypes.node,
 };
 
 export const useLanguage = () => useContext(LanguageContext);

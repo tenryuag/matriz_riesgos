@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { User } from "@/api/entities";
 import {
@@ -317,5 +318,13 @@ const ForgotPassword = ({ theme, toggleTheme }) => {
     </LanguageProvider>
   );
 };
+
+// El tema llega desde las rutas; las dos piezas reciben lo mismo.
+const themeProps = {
+  theme: PropTypes.string,
+  toggleTheme: PropTypes.func,
+};
+ForgotPasswordScreen.propTypes = themeProps;
+ForgotPassword.propTypes = themeProps;
 
 export default ForgotPassword;

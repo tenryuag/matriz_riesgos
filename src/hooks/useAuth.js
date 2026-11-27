@@ -21,7 +21,7 @@ export function useAuth() {
       const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
-    } catch (error) {
+    } catch {
       console.log("Usuario no autenticado");
       setUser(null);
       setIsAdmin(false);

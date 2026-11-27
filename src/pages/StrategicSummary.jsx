@@ -18,15 +18,10 @@ import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
-import { PLAN_SOURCE_SECTIONS } from "@/config/strategicCatalog";
 
 export const RATING_SECTION = "summary-ratings";
 
-// Secciones que el resumen necesita leer (catálogo único; útil también para el hub).
-export const SUMMARY_SOURCE_SECTIONS = PLAN_SOURCE_SECTIONS;
-
 // Motor compartido con el servidor MCP (fuentes, puntaje y prioridad).
-export { collectStrategies, scoreFor, priorityFor } from "@/config/strategicCalc";
 import { collectStrategies, scoreFor, priorityFor, riskObjectivesFrom } from "@/config/strategicCalc";
 
 const SOURCES = [

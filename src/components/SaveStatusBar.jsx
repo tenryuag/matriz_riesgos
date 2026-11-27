@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from "prop-types";
 import { CheckCircle2, AlertTriangle, Save, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hideWhenReadOnly } from "@/components/ReadOnlyContext";
@@ -56,6 +56,11 @@ function SaveStatusBar({ status, onSaveNow }) {
     </div>
   );
 }
+
+SaveStatusBar.propTypes = {
+  status: PropTypes.string,
+  onSaveNow: PropTypes.func,
+};
 
 // Solo sirve para editar: en «solo ver» no se muestra.
 export default hideWhenReadOnly(SaveStatusBar);

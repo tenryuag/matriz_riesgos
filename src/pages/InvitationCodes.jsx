@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { InvitationCode, User } from "@/api/entities";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -47,6 +47,10 @@ export default function InvitationCodes() {
     if (isAdmin) {
       loadData();
     }
+    // Se carga una vez, al confirmar que la cuenta es administradora. La
+    // función usa `t`, que cambia en cada render: ponerla aquí repetiría la
+    // consulta sin parar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const checkAdmin = async () => {
@@ -98,7 +102,7 @@ export default function InvitationCodes() {
       setCopiedCode(code);
       toast.success(t('codeCopied'));
       setTimeout(() => setCopiedCode(null), 2000);
-    } catch (error) {
+    } catch {
       toast.error(t('codeCopyError'));
     }
   };

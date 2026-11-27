@@ -32,6 +32,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import {
+  buildFoda,
+  collectStrategies,
+  scoreFor,
+  priorityFor,
   localISODate,
   riskObjectivesFrom,
   riskInitiativeWarnings,
@@ -42,8 +46,6 @@ import {
 } from "@/config/strategicCalc";
 import RiskLevelChip from "@/components/strategy/RiskLevelChip";
 import { QUESTIONS as CUSTOMER_QUESTIONS, SECTION as CUSTOMER_SECTION } from "./CustomerAnalysis";
-import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
-import { buildFoda } from "./FodaAnalysis";
 
 // ============================================================
 // Inicio del módulo: dashboard ejecutivo de toma de decisiones.

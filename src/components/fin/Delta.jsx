@@ -15,18 +15,18 @@ const GOOD = "text-green-600 dark:text-green-500";
 const BAD = "text-red-500";
 const FLAT = "text-muted";
 
-export function annualized(value, year) {
+function annualized(value, year) {
   if (value == null || !year) return value ?? null;
   return value * annualizeFactor(year);
 }
 
 // Fracción de cambio entre dos periodos (anualizando parciales), o null.
-export function deltaBetween(curr, prev, currYear, prevYear) {
+function deltaBetween(curr, prev, currYear, prevYear) {
   if (curr == null || prev == null) return null;
   return pctChange(annualized(curr, currYear), annualized(prev, prevYear));
 }
 
-export function deltaClass(delta, better = "higher") {
+function deltaClass(delta, better = "higher") {
   if (delta == null) return FLAT;
   if (Math.abs(delta) < 0.0005) return FLAT;
   if (better === "neutral") return FLAT;

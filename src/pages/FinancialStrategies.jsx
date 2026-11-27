@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
 import {
-  FIN_GROUPS as FIN_GROUPS_CATALOG,
+  FIN_GROUPS,
   FIN_SECTION,
   FIN_SIT_SECTION,
   FIN_SITUATION_GROUPS,
@@ -24,8 +24,6 @@ import {
 } from "@/config/strategicCatalog";
 
 export const SECTION = FIN_SECTION;
-// Catálogo compartido con el servidor MCP.
-export const FIN_GROUPS = FIN_GROUPS_CATALOG;
 
 // Estrategias financieras en dos pasos (Excel v2_FODA, planes A y B):
 // 1. Situaciones: lo que el usuario reconoce hoy en su empresa. Van directo al
@@ -33,7 +31,7 @@ export const FIN_GROUPS = FIN_GROUPS_CATALOG;
 // 2. Decisiones: qué quiere hacer al respecto. Son las estrategias que entran
 //    al resumen para priorizarse y de ahí al mapa y a las iniciativas.
 
-export const ALL_FIN_KEYS = FIN_GROUPS.flatMap((g) => g.items.map((i) => i.key));
+const ALL_FIN_KEYS = FIN_GROUPS.flatMap((g) => g.items.map((i) => i.key));
 
 const SIT_BY_KEY = Object.fromEntries(ALL_FIN_SITUATIONS.map((s) => [s.key, s]));
 

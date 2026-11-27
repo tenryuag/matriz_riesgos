@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { Eye, EyeOff } from 'react-feather';
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { User, Company } from "@/api/entities";
 import {
   AlertTriangle,
-  ArrowRight,
   Shield,
   Lock,
   CheckCircle,
@@ -594,5 +594,13 @@ const Register = ({ theme, toggleTheme }) => {
     </LanguageProvider>
   );
 };
+
+// El tema llega desde las rutas; las dos piezas reciben lo mismo.
+const themeProps = {
+  theme: PropTypes.string,
+  toggleTheme: PropTypes.func,
+};
+RegisterScreen.propTypes = themeProps;
+Register.propTypes = themeProps;
 
 export default Register;

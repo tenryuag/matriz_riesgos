@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -12,7 +12,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  FileText,
   Info,
   Search
 } from "lucide-react";

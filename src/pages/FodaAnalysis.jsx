@@ -31,8 +31,6 @@ import RiskLevelChip from "@/components/strategy/RiskLevelChip";
 // ============================================================
 
 // Motor compartido con el servidor MCP.
-export { MARKET_SECTION } from "@/config/strategicCatalog";
-export { buildFoda } from "@/config/strategicCalc";
 import { buildFoda, mergeFodaWithRisks, riskObjectivesFrom } from "@/config/strategicCalc";
 
 const PRIORITY_CHIP = {

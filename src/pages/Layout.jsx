@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { Eye, EyeOff } from 'react-feather';
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,14 +14,11 @@ import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { ReadOnlyZone, READ_ONLY_CSS } from "@/components/ReadOnlyContext";
 import { getActingCompany } from "@/api/supabaseClient";
 import {
-  LayoutDashboard,
   Building2,
   AlertTriangle,
-  Plus,
   LogOut,
   Menu,
   X,
-  ShieldCheck,
   Sun,
   Moon,
   Globe,
@@ -28,11 +26,6 @@ import {
   Shield,
   Lock,
   CheckCircle,
-  Ticket,
-  Users,
-  BookOpen,
-  TrendingUp,
-  Target,
   LayoutGrid,
   ChevronDown,
   ChevronRight,
@@ -404,7 +397,7 @@ const AppLayout = ({ children, currentPageName }) => {
       const role = currentUser?.app_metadata?.role || 'user';
 
       setIsAdmin(role === 'admin');
-    } catch (error) {
+    } catch {
       // Ante cualquier fallo al resolver la sesión, tratar como no autenticado
       // para que la app muestre el login en vez de quedarse rota.
       console.log("Usuario no autenticado");
@@ -1076,3 +1069,15 @@ export default function LayoutWrapper({ children, currentPageName }) {
   );
 }
 
+LoginScreen.propTypes = {
+  theme: PropTypes.string,
+  toggleTheme: PropTypes.func,
+  onLoginSuccess: PropTypes.func,
+};
+
+const layoutProps = {
+  children: PropTypes.node,
+  currentPageName: PropTypes.string,
+};
+AppLayout.propTypes = layoutProps;
+LayoutWrapper.propTypes = layoutProps;

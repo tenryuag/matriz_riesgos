@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan } from "@/api/entities";
 import {
   ArrowLeft,
   ListChecks,
-  Info,
   Sparkles,
   Award,
   Wrench,
@@ -15,13 +14,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
-import { OPP_GROUPS, SECTION as OPP_SECTION } from "./OpportunityAnalysis";
+import { SECTION as OPP_SECTION } from "./OpportunityAnalysis";
+import { OPP_GROUPS } from "@/config/strategicCatalog";
 
 export const SECTION = "opportunity-conclusions";
 
 // Regla del Excel: Sí → fortaleza (F) · No → debilidad (D).
 // Lógica compartida con el servidor MCP (misma regla Sí→F / No→D).
-export { deriveFromAnswer, effectiveConclusions } from "@/config/strategicCalc";
 import { deriveFromAnswer, effectiveConclusions } from "@/config/strategicCalc";
 
 export default function OpportunityConclusions() {

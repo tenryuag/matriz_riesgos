@@ -1,22 +1,16 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
   TrendingUp,
   BarChart3,
-  Target,
   DollarSign,
   FileText,
   ArrowRight,
   Building,
-  Users,
-  PieChart,
   Calendar,
-  Briefcase,
   LineChart
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/components/LanguageContext';
 
 export default function FinanceDashboard() {

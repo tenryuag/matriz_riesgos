@@ -7,7 +7,7 @@ import PropTypes from "prop-types";
 // las comas son solo de presentación.
 
 // Deja solo dígitos, un punto decimal y, si se permite, un signo al inicio.
-export function cleanAmountText(text, allowNegative = true) {
+function cleanAmountText(text, allowNegative = true) {
   let s = String(text ?? "").replace(/[^\d.-]/g, "");
   const negative = allowNegative && s.startsWith("-");
   s = s.replace(/-/g, "");
@@ -17,7 +17,7 @@ export function cleanAmountText(text, allowNegative = true) {
 }
 
 // "1250000.5" → "1,250,000.5" (respeta un punto final o un "-" a medias).
-export function formatAmountText(raw) {
+function formatAmountText(raw) {
   const s = String(raw ?? "");
   if (s === "" || s === "-") return s;
   const negative = s.startsWith("-");

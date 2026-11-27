@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { StrategicPlan } from "@/api/entities";
@@ -7,18 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave } from "@/hooks/useAutosave";
 import SaveStatusBar from "@/components/SaveStatusBar";
-import { OPP_GROUPS as OPP_GROUPS_CATALOG } from "@/config/strategicCatalog";
+// Catálogo compartido con el servidor MCP.
+import { OPP_GROUPS } from "@/config/strategicCatalog";
 
 export const SECTION = "opportunities";
-// Catálogo compartido con el servidor MCP.
-export const OPP_GROUPS = OPP_GROUPS_CATALOG;
 
 // Cuestionario de palancas de crecimiento (hoja "Análisis Oportunidades" del
 // Excel). Todas las preguntas se responden Sí/No. Cada una está ligada a una
 // estrategia: en la siguiente pantalla, "Sí" se vuelve fortaleza y "No"
 // debilidad, automáticamente.
 
-export const ALL_OPP_KEYS = OPP_GROUPS.flatMap((g) => g.questions.map((q) => q.key));
+const ALL_OPP_KEYS = OPP_GROUPS.flatMap((g) => g.questions.map((q) => q.key));
 
 export default function OpportunityAnalysis() {
   const [planId, setPlanId] = useState(null);

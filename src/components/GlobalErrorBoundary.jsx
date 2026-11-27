@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { AlertTriangle, RefreshCw, Home, LogOut, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,7 +100,7 @@ class GlobalErrorBoundary extends React.Component {
                   </p>
                   <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
                     <li>Toca el ícono de traducir en la barra de direcciones (o el menú ⋮ → Traducir).</li>
-                    <li>Elige <strong>"No traducir nunca este sitio"</strong> o desactiva "Traducir siempre".</li>
+                    <li>Elige <strong>&quot;No traducir nunca este sitio&quot;</strong> o desactiva &quot;Traducir siempre&quot;.</li>
                     <li>Recarga la página.</li>
                   </ol>
                 </div>
@@ -167,5 +168,9 @@ class GlobalErrorBoundary extends React.Component {
     return this.props.children; 
   }
 }
+
+GlobalErrorBoundary.propTypes = {
+  children: PropTypes.node,
+};
 
 export default GlobalErrorBoundary;

@@ -1,10 +1,11 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
 } from "react";
+import PropTypes from "prop-types";
 import {
   supabase,
   getActingCompany,
@@ -204,6 +205,10 @@ export function ModuleAccessProvider({ children }) {
 }
 
 // Hook para leer el acceso por módulo desde cualquier componente.
+ModuleAccessProvider.propTypes = {
+  children: PropTypes.node,
+};
+
 export function useModuleAccess() {
   return useContext(ModuleAccessContext);
 }

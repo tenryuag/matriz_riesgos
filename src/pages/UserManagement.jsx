@@ -45,6 +45,10 @@ export default function UserManagement() {
     if (isAdmin) {
       loadUsers();
     }
+    // Se carga una vez, al confirmar que la cuenta es administradora. La
+    // función usa `t`, que cambia en cada render: ponerla aquí repetiría la
+    // consulta sin parar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const checkAdmin = async () => {

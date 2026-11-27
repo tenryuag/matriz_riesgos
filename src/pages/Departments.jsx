@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Department } from "@/api/entities";
 import { Risk } from "@/api/entities";
 import { Link, useNavigate } from "react-router-dom";
@@ -97,12 +97,6 @@ export default function Departments() {
 
   const getRiskLevelStats = (departmentId) => {
     const departmentRisks = getDepartmentRisks(departmentId);
-    const stats = departmentRisks.reduce((acc, risk) => {
-      const level = risk.residual_level || risk.inherent_level || t('unclassified');
-      acc[level] = (acc[level] || 0) + 1;
-      return acc;
-    }, {});
-
     // Count high risks using language-independent comparison
     const highRisks = departmentRisks.filter(risk => {
       const level = risk.residual_level || risk.inherent_level;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
@@ -7,7 +7,6 @@ import {
   Globe,
   BarChart3,
   FileText,
-  ArrowRight,
   ChevronRight,
   TrendingUp,
   DollarSign,

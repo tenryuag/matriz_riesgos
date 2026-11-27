@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { collectStrategies, scoreFor, priorityFor } from "./StrategicSummary";
 import { useStrategyInputs } from "@/hooks/useStrategyInputs";
 import UnassignedRisksNote from "@/components/strategy/UnassignedRisksNote";
 
@@ -34,8 +33,7 @@ import UnassignedRisksNote from "@/components/strategy/UnassignedRisksNote";
 // ============================================================
 
 // Perspectiva de cada estrategia: lógica compartida con el servidor MCP.
-export { perspectiveFor } from "@/config/strategicCalc";
-import { perspectiveFor, riskObjectivesFrom } from "@/config/strategicCalc";
+import { collectStrategies, scoreFor, priorityFor, perspectiveFor, riskObjectivesFrom } from "@/config/strategicCalc";
 import { LANES as PERSPECTIVE_LANES } from "@/config/perspectives";
 
 // Carriles en el orden clásico del Balanced Scorecard: lo financiero arriba
