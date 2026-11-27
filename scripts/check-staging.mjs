@@ -1,33 +1,31 @@
-// Comprueba la base de STAGING por su API, con las cuentas de demostración:
-// que cada una entra con su contraseña y ve exactamente lo que le toca. Solo
-// lee. Lo corre `npm run db:staging:preparar`; a mano:
-//   STAGING_URL=… STAGING_KEY=… DEMO_PASSWORD=… node scripts/check-staging.mjs
-// Las cantidades esperadas salen de supabase-seed-staging.sql.
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
+// Prueba la base de STAGING por su API pública, como la usa la app. La corre
+// `npm run db:staging:preparar`, que antes crea dos cuentas temporales (una
+// empresa cliente con un análisis financiero mínimo y su mentora) y después
+// las borra. Solo lee.
+//   STAGING_URL, STAGING_KEY  dirección y llave pública de la rama
+//   QA_PASSWORD               contraseña de las dos cuentas temporales
+//   OTRA_EMPRESA              una empresa real de la copia: nadie de fuera debe verla
+//   ORIGEN                    dirección del sitio de staging (para el permiso del navegador)
 const URL_ = process.env.STAGING_URL;
 const KEY = process.env.STAGING_KEY;
-const PASS = process.env.DEMO_PASSWORD;
+const PASS = process.env.QA_PASSWORD;
+const OTHER = process.env.OTRA_EMPRESA || null;
+const ORIGIN = process.env.ORIGEN || "https://staging--matrizriesgos.netlify.app";
 if (!URL_ || !KEY || !PASS) {
-  console.error("Faltan STAGING_URL, STAGING_KEY o DEMO_PASSWORD");
+  console.error("Faltan STAGING_URL, STAGING_KEY o QA_PASSWORD");
   process.exit(1);
 }
 if (URL_.includes("hcmeoducjqudokfhhvyc")) {
-  console.error("Esa dirección es la de producción: esta comprobación es solo para la rama.");
+  console.error("Esa dirección es la de producción: esta prueba es solo para la rama.");
   process.exit(1);
 }
-
-const seed = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../supabase-seed-staging.sql"), "utf8");
-const expected = Object.fromEntries([...seed.matchAll(/^-- ([a-z_]+): (\d+) filas$/gm)].map((m) => [m[1], Number(m[2])]));
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
   if (!ok) failed++;
-  console.log(`  ${ok ? "OK   " : "FALLA"} ${name}${detail ? " — " + detail : ""}`);
+  console.log(`    ${ok ? "OK   " : "FALLA"} ${name}${detail ? " — " + detail : ""}`);
 };
-const note = (text) => console.log(`  ·     ${text}`);
+const note = (text) => console.log(`    ·     ${text}`);
 
 async function login(email) {
   const res = await fetch(`${URL_}/auth/v1/token?grant_type=password`, {
@@ -40,10 +38,10 @@ async function login(email) {
 }
 const headers = (token, company) => ({
   apikey: KEY,
-  Authorization: `Bearer ${token}`,
+  Authorization: `Bearer ${token || KEY}`,
   ...(company ? { "x-company-id": company } : {}),
 });
-// Cuántas filas de una tabla ve esa sesión (RLS incluido).
+// Cuántas filas de una tabla ve esa sesión (reglas de seguridad incluidas).
 async function count(token, table, company = null) {
   const res = await fetch(`${URL_}/rest/v1/${table}?select=*`, {
     method: "HEAD",
@@ -65,73 +63,71 @@ const sees = async (token, tables, company = null) =>
 const same = (got, want) => Object.keys(want).every((k) => got[k] === want[k]);
 const show = (got) => Object.entries(got).map(([k, v]) => `${k} ${v}`).join(", ");
 
-const MODULES = ["risks", "departments", "strategic_plans", "plan_answers", "strategic_initiatives", "fin_analyses", "fin_years", "fin_values"];
-const all = Object.fromEntries(MODULES.map((t) => [t, expected[t] ?? 0]));
-const none = Object.fromEntries(MODULES.map((t) => [t, 0]));
-const fin = ["fin_analyses", "fin_years", "fin_values"];
+const RISK = ["risks", "departments"];
+const PLAN = ["strategic_plans", "plan_answers", "strategic_initiatives"];
+const FIN = ["fin_analyses", "fin_years", "fin_values"];
+const ALL = [...RISK, ...PLAN, ...FIN];
+const zeros = (tables) => Object.fromEntries(tables.map((t) => [t, 0]));
+const ones = (tables) => Object.fromEntries(tables.map((t) => [t, 1]));
 
-console.log("Base de staging, vista por las cuentas demo");
 {
   const s = await fetch(`${URL_}/auth/v1/settings`, { headers: { apikey: KEY } }).then((r) => r.json()).catch(() => ({}));
   check("el registro está abierto y no pide confirmar el correo (como en producción)", s.disable_signup === false && s.mailer_autoconfirm === true,
     `registro ${s.disable_signup ? "cerrado" : "abierto"}, confirmación de correo ${s.mailer_autoconfirm ? "apagada" : "ENCENDIDA"}`);
 }
+{
+  // Sin sesión, con la llave pública que va dentro del sitio: no se lee nada.
+  const got = await sees(null, [...ALL, "companies", "invitation_codes", "user_module_access"]);
+  check("sin iniciar sesión no se lee ningún dato", Object.values(got).every((v) => v === 0 || typeof v === "string"), show(got));
+}
+{
+  // El navegador pregunta antes si puede mandar el encabezado del modo mentor.
+  const res = await fetch(`${URL_}/rest/v1/fin_analyses`, {
+    method: "OPTIONS",
+    headers: { Origin: ORIGIN, "Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "apikey,authorization,x-company-id" },
+  }).catch(() => null);
+  const allowed = (res?.headers.get("access-control-allow-headers") || "").toLowerCase();
+  check("el navegador puede mandar el encabezado x-company-id desde el sitio de staging",
+    !!res && res.status < 400 && (allowed === "*" || allowed.includes("x-company-id")), res ? `respuesta ${res.status}` : "sin conexión");
+}
 
-const admin = await login("demo.admin@example.com");
-check("demo.admin entra con la contraseña", !!admin);
+const client = await login("qa.staging.cliente@example.com");
+check("una cuenta nueva entra con su contraseña", !!client);
 let company = null;
-if (admin) {
-  const access = await rpc(admin, "my_access");
+if (client) {
+  const access = await rpc(client, "my_access");
   company = access?.company?.id || null;
-  check("demo.admin: su empresa con los tres módulos", !!company && ["risk", "strategic", "fin-analysis"].every((m) => access.modules?.[m] === "edit"), access?.company?.name || "sin empresa");
-  const got = await sees(admin, MODULES);
-  check("demo.admin: ve el ejemplo completo", same(got, all), show(got));
-  const ia = await count(admin, "ia_resultados");
-  check("demo.admin: informe y resumen de IA guardados", ia === (expected.ia_resultados ?? 0), `${ia}`);
+  check("empresa cliente: administra su empresa, con Gestión del Riesgo y Análisis Financiero",
+    !!company && access.company.name === "QA Cliente, S.A." && access.modules?.risk === "edit" && access.modules?.["fin-analysis"] === "edit" && !access.modules?.strategic,
+    JSON.stringify(access?.modules));
+  const got = await sees(client, [...ALL, "companies"]);
+  check("empresa cliente: ve su análisis y nada de las demás empresas", same(got, { ...zeros([...RISK, ...PLAN]), ...ones(FIN), companies: 1 }), show(got));
+  const panel = await rpc(client, "admin_companies");
+  check("empresa cliente: no puede abrir el panel de la plataforma", panel?.error === "UNAUTHORIZED");
 }
 
-const ana = await login("demo.ana@example.com");
-check("demo.ana entra con la contraseña", !!ana);
-if (ana) {
-  const access = await rpc(ana, "my_access");
-  const got = await sees(ana, MODULES);
-  check("demo.ana: ve todo, con permiso de «solo ver»", same(got, all) && Object.values(access?.modules || {}).every((l) => l === "view"), JSON.stringify(access?.modules));
-}
-
-const invitada = await login("demo.invitacion@example.com");
-check("demo.invitacion entra con la contraseña", !!invitada);
-if (invitada) {
-  const got = await sees(invitada, MODULES);
-  check("demo.invitacion: sin módulos asignados no ve nada", same(got, none), show(got));
-}
-
-const mentora = await login("demo.mentora@example.com");
-check("demo.mentora entra con la contraseña", !!mentora);
-if (mentora && company) {
-  const own = await sees(mentora, MODULES);
-  check("demo.mentora, en su propia empresa: no ve datos del cliente", same(own, none), show(own));
-  const list = await rpc(mentora, "mentor_companies");
-  check("demo.mentora: la empresa aparece en «Empresas que acompañas»", JSON.stringify(list || "").includes(company));
+const mentor = await login("qa.staging.mentora@example.com");
+check("la mentora entra con su contraseña", !!mentor);
+if (mentor && company) {
+  const own = await sees(mentor, ALL);
+  check("mentora, en su propia empresa: no ve datos del cliente", same(own, zeros(ALL)), show(own));
+  const list = await rpc(mentor, "mentor_companies");
+  check("mentora: el cliente aparece en «Empresas que acompañas»", JSON.stringify(list || "").includes(company));
   // Lo que en local no se podía probar: que el servidor hospedado deje pasar
   // el encabezado x-company-id hasta la base.
-  const got = await sees(mentora, MODULES, company);
-  const want = { ...none, ...Object.fromEntries(fin.map((t) => [t, expected[t] ?? 0])) };
-  check("demo.mentora, en modo mentor (encabezado x-company-id): solo Análisis Financiero del cliente", same(got, want), show(got));
-}
-
-const plataforma = await login("demo.plataforma@example.com");
-check("demo.plataforma entra con la contraseña", !!plataforma);
-if (plataforma) {
-  const panel = await rpc(plataforma, "admin_companies");
-  const names = JSON.stringify(panel || "");
-  check("demo.plataforma: el panel «Empresas» lista las tres empresas", ["Metalmecánica del Bajío", "Consultoría Marta Ruiz", "Paula Admin"].every((n) => names.includes(n)));
+  const got = await sees(mentor, ALL, company);
+  check("mentora, en modo mentor (encabezado x-company-id): solo el Análisis Financiero del cliente", same(got, { ...zeros([...RISK, ...PLAN]), ...ones(FIN) }), show(got));
+  if (OTHER) {
+    const other = await sees(mentor, ALL, OTHER);
+    check("mentora, pidiendo una empresa que no acompaña: no ve nada", same(other, zeros(ALL)), show(other));
+  }
 }
 
 // Informativo: las funciones las despliega Tenryu.
-if (admin) {
+if (client) {
   const res = await fetch(`${URL_}/functions/v1/ia`, {
     method: "POST",
-    headers: { ...headers(admin), "Content-Type": "application/json" },
+    headers: { ...headers(client), "Content-Type": "application/json" },
     body: JSON.stringify({ action: "estado" }),
   }).catch(() => null);
   const body = res ? await res.json().catch(() => null) : null;
@@ -139,5 +135,5 @@ if (admin) {
   else note(`función ia: versión ${body.version}${body.version === "1.1.0" ? "" : " — falta desplegar la 1.1.0 (modo mentor)"}`);
 }
 
-console.log(failed ? `\n${failed} comprobaciones fallaron` : "\nTodo en orden");
+console.log(failed ? `    ${failed} comprobaciones fallaron` : "    Todo en orden");
 process.exit(failed ? 1 : 0);

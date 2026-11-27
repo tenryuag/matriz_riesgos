@@ -10,7 +10,6 @@
     "db:local:cargar": "scripts/bd-local.sh cargar",
     "db:local:empresas": "scripts/bd-local.sh empresas",
     "db:local:ensayar-rollback": "node scripts/check-empresas-rollback.mjs",
-    "db:staging:exportar": "scripts/bd-staging.sh exportar",
     "db:staging:estado": "scripts/bd-staging.sh estado",
     "db:staging:preparar": "scripts/bd-staging.sh preparar",
     "db:staging:conectar": "scripts/bd-staging.sh conectar",

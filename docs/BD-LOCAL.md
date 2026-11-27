@@ -1,8 +1,8 @@
 # Base de datos local de pruebas
 
-Staging y producción comparten la misma base en Supabase. Para probar cambios
-de estructura o de reglas de seguridad sin tocarla, se trabaja contra una copia
-local que corre en Docker.
+Para probar cambios de estructura o de reglas de seguridad sin tocar la base
+de producción, se trabaja contra una copia local que corre en Docker. (Staging
+tiene además su propia base en línea: [STAGING.md](STAGING.md).)
 
 ## Requisitos
 
@@ -56,8 +56,8 @@ docker exec -i -e PGPASSWORD=postgres supabase_db_hcmeoducjqudokfhhvyc \
 - Las funciones `ia` y `mcp` no se levantan solas. Para probarlas:
   `supabase functions serve` (la de IA necesita `ANTHROPIC_API_KEY` en
   `supabase/.env.local`).
-- El sitio de staging en Netlify sigue apuntando a la base de producción. Lo
-  que se pruebe en local solo se ve en esta máquina.
+- Lo que se pruebe en local solo se ve en esta máquina. El sitio de staging
+  usa otra base: la rama `staging` de Supabase.
 - No correr `supabase config push`: sobreescribiría la configuración de Auth
   de producción con la de este archivo.
 
@@ -102,9 +102,9 @@ local queda como estaba.
 
 ## Staging con su propia base
 
-Para probar en línea sin tocar producción hay una rama de Supabase con datos
-de ejemplo, conectada al sitio de staging. Cómo se crea, se carga y se conecta:
-[STAGING.md](STAGING.md).
+Para probar en línea sin tocar producción hay una rama de Supabase con una
+copia de los datos de producción, conectada al sitio de staging. Cómo se crea,
+se carga y se conecta: [STAGING.md](STAGING.md).
 
 ## Orden para estrenar empresas en producción
 

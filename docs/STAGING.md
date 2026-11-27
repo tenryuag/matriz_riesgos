@@ -1,38 +1,52 @@
 # Staging con su propia base de datos
 
-Staging deja de compartir la base con producción. Usa una **rama de Supabase**
-llamada `staging`, que es una base aparte (sus propios usuarios, dirección y
-llaves) con datos de ejemplo. Lo que se pruebe ahí no puede tocar producción.
+Staging ya no comparte la base con producción. Usa una **rama de Supabase**
+llamada `staging`: una base aparte (sus propios usuarios, dirección y llaves)
+con una **copia de los datos de producción**. Todos pueden probar con datos
+reales y nada de lo que se haga ahí llega a producción.
 
 | Pieza | Staging | Producción |
 |---|---|---|
 | Rama de git | `staging` | `main` |
 | Sitio | https://staging--matrizriesgos.netlify.app | https://app.mara-perez.online |
 | Base de datos | rama `staging` de Supabase | proyecto `hcmeoducjqudokfhhvyc` |
-| Datos | de ejemplo (cuentas `demo.*@example.com`) | reales |
+| Datos | copia de producción (del día en que se preparó) | reales |
 
 El mismo nombre en los tres lugares es a propósito: una sola cosa llamada
 «staging».
+
+## Cómo se entra
+
+Con el mismo correo y la misma contraseña que en producción: las cuentas
+vienen en la copia. Para registrar una empresa nueva hay cinco códigos de
+invitación de prueba en `supabase/local/staging-accesos.txt` (git lo ignora);
+un administrador también puede generar más desde el panel.
 
 ## Dejar la rama lista
 
 1. **Crear la rama en Supabase** (lo hace Tenryu): Dashboard → Branches →
    *Create branch*, nombre `staging`, sin «Include data». Conviene marcarla
-   como persistente si se va a quedar: una rama persistente no se pausa ni se
-   borra sola. Por CLI:
-   `supabase branches create staging --persistent --remote=hcmeoducjqudokfhhvyc`.
-2. **Cargarla:**
+   como persistente: una rama persistente no se pausa ni se borra sola.
+2. **Copiar y preparar:**
 
    ```bash
    npm run db:staging:preparar
    ```
 
-   Aplica los tres SQL de empresas (el mismo paso del estreno en producción),
-   carga los datos de ejemplo, pone la contraseña de las cuentas demo, crea
-   cinco códigos de invitación y comprueba por la API que cada cuenta ve lo
-   que le toca. Es repetible.
+   - Baja una copia de los datos de producción (solo lectura) a
+     `supabase/local/staging-data.sql` y la carga en la rama, en una sola
+     transacción. Comprueba que cada tabla quedó con las mismas filas.
+   - Aplica los tres SQL de empresas, igual que se hará en producción, y
+     compara qué ve cada usuario antes y después.
+   - Corre las pruebas de aislamiento, invitaciones y mentores
+     (`scripts/check-empresas*.sql`; no dejan cambios).
+   - Prueba la API de la rama con dos cuentas temporales (una empresa cliente
+     y su mentora) y las borra.
+
+   Si se interrumpe, se puede volver a correr: retoma donde se quedó y no
+   vuelve a copiar una rama que ya tiene datos.
 3. **Funciones y secretos de la rama** (lo hace Tenryu). La rama nace con una
-   copia de las funciones de producción y sin los secretos:
+   copia de las funciones de producción y sin sus secretos:
 
    ```bash
    supabase functions deploy ia  --no-verify-jwt --remote=<ref de la rama>
@@ -41,6 +55,8 @@ El mismo nombre en los tres lugares es a propósito: una sola cosa llamada
    ```
 
    `npm run db:staging:preparar` imprime estos comandos con el ref ya puesto.
+   Hasta desplegar `ia`, el asistente de IA no puede guardar resultados en
+   staging (la versión anterior no entiende la tabla nueva).
 4. **Conectar el sitio:**
 
    ```bash
@@ -51,46 +67,40 @@ El mismo nombre en los tres lugares es a propósito: una sola cosa llamada
    despliegue de la rama `staging`; los valores de producción se comprueban
    antes y después. Surte efecto en el siguiente despliegue de staging.
 
-`npm run db:staging:estado` dice en cualquier momento qué hay en la rama, qué
-funciones y secretos tiene y si Netlify ya apunta a ella.
+`npm run db:staging:estado` dice en cualquier momento qué hay en la rama, de
+cuándo es la copia, qué funciones y secretos tiene y si Netlify ya apunta a
+ella.
 
-## Cuentas de ejemplo
+## Qué se copia y qué no
 
-La contraseña (una sola para todas) y los códigos de invitación quedan en
-`supabase/local/staging-accesos.txt`, que git ignora. Para elegir la
-contraseña: `DEMO_PASSWORD=… npm run db:staging:preparar`.
-
-| Cuenta | Quién es |
-|---|---|
-| `demo.admin@example.com` | Carlos Méndez, administrador de «Metalmecánica del Bajío» (los tres módulos, con datos) |
-| `demo.ana@example.com` | Ana López, miembro con «solo ver» |
-| `demo.invitacion@example.com` | miembro sin módulos asignados |
-| `demo.mentora@example.com` | Marta Ruiz, mentora de esa empresa en Análisis Financiero |
-| `demo.plataforma@example.com` | Paula Admin, administradora de la plataforma |
-
-Las cuentas reales no existen en staging: se entra con las de ejemplo o
-registrando una empresa nueva con uno de los códigos.
-
-## De dónde salen los datos
-
-`supabase-seed-staging.sql` se genera desde la base local con
-`npm run db:staging:exportar`: toma las cuentas demo locales y les asigna el
-ejemplo completo de «Metalmecánica del Bajío» (21 riesgos, plan estratégico,
-análisis financiero de cinco periodos, informe y resumen de IA). El archivo no
-lleva contraseñas ni identificadores de usuarios o empresas reales; la
-exportación se cancela si detecta alguno.
+- **Sí:** las cuentas (con su contraseña cifrada, para entrar igual que en
+  producción) y todas las tablas con datos: riesgos, planes, análisis
+  financieros, permisos por módulo, códigos de invitación, uso de IA.
+- **No:** sesiones abiertas y tokens, factores de doble verificación ni las
+  conexiones de Claude registradas contra producción.
 
 ## Qué tener presente
 
-- **Cuesta mientras exista:** 0.01344 USD por hora (unos 10 USD al mes). Los
-  créditos de cómputo del plan y el tope de gasto no cubren ramas.
+- **Son datos reales de clientes en un sitio público.** La rama se cuida igual
+  que producción: no compartir la liga de staging fuera del equipo ni dar
+  acceso de administrador a cuentas de prueba.
+- **Lo que hoy solo oculta la app, ahora lo aplica la base.** Una cuenta deja
+  de recibir los datos de un módulo que no tiene asignado. En la copia del
+  27-nov-2026 eso alcanza a una cuenta: tiene un plan estratégico capturado
+  cuando contaba con ese módulo y hoy solo tiene Gestión del Riesgo. No se
+  borra nada; si se le devuelve el módulo, el plan reaparece.
+- **La copia es una foto.** Lo que se capture después en producción no llega
+  a staging. Mientras producción no tenga las fases de empresas, actualizar
+  la copia implica borrar la rama, crearla otra vez y repetir los pasos 2 a 4.
 - **Si la rama se borra y se crea otra vez, cambian su dirección y sus
   llaves.** Hay que repetir los pasos 2 a 4 y volver a desplegar staging.
+- **Cuesta mientras exista:** 0.01344 USD por hora (unos 10 USD al mes). Los
+  créditos de cómputo del plan y el tope de gasto no cubren ramas.
 - **No usar el botón «Merge» de la rama.** Este proyecto no tiene historial de
   migraciones; a producción sigue llegando solo el SQL que Tenryu corre.
 - **Los correos no salen en la rama** (la contraseña del servidor de correo no
   se copia). El registro funciona porque no pide confirmar el correo;
-  «Olvidé mi contraseña» no.
+  «Olvidé mi contraseña» no. Ningún cliente recibe correos desde staging.
 - **«Conectar Claude» no se prueba desde el sitio de staging:** su ruta `/mcp`
   apunta a la función de producción y la pantalla de consentimiento solo
   funciona en el dominio de producción.
