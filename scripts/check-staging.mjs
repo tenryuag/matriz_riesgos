@@ -123,7 +123,7 @@ if (mentor && company) {
   }
 }
 
-// Informativo: las funciones las despliega Tenryu.
+// Informativo: las funciones se despliegan aparte (npm run db:staging:funciones).
 if (client) {
   const res = await fetch(`${URL_}/functions/v1/ia`, {
     method: "POST",
@@ -132,7 +132,7 @@ if (client) {
   }).catch(() => null);
   const body = res ? await res.json().catch(() => null) : null;
   if (!res || !body?.version) note(`función ia: sin respuesta útil (${res ? res.status : "sin conexión"}); hay que desplegarla en la rama`);
-  else note(`función ia: versión ${body.version}${body.version === "1.1.0" ? "" : " — falta desplegar la 1.1.0 (modo mentor)"}`);
+  else note(`función ia: versión ${body.version}${body.version === "1.1.0" ? "" : " — falta desplegar la 1.1.0 (modo mentor)"}; llave de Anthropic ${body.configurado ? "puesta" : "SIN poner (el asistente responde «no configurado»)"}`);
 }
 
 console.log(failed ? `    ${failed} comprobaciones fallaron` : "    Todo en orden");

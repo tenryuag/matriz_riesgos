@@ -5,6 +5,7 @@
 # Uso (desde la raíz del repo):
 #   npm run db:staging:estado    → qué hay hoy en la rama (solo lee)
 #   npm run db:staging:preparar  → copia producción a la rama y hace ahí el estreno de empresas
+#   npm run db:staging:funciones → despliega en la rama las funciones `ia` y `mcp` de este repo
 #   npm run db:staging:conectar  → apunta el sitio de staging (Netlify) a la rama
 #
 # Producción solo se LEE (un volcado de sus datos). Todo lo que se escribe va
@@ -25,7 +26,9 @@ COPIA="$LOCAL/staging-data.sql"          # volcado de producción que se carga e
 HUELLAS="$LOCAL/staging-huellas"         # qué veía cada usuario antes y después del estreno
 ACCESOS="$LOCAL/staging-accesos.txt"     # códigos de invitación de staging
 FASES=(supabase-empresas.sql supabase-empresas-usuarios.sql supabase-empresas-mentores.sql)
-SECRETOS=(ANTHROPIC_API_KEY PUBLISHABLE_KEY PUBLIC_MCP_URL PUBLIC_APP_URL)
+# Ajustes de las funciones que la rama no hereda. La llave publicable no hace
+# falta: sin ella las funciones usan la llave de la propia rama.
+SECRETOS=(ANTHROPIC_API_KEY PUBLIC_APP_URL)
 # Lo que no se copia: sesiones y tokens vivos, y las conexiones de Claude
 # (clientes OAuth) registradas contra producción.
 SIN_DATOS="auth.sessions,auth.refresh_tokens,auth.one_time_tokens,auth.flow_state,auth.audit_log_entries,auth.mfa_amr_claims,auth.mfa_challenges,auth.mfa_factors,auth.oauth_authorizations,auth.oauth_consents,auth.oauth_client_states,auth.oauth_clients,storage.bucket_lifecycle_states,storage.lifecycle_abandoned_artifacts"
@@ -266,6 +269,42 @@ EOF
 
 # ── Comandos ─────────────────────────────────────────────────────────────────
 
+# Nombres de SECRETOS que la rama todavía no tiene (solo nombres, nunca valores).
+secretos_faltantes() {
+  local tiene s falta=()
+  tiene=$(supabase secrets list --remote="$R_REF" -o json 2>/dev/null | grep -oE '"name": ?"[A-Z_]+"' | sed -E 's/"name": ?"([A-Z_]+)"/\1/' || true)
+  for s in $SECRETOS; do print -r -- "$tiene" | grep -qx "$s" || falta+=($s); done
+  print -r -- "${falta[*]}"
+}
+
+# Despliega en la rama las funciones de este repositorio (la versión del
+# código que está en la carpeta, no la de producción) y deja el ajuste que no
+# es secreto. La llave de Anthropic no vive en esta máquina: la pone Tenryu.
+funciones() {
+  rama
+  echo "Destino: funciones de la rama «$RAMA» ($R_REF). Producción ($PROD) no se toca."
+  npm run -s mcp:sync >/dev/null
+  local f out
+  for f in ia mcp; do
+    echo "Desplegando $f…"
+    out=$(supabase functions deploy "$f" --no-verify-jwt --remote="$R_REF" --yes 2>&1) \
+      || { print -r -- "$out" | tail -8; echo "Falló el despliegue de $f."; exit 1; }
+    print -r -- "$out" | grep '^Target:' | sed 's/^/    /'
+  done
+  out=$(supabase secrets set "PUBLIC_APP_URL=$URL_STAGING" --remote="$R_REF" --yes 2>&1) \
+    || { print -r -- "$out" | tail -5; echo "No pude guardar PUBLIC_APP_URL en la rama."; exit 1; }
+  echo "Funciones en la rama:"
+  supabase functions list --remote="$R_REF" 2>/dev/null | grep -oE '"slug":"(ia|mcp)"[^}]*"version":[0-9]+' \
+    | sed -E 's/"slug":"([a-z]+)".*"version":([0-9]+)/  \1 (despliegue \2)/'
+  local falta; falta=$(secretos_faltantes)
+  if [ -n "$falta" ]; then
+    echo "Falta en la rama: $falta"
+    [[ "$falta" == *ANTHROPIC_API_KEY* ]] && echo "  supabase secrets set ANTHROPIC_API_KEY=… --remote=$R_REF      # sin esto el asistente de IA responde «no configurado»"
+  else
+    echo "Secretos de las funciones: completos"
+  fi
+}
+
 estado() {
   rama; conectar_bd
   echo "Rama «$RAMA» de Supabase: $R_REF  ·  $R_URL"
@@ -285,10 +324,8 @@ EOF
   echo "Funciones desplegadas en la rama:"
   supabase functions list --remote="$R_REF" 2>/dev/null | grep -oE '"slug":"(ia|mcp)"[^}]*"version":[0-9]+' \
     | sed -E 's/"slug":"([a-z]+)".*"version":([0-9]+)/  \1 (despliegue \2)/' || echo "  (ninguna)"
-  local tiene falta=()
-  tiene=$(supabase secrets list --remote="$R_REF" 2>/dev/null || true)
-  for s in $SECRETOS; do print -r -- "$tiene" | grep -q "$s" || falta+=($s); done
-  if (( ${#falta} )); then echo "Secretos que faltan en la rama: ${falta[*]}"; else echo "Secretos de las funciones: completos"; fi
+  local falta; falta=$(secretos_faltantes)
+  if [ -n "$falta" ]; then echo "Secretos que faltan en la rama: $falta"; else echo "Secretos de las funciones: completos"; fi
   local net
   net=$(netlify env:get VITE_SUPABASE_URL --context "$CONTEXTO" --site "$SITIO" 2>/dev/null || true)
   if [ "$net" = "$R_URL" ]; then echo "Netlify: staging apunta a esta rama"
@@ -391,11 +428,10 @@ EOF
 
   echo
   echo "Rama lista. Códigos de invitación de staging: $ACCESOS"
-  echo "Falta lo que solo hace Tenryu (las funciones de la rama son copia de las de producción):"
-  echo "  supabase functions deploy ia  --no-verify-jwt --remote=$R_REF"
-  echo "  supabase functions deploy mcp --no-verify-jwt --remote=$R_REF"
-  echo "  supabase secrets set ANTHROPIC_API_KEY=… --remote=$R_REF      # para probar la IA"
-  echo "Y conectar el sitio: npm run db:staging:conectar"
+  echo "Siguen: npm run db:staging:funciones (la rama nace con las funciones de producción)"
+  echo "        npm run db:staging:conectar"
+  echo "Y la llave de la IA, que pone Tenryu:"
+  echo "  supabase secrets set ANTHROPIC_API_KEY=… --remote=$R_REF"
 }
 
 # Apunta el despliegue de la rama git `staging` a la rama de Supabase. Los
@@ -429,6 +465,7 @@ conectar() {
 case "$1" in
   estado) estado ;;
   preparar) preparar ;;
+  funciones) funciones ;;
   conectar) conectar ;;
-  *) echo "Uso: $0 estado | preparar | conectar   (RAMA=nombre para otra rama)"; exit 1 ;;
+  *) echo "Uso: $0 estado | preparar | funciones | conectar   (RAMA=nombre para otra rama)"; exit 1 ;;
 esac

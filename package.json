@@ -12,6 +12,7 @@
     "db:local:ensayar-rollback": "node scripts/check-empresas-rollback.mjs",
     "db:staging:estado": "scripts/bd-staging.sh estado",
     "db:staging:preparar": "scripts/bd-staging.sh preparar",
+    "db:staging:funciones": "scripts/bd-staging.sh funciones",
     "db:staging:conectar": "scripts/bd-staging.sh conectar",
     "build": "vite build",
     "lint": "eslint .",

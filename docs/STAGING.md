@@ -45,18 +45,26 @@ un administrador también puede generar más desde el panel.
 
    Si se interrumpe, se puede volver a correr: retoma donde se quedó y no
    vuelve a copiar una rama que ya tiene datos.
-3. **Funciones y secretos de la rama** (lo hace Tenryu). La rama nace con una
-   copia de las funciones de producción y sin sus secretos:
+3. **Funciones de la rama.** La rama nace con una copia de las funciones de
+   producción y sin sus secretos:
 
    ```bash
-   supabase functions deploy ia  --no-verify-jwt --remote=<ref de la rama>
-   supabase functions deploy mcp --no-verify-jwt --remote=<ref de la rama>
+   npm run db:staging:funciones
+   ```
+
+   Despliega en la rama las funciones `ia` y `mcp` de este repositorio y
+   guarda la dirección del sitio de staging. Nunca despliega a producción.
+
+   Falta entonces solo la llave de Anthropic, que no vive en esta máquina y
+   pone Tenryu (conviene una llave propia para staging, para distinguir su
+   gasto):
+
+   ```bash
    supabase secrets set ANTHROPIC_API_KEY=… --remote=<ref de la rama>
    ```
 
-   `npm run db:staging:preparar` imprime estos comandos con el ref ya puesto.
-   Hasta desplegar `ia`, el asistente de IA no puede guardar resultados en
-   staging (la versión anterior no entiende la tabla nueva).
+   Sin esa llave todo funciona menos el asistente de IA, que responde «no
+   configurado».
 4. **Conectar el sitio:**
 
    ```bash
